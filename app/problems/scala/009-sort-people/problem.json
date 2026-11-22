@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "types",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"sort",
+		"ordering",
+		"case-class"
+	],
 	"title": "나이 내림차순 정렬",
 	"limitSec": 400,
 	"targets": [

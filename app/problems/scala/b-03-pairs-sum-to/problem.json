@@ -1,0 +1,29 @@
+{
+	"id": "b-03-pairs-sum-to",
+	"order": 3,
+	"level": 1,
+	"topic": "syntax",
+	"kind": "refactor",
+	"refs": [
+		"for-guard-multi",
+		"range"
+	],
+	"title": "합이 target인 쌍 (for로)",
+	"limitSec": 150,
+	"targets": [
+		"for 다중 생성기",
+		"가드"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "리스트 `xs`에서 `i < j`이고 `xs(i) + xs(j) == target`인 모든 쌍 `(xs(i), xs(j))`를 `i`, `j` 순서대로 모은다. 아래 `var`/`while` 구현은 맞게 동작하니 `var`와 `while` 없이 다시 써라.",
+	"starter": "def pairsSumTo(xs: List[Int], target: Int): List[(Int, Int)] =\n  var result = List.empty[(Int, Int)]\n  var i = 0\n  while i < xs.length do\n    var j = i + 1\n    while j < xs.length do\n      if xs(i) + xs(j) == target then result = result :+ (xs(i), xs(j))\n      j += 1\n    i += 1\n  result\n",
+	"hints": [
+		"생성기를 여러 개 두고 `if` 가드를 붙일 수 있는 `for … yield` 식을 쓴다.",
+		"`i < j`인 모든 인덱스 쌍이라면: `for i <- 0 until n; j <- i + 1 until n yield (i, j)`"
+	],
+	"notes": "`for`의 생성기는 겹 반복문처럼 앞 변수를 뒤 생성기에서 쓸 수 있다. 결과가 `Range` 기반이라 `Vector`가 되므로 `List`를 돌려주려면 마지막에 `.toList`를 붙인다."
+}

@@ -1,0 +1,29 @@
+{
+	"id": "b-16-parse-or-zero",
+	"order": 16,
+	"level": 1,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"to-int-option",
+		"option-get"
+	],
+	"title": "읽되 실패하면 0",
+	"limitSec": 60,
+	"targets": [
+		"toIntOption",
+		"getOrElse"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "문자열 `s`를 `Int`로 읽어 반환하되, 숫자로 읽을 수 없으면 0을 반환하라. 예외를 던지면 안 된다.",
+	"starter": "def parseOrZero(s: String): Int =\n  ???\n",
+	"hints": [
+		"예외 없이 문자열을 `Option[Int]`로 바꾸는 메서드와, `None`일 때의 기본값을 주는 메서드를 이어 붙인다.",
+		"읽지 못하면 -1인 `Double` 버전이라면: `s.toDoubleOption.getOrElse(-1.0)`"
+	],
+	"notes": "`s.toInt`는 읽을 수 없으면 `NumberFormatException`을 던지니 `toIntOption`을 쓴다(2.13부터). `\" 7\"`처럼 공백이 붙은 문자열도 `None`이 되므로 필요하면 먼저 `trim`한다."
+}

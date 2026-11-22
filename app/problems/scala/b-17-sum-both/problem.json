@@ -1,0 +1,29 @@
+{
+	"id": "b-17-sum-both",
+	"order": 17,
+	"level": 1,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"option-for",
+		"option-map"
+	],
+	"title": "둘 다 있을 때만 합",
+	"limitSec": 60,
+	"targets": [
+		"Option for",
+		"yield"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "두 `Option[Int]` `a`, `b`가 모두 값이 있을 때만 그 합을 `Some`으로 반환하고, 하나라도 `None`이면 `None`을 반환하라.",
+	"starter": "def sumBoth(a: Option[Int], b: Option[Int]): Option[Int] =\n  ???\n",
+	"hints": [
+		"`Option`을 `for`로 이으면 값이 모두 있을 때만 `yield`까지 도달한다.",
+		"두 문자열이 모두 있을 때만 이어 붙이는 경우라면: `for x <- p; y <- q yield x + y`"
+	],
+	"notes": "`for`의 첫 `None`에서 전체 결과가 `None`이 되며, 이는 `a.flatMap(x => b.map(y => x + y))`와 같다. 한 줄로 쓸 때는 `for x <- a; y <- b yield x + y`처럼 `;`로 생성자를 나눈다."
+}

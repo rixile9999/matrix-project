@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "folds",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"foldleft-tuple",
+		"foldleft",
+		"case-lambda",
+		"val-destructure"
+	],
 	"title": "가장 긴 증가 구간",
 	"limitSec": 400,
 	"targets": [

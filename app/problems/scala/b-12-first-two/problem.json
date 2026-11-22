@@ -1,0 +1,28 @@
+{
+	"id": "b-12-first-two",
+	"order": 12,
+	"level": 1,
+	"topic": "pattern",
+	"kind": "write",
+	"refs": [
+		"match-list",
+		"match-expr"
+	],
+	"title": "앞의 두 원소 설명",
+	"limitSec": 120,
+	"targets": [
+		"리스트 패턴"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`xs`가 비었으면 `\"없음\"`, 원소가 하나면 `\"하나: 7\"`, 둘 이상이면 앞의 둘을 `\"처음 둘: 7, 8\"` 형태로 반환하라.",
+	"starter": "def firstTwo(xs: List[Int]): String =\n  ???\n",
+	"hints": [
+		"`match`에서 `::`와 `Nil`로 리스트의 앞부분을 분해한다.",
+		"첫 원소와 나머지로 나누는 경우라면: `xs match { case h :: t => s\"$h 뒤에 ${t.size}개\"; case Nil => \"없음\" }`"
+	],
+	"notes": "`a :: b :: _`는 원소가 둘 이상일 때만 맞고, `a :: Nil`은 정확히 하나일 때 맞는다. `match`는 위에서부터 첫 번째로 맞는 `case`를 고르므로 `case _`를 앞에 두면 뒤 패턴에 도달하지 못한다."
+}

@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "syntax",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"for-guard-multi",
+		"for-yield",
+		"range"
+	],
 	"title": "피타고라스 세 쌍",
 	"limitSec": 400,
 	"targets": [

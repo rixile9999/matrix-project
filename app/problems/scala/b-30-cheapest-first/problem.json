@@ -1,0 +1,29 @@
+{
+	"id": "b-30-cheapest-first",
+	"order": 30,
+	"level": 1,
+	"topic": "context",
+	"kind": "fix",
+	"refs": [
+		"ordering",
+		"sort"
+	],
+	"title": "싼 순, 같으면 이름순",
+	"limitSec": 150,
+	"targets": [
+		"Ordering.by",
+		"orElse"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`cheapestFirst`는 `Item`을 가격이 싼 순으로, 가격이 같으면 이름의 사전순으로 정렬해야 한다. 코드에 버그가 하나 있으니 고쳐라.",
+	"starter": "case class Item(name: String, price: Int)\n\ndef cheapestFirst(items: List[Item]): List[Item] =\n  val byPrice: Ordering[Item] = Ordering.by(_.price)\n  val byName: Ordering[Item] = Ordering.by(_.name)\n  items.sorted(using byPrice.reverse.orElse(byName))\n",
+	"hints": [
+		"`Ordering`에는 방향을 뒤집는 메서드가 있으니, 어느 기준에 붙어 있는지와 정말 필요한지를 확인한다.",
+		"점수가 높은 순, 같으면 이름순이라면: `Ordering.by[Player, Int](_.score).reverse.orElse(Ordering.by(_.name))`"
+	],
+	"notes": "`Ordering.by(f)`는 기본 방향이 오름차순이고, `reverse`는 그 기준 하나만 뒤집으며 `orElse`는 앞 기준이 같을 때만 다음 기준을 쓴다. `sortBy`에 튜플 키를 주는 방법도 있지만 한 기준만 뒤집을 때는 `Ordering`을 직접 조합하는 편이 읽기 쉽다."
+}

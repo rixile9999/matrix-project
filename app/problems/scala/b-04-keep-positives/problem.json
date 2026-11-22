@@ -1,0 +1,28 @@
+{
+	"id": "b-04-keep-positives",
+	"order": 4,
+	"level": 1,
+	"topic": "collections",
+	"kind": "fix",
+	"refs": [
+		"takewhile-span",
+		"filter"
+	],
+	"title": "양수만 남기기 (버그 수정)",
+	"limitSec": 90,
+	"targets": [
+		"filter"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`positives`는 `xs`에서 0보다 큰 원소를 모두, 원래 순서대로 반환해야 한다. 지금 구현에는 버그가 하나 있다. 고쳐라.",
+	"starter": "def positives(xs: List[Int]): List[Int] =\n  xs.takeWhile(_ > 0)\n",
+	"hints": [
+		"`takeWhile`은 조건이 처음 깨지는 곳에서 멈춘다. 조건에 맞는 원소를 전부 고르는 메서드는 따로 있다.",
+		"짝수만 고르는 경우라면: `xs.filter(_ % 2 == 0)`"
+	],
+	"notes": "`takeWhile`은 앞에서부터 조건이 참인 동안만 취하고, `filter`는 전체를 훑는다. 반대 조건으로 걸러내려면 `filterNot`도 쓸 수 있다."
+}

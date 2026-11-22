@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "pattern",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"match-list",
+		"match-bind",
+		"match-guard",
+		"recursion-list"
+	],
 	"title": "연속 중복 제거",
 	"limitSec": 400,
 	"targets": [

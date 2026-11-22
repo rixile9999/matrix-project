@@ -1,0 +1,61 @@
+[
+	{
+		"id": "lambda",
+		"topic": "functions",
+		"title": "람다와 _ 표기",
+		"code": "List(1, 2, 3).map(x => x * x) // => List(1, 4, 9)\nList(1, 2, 3).map(_ * 2) // => List(2, 4, 6)\nList((1, 2), (3, 4)).map(_ + _) // => List(3, 7)\nval inc = (x: Int) => x + 1\ninc(4) // => 5\nval add: (Int, Int) => Int = _ + _\nadd(2, 3) // => 5",
+		"text": "`x => ...` 또는 `_`로 쓰며, `_`는 자리마다 다른 인자를 뜻한다(`_ + _`는 인자 둘). 타입이 추론되지 않는 곳에서는 `(x: Int) => ...`처럼 타입을 적는다."
+	},
+	{
+		"id": "hof",
+		"topic": "functions",
+		"title": "함수를 인자·반환값으로",
+		"code": "def applyTwice(f: Int => Int, x: Int): Int = f(f(x))\napplyTwice(_ + 3, 1) // => 7\ndef adder(n: Int): Int => Int = x => x + n\nadder(5)(1) // => 6\nList(1, 2, 3).map(adder(10)) // => List(11, 12, 13)",
+		"text": "함수 타입은 `A => B`, 인자가 둘이면 `(A, B) => C`이다. 함수를 돌려주는 함수는 `adder(5)(1)`처럼 바로 이어서 호출할 수 있다."
+	},
+	{
+		"id": "currying",
+		"topic": "functions",
+		"title": "다중 매개변수 목록",
+		"code": "def add(a: Int)(b: Int): Int = a + b\nadd(1)(2) // => 3\nval add5: Int => Int = add(5)\nadd5(10) // => 15\nval addF = (a: Int) => (b: Int) => a + b\naddF(1)(2) // => 3\n((a: Int, b: Int) => a + b).curried(1)(2) // => 3",
+		"text": "매개변수 목록을 여러 개 두면 일부만 적용할 수 있고, 마지막 목록에 람다를 넘기는 `foldLeft(0)(_ + _)` 꼴이 흔하다. 앞 목록의 타입이 뒤 목록의 추론에 쓰인다는 점이 장점이다.",
+		"scala2": "부분 적용에 `add(5) _`처럼 `_`가 필요했지만 Scala 3는 기대 타입이 함수면 자동으로 변환한다."
+	},
+	{
+		"id": "compose",
+		"topic": "functions",
+		"title": "andThen · compose",
+		"code": "val f = (x: Int) => x + 1\nval g = (x: Int) => x * 2\n(f andThen g)(3) // => 8\n(f compose g)(3) // => 7\nList(1, 2).map(f.andThen(g)) // => List(4, 6)",
+		"text": "`f andThen g`는 `g(f(x))`, `f compose g`는 `f(g(x))`이다. 이름이 있는 메서드가 아니라 `Function1` 값(`val f = ...`)에서 쓸 수 있다."
+	},
+	{
+		"id": "eta",
+		"topic": "functions",
+		"title": "메서드를 함수로",
+		"code": "def double(x: Int): Int = x * 2\nList(1, 2, 3).map(double) // => List(2, 4, 6)\nval g = double\ng(5) // => 10\nList(\"a\", \"bb\").map(_.length) // => List(1, 2)\nList(\"a\", \"bb\").map(_.toUpperCase) // => List(A, BB)",
+		"text": "매개변수가 있는 메서드는 함수가 필요한 자리에서 자동으로 함수로 바뀐다(eta 확장). 인자 없는 메서드는 `_.length`처럼 람다로 감싼다.",
+		"scala2": "`val g = double _`처럼 `_`를 붙여야 했다. Scala 3에서는 `_` 없이 쓴다."
+	},
+	{
+		"id": "partial-function",
+		"topic": "functions",
+		"title": "PartialFunction · lift · isDefinedAt",
+		"code": "val pf: PartialFunction[Int, String] = {\n  case 1 => \"one\"\n  case 2 => \"two\"\n}\npf.isDefinedAt(3) // => false\npf.lift(1) // => Some(one)\npf.lift(3) // => None\nList(1, 2, 3).collect(pf) // => List(one, two)\npf.applyOrElse(3, _ => \"?\") // => ?",
+		"text": "`PartialFunction`은 일부 입력에만 정의된 함수이며 정의되지 않은 값에 직접 호출하면 `MatchError`가 난다. `lift`로 `Option`을 돌려받거나 `collect`에 넘겨 안전하게 쓴다."
+	},
+	{
+		"id": "default-named",
+		"topic": "functions",
+		"title": "기본값 · 이름 붙인 인자",
+		"code": "def box(w: Int = 1, h: Int = 1, label: String = \"x\"): String = s\"$label ${w}x$h\"\nbox() // => x 1x1\nbox(h = 3) // => x 1x3\nbox(2, label = \"r\") // => r 2x1",
+		"text": "기본값이 있는 매개변수는 생략할 수 있고, `이름 = 값`으로 원하는 것만 지정한다. 위치 인자는 이름 인자보다 앞에 와야 한다."
+	},
+	{
+		"id": "varargs",
+		"topic": "functions",
+		"title": "가변 인자 xs*",
+		"code": "def total(xs: Int*): Int = xs.sum\ntotal(1, 2, 3) // => 6\ntotal() // => 0\nval nums = List(4, 5)\ntotal(nums*) // => 9\ntotal(0, 1) // => 1",
+		"text": "`xs: Int*`는 함수 안에서 `Seq[Int]`이다. 이미 있는 컬렉션을 펼쳐 넘길 때는 `nums*`를 쓴다.",
+		"scala2": "Scala 2는 `total(nums: _*)`로 썼다. Scala 3도 `: _*`를 아직 받아 주지만 `nums*`가 새 표기이다."
+	}
+]

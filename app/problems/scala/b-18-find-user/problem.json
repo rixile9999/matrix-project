@@ -1,0 +1,28 @@
+{
+	"id": "b-18-find-user",
+	"order": 18,
+	"level": 1,
+	"topic": "errors",
+	"kind": "fix",
+	"refs": [
+		"either-convert",
+		"either-basic"
+	],
+	"title": "없는 사용자는 Left",
+	"limitSec": 90,
+	"targets": [
+		"toRight"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`users`에서 `id`의 이름을 찾아 있으면 `Right(이름)`, 없으면 `Left(\"없는 사용자: \" + id)`를 반환하는 함수다. 코드에 버그가 하나 있으니 고쳐라.",
+	"starter": "def findUser(id: Int, users: Map[Int, String]): Either[String, String] =\n  users.get(id).toLeft(\"없는 사용자: \" + id)\n",
+	"hints": [
+		"`Option`을 `Either`로 올리는 메서드는 `None`일 때 채울 값을 받는 쪽이 `Left`인지 `Right`인지가 갈린다.",
+		"없으면 `Left(\"비었음\")`인 첫 원소 찾기라면: `xs.headOption.toRight(\"비었음\")`"
+	],
+	"notes": "`toRight(x)`는 `None`이면 `Left(x)`, `toLeft(x)`는 `None`이면 `Right(x)`를 만든다. 두 메서드 모두 타입이 맞아 컴파일되므로 값 타입이 같을 때 실수가 컴파일러에 걸리지 않는다."
+}

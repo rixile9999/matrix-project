@@ -1,0 +1,78 @@
+[
+	{
+		"id": "val-var-def",
+		"topic": "syntax",
+		"title": "val · var · def",
+		"code": "val x = 10 // => 10\nval s: String = \"hi\" // => hi\nvar n = 0\nn += 1\nn // => 1\ndef sq(a: Int): Int = a * a\nsq(5) // => 25\ndef add(a: Int, b: Int = 1) = a + b\nadd(2) // => 3",
+		"text": "`val`은 재대입 불가, `var`은 재대입 가능이며 `var`은 꼭 필요할 때만 쓴다. `def`는 매번 평가되는 메서드이고 반환 타입은 생략할 수 있지만 재귀 함수에는 적어야 한다."
+	},
+	{
+		"id": "if-expr",
+		"topic": "syntax",
+		"title": "if는 식이다",
+		"code": "val x = 7\nval kind = if x % 2 == 0 then \"even\" else \"odd\" // => odd\nval abs = if x < 0 then -x else x // => 7\nval u = if x > 100 then println(\"big\") // => ()\nif x > 5 then \"a\" else \"b\" // => a",
+		"text": "`if`는 값을 돌려주는 식이므로 삼항 연산자가 따로 없다. `else`를 생략하면 결과 타입이 `Unit`이 되니 값이 필요하면 항상 `else`를 쓴다.",
+		"scala2": "조건에 괄호가 필수이고 `then`이 없다. `if (x % 2 == 0) \"even\" else \"odd\"`"
+	},
+	{
+		"id": "block-indent",
+		"topic": "syntax",
+		"title": "들여쓰기 블록과 end",
+		"code": "def f(n: Int): Int =\n  val a = n * 2\n  a + 1\nf(3) // => 7\nclass Box(val v: Int):\n  def twice = v * 2\nend Box\nBox(4).twice // => 8\nval r = { val a = 1; a + 2 } // => 3",
+		"text": "`=` 또는 `:` 뒤에서 들여쓰기로 블록을 열고 마지막 식이 블록의 값이다. 긴 블록은 `end 이름`으로 닫을 수 있고 중괄호도 여전히 쓸 수 있다.",
+		"scala2": "중괄호 `{ }`가 필수이고 `class Box(val v: Int) { ... }`처럼 `:` 문법과 `end` 마커가 없다."
+	},
+	{
+		"id": "for-yield",
+		"topic": "syntax",
+		"title": "for … yield",
+		"code": "val xs = List(1, 2, 3)\nfor x <- xs yield x * 2 // => List(2, 4, 6)\nfor x <- xs; y <- List(\"a\", \"b\") yield s\"$x$y\" // => List(1a, 1b, 2a, 2b, 3a, 3b)\nval pairs = for i <- 1 to 2; j <- 1 to 2 yield (i, j) // => Vector((1,1), (1,2), (2,1), (2,2))\nfor (x, i) <- xs.zipWithIndex yield x * i // => List(0, 2, 6)",
+		"text": "`for … yield`는 `map`/`flatMap`으로 풀리며 결과 컬렉션 종류는 첫 생성기를 따른다. `1 to 2` 같은 Range에서 시작하면 `Vector`가 나온다.",
+		"scala2": "생성기를 괄호로 감싸야 한다. `for (x <- xs) yield x * 2`"
+	},
+	{
+		"id": "for-guard-multi",
+		"topic": "syntax",
+		"title": "for의 가드와 다중 생성기",
+		"code": "val xs = List(1, 2, 3, 4)\nfor x <- xs if x % 2 == 0 yield x // => List(2, 4)\nfor x <- xs; y <- xs if x < y && x + y == 5 yield (x, y) // => List((1,4), (2,3))\nfor x <- xs; sq = x * x if sq > 4 yield sq // => List(9, 16)\nfor x <- xs; y <- xs if x == y yield x // => List(1, 2, 3, 4)",
+		"text": "생성기는 `;` 또는 줄바꿈으로 나열하고 뒤의 생성기가 안쪽 루프가 된다. `if`는 가드, `이름 = 식`은 중간 값 정의이다."
+	},
+	{
+		"id": "for-do",
+		"topic": "syntax",
+		"title": "for … do (부수 효과)",
+		"code": "val xs = List(1, 2, 3)\nval sb = StringBuilder()\nfor x <- xs do sb.append(x).append(',')\nsb.toString // => 1,2,3,\nfor i <- 0 until 2; j <- 0 until 2 do println((i, j))\nxs.foreach(println)",
+		"text": "`yield` 없이 `do`를 쓰면 `foreach`로 풀려 결과 없이 부수 효과만 낸다. 값을 모으고 싶으면 `yield`를 쓰고 `var`에 누적하지 않는다.",
+		"scala2": "`do` 대신 괄호만 쓴다. `for (x <- xs) println(x)`"
+	},
+	{
+		"id": "match-expr",
+		"topic": "syntax",
+		"title": "match는 식이다",
+		"code": "val n = 3\nval s = n match\n  case 1 => \"one\"\n  case 3 => \"three\"\n  case _ => \"many\"\ns // => three\nn match { case 3 => \"x\"; case _ => \"y\" } // => x\n(n + 1) match { case 4 => true; case _ => false } // => true",
+		"text": "`match`는 값을 돌려주는 식이고 위에서부터 처음 맞는 `case`를 고른다. 아무 `case`도 맞지 않으면 `MatchError`가 나므로 `_`로 마무리한다.",
+		"scala2": "`match` 뒤에 중괄호가 필수이다. `n match { case 1 => \"one\"; case _ => \"many\" }`"
+	},
+	{
+		"id": "range",
+		"topic": "syntax",
+		"title": "범위: to · until · by",
+		"code": "(1 to 4).toList // => List(1, 2, 3, 4)\n(1 until 4).toList // => List(1, 2, 3)\n(10 to 1 by -3).toList // => List(10, 7, 4, 1)\n(1 to 0).toList // => List()\n('a' to 'e').mkString // => abcde\n(1 to 10).sum // => 55",
+		"text": "`to`는 끝을 포함하고 `until`은 제외하며 `by`로 간격을 준다. 내려가려면 `10 to 1`이 아니라 `by -1`을 붙여야 하고, 시작이 끝보다 크면 빈 범위이다."
+	},
+	{
+		"id": "tuple",
+		"topic": "syntax",
+		"title": "튜플",
+		"code": "val t = (1, \"a\", 2.5)\nt // => (1,a,2.5)\nt._2 // => a\nval (n, s, d) = t\nn + d // => 3.5\n(1, \"a\").swap // => (a,1)\nList((1, 'x'), (2, 'y')).map((a, b) => s\"$a$b\") // => List(1x, 2y)",
+		"text": "튜플은 `_1`부터 시작하는 접근자나 `val (a, b) = t` 분해로 꺼내며 `toString`에 공백이 없다. 튜플 원소 리스트에는 `{ case (a, b) => … }` 없이 `(a, b) => …` 람다를 바로 쓸 수 있다.",
+		"scala2": "튜플 인자 자동 분해가 없어 `.map { case (a, b) => s\"$a$b\" }`로 써야 한다."
+	},
+	{
+		"id": "string-interp",
+		"topic": "syntax",
+		"title": "문자열 보간 s · f · raw",
+		"code": "val name = \"Kim\"\nval n = 3\ns\"hi $name, ${n + 1}\" // => hi Kim, 4\nf\"${3.14159}%.2f\" // => 3.14\nf\"$n%03d\" // => 003\nraw\"a\\nb\" // => a\\nb",
+		"text": "`s\"\"`는 `$이름`과 `${식}`을 끼워 넣고, `f\"\"`는 `%` 서식을 붙이며, `raw\"\"`는 이스케이프를 해석하지 않는다. `f`의 서식은 값 바로 뒤에 붙인다(`$n%03d`)."
+	}
+]

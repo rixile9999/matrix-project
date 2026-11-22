@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "types",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"enum-adt",
+		"match-case-class",
+		"sealed-trait"
+	],
 	"title": "수식 트리 계산",
 	"limitSec": 400,
 	"targets": [

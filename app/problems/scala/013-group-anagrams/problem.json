@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "maps",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"groupby",
+		"map-sort",
+		"map-update",
+		"sort"
+	],
 	"title": "애너그램 묶기",
 	"limitSec": 500,
 	"targets": [

@@ -1,0 +1,84 @@
+[
+	{
+		"id": "case-class",
+		"topic": "types",
+		"title": "case class: copy · 동등성",
+		"code": "case class Point(x: Int, y: Int)\nval p = Point(1, 2) // => Point(1,2)\np.copy(y = 5) // => Point(1,5)\np == Point(1, 2) // => true\np.x + p.y // => 3",
+		"text": "`new` 없이 만들고, `==`는 필드 값 비교이며, `copy(필드 = 값)`으로 일부만 바꾼 새 값을 얻는다. 필드는 기본이 `val`이라 바꿀 수 없다."
+	},
+	{
+		"id": "companion",
+		"topic": "types",
+		"title": "동반 객체와 apply",
+		"code": "class Temp private (val deg: Int)\nobject Temp:\n  def apply(d: Int): Temp = new Temp(math.max(d, -273))\n  def fromF(f: Int): Temp = Temp((f - 32) * 5 / 9)\nTemp(-500).deg // => -273\nTemp.fromF(212).deg // => 100",
+		"text": "같은 이름의 `object`가 동반 객체이며 `apply`를 두면 `Temp(...)`로 만들 수 있다. 생성자를 `private`으로 막고 검증을 `apply`에 모으는 패턴에 쓴다.",
+		"scala2": "Scala 3는 클래스에도 `new` 없이 만드는 creator application을 지원하지만, Scala 2에서는 `apply`를 직접 정의해야 했다."
+	},
+	{
+		"id": "enum-simple",
+		"topic": "types",
+		"title": "enum (단순 열거)",
+		"code": "enum Color:\n  case Red, Green, Blue\nColor.Green // => Green\nColor.values.toList // => List(Red, Green, Blue)\nColor.valueOf(\"Blue\") // => Blue\nColor.Red.ordinal // => 0",
+		"text": "`enum` 한 줄에 `case A, B, C`로 나열하며 `values`, `valueOf`, `ordinal`이 자동으로 생긴다. `valueOf`는 없는 이름이면 예외를 던진다.",
+		"scala2": "`sealed trait Color` + `case object Red extends Color`를 일일이 쓰던 것이고, `values`/`ordinal`은 없었다."
+	},
+	{
+		"id": "enum-adt",
+		"topic": "types",
+		"title": "enum ADT (매개변수 있는 case)",
+		"code": "enum Shape:\n  case Circle(r: Double)\n  case Rect(w: Double, h: Double)\n  def area: Double = this match\n    case Circle(r) => 3.0 * r * r\n    case Rect(w, h) => w * h\nShape.Rect(2, 3).area // => 6.0\nShape.Circle(1) // => Circle(1.0)\nShape.Circle(1).area // => 3.0",
+		"text": "매개변수 있는 `case`는 case class처럼 동작하고 `enum` 안에 메서드를 넣을 수 있다. 값의 정적 타입은 `Shape`이며, `Shape.Circle(1)`처럼 `Shape.`를 붙여 만든다.",
+		"scala2": "`sealed trait` + `case class ... extends Shape` 조합과 같다."
+	},
+	{
+		"id": "sealed-trait",
+		"topic": "types",
+		"title": "sealed trait 계층",
+		"code": "sealed trait Expr\ncase class Num(n: Int) extends Expr\ncase class Add(l: Expr, r: Expr) extends Expr\ncase object Zero extends Expr\ndef eval(e: Expr): Int = e match\n  case Num(n) => n\n  case Add(l, r) => eval(l) + eval(r)\n  case Zero => 0\neval(Add(Num(1), Add(Num(2), Zero))) // => 3",
+		"text": "`sealed`이면 하위 타입이 같은 파일에만 있어서 `match`에서 빠뜨린 경우를 컴파일러가 경고한다. 인자 없는 경우는 `case object`로 만든다."
+	},
+	{
+		"id": "trait-basic",
+		"topic": "types",
+		"title": "trait",
+		"code": "trait Greeter:\n  def name: String\n  def greet: String = s\"hi $name\"\nclass En(val name: String) extends Greeter\nEn(\"bo\").greet // => hi bo\ntrait Loud extends Greeter:\n  override def greet = super.greet.toUpperCase\nclass LoudEn(n: String) extends En(n) with Loud\nLoudEn(\"bo\").greet // => HI BO",
+		"text": "`trait`은 추상 멤버와 구현을 함께 가지며 `extends A with B`로 여러 개를 섞는다. `override`가 필요하고, 섞는 순서에 따라 `super` 호출 순서가 정해진다."
+	},
+	{
+		"id": "generics",
+		"topic": "types",
+		"title": "제네릭 메서드와 클래스",
+		"code": "def firstOr[A](xs: List[A], d: A): A = xs.headOption.getOrElse(d)\nfirstOr(List(1, 2), 0) // => 1\nfirstOr(List.empty[String], \"none\") // => none\nclass Box[A](val a: A):\n  def map[B](f: A => B): Box[B] = Box(f(a))\nBox(3).map(_ + 1).a // => 4",
+		"text": "타입 매개변수는 대괄호 `[A]`이며 메서드와 클래스 모두에 붙는다. 인자에서 추론되지 않는 빈 컬렉션은 `List.empty[String]`처럼 타입을 직접 적는다."
+	},
+	{
+		"id": "variance",
+		"topic": "types",
+		"title": "변성 +A · -A",
+		"code": "class Box[+A](val v: A)\ntrait Printer[-A]:\n  def show(a: A): String\nval anyP: Printer[Any] = new Printer[Any]:\n  def show(a: Any) = s\"<$a>\"\nval strP: Printer[String] = anyP\nstrP.show(\"x\") // => <x>\nval b: Box[Any] = Box(\"s\")\nb.v // => s\nval xs: List[Any] = List(1, 2) // => List(1, 2)",
+		"text": "`+A`(공변)는 값을 꺼내기만 하는 생산자에, `-A`(반공변)는 값을 받기만 하는 소비자에 쓴다. `+A`는 메서드 매개변수 위치에 쓸 수 없다."
+	},
+	{
+		"id": "opaque-type",
+		"topic": "types",
+		"title": "opaque type",
+		"code": "opaque type UserId = Int\nobject UserId:\n  def apply(n: Int): UserId = n\nextension (id: UserId) def value: Int = id\nUserId(7).value // => 7\nUserId(7).value + 1 // => 8",
+		"text": "정의된 범위 밖에서는 `UserId`와 `Int`가 서로 다른 타입이라 실수로 섞어 쓸 수 없고 런타임 비용도 없다. `apply`는 동반 객체에, 메서드는 `extension`으로 같은 범위에 둔다. `extension`을 `opaque type`과 같은 범위에 두면 정의한 범위 안에서도 밖에서도 쓸 수 있다.",
+		"scala2": "값 클래스(`class UserId(val n: Int) extends AnyVal`)가 비슷한 역할이지만 박싱이 생길 수 있다. `opaque type`은 Scala 3 전용이다."
+	},
+	{
+		"id": "union-type",
+		"topic": "types",
+		"title": "union 타입 A | B",
+		"code": "def show(x: Int | String): String = x match\n  case i: Int => s\"int $i\"\n  case s: String => s\"str $s\"\nshow(3) // => int 3\nshow(\"a\") // => str a\nval xs: List[Int | String] = List(1, \"a\") // => List(1, a)",
+		"text": "`A | B`는 둘 중 하나인 타입이며 `match`의 타입 패턴으로 구분한다. 래퍼 없이 쓰므로 `Either`와 달리 `Left`/`Right`로 감쌀 필요가 없다.",
+		"scala2": "union 타입은 Scala 3 신기능이다. Scala 2에서는 `Either`나 `sealed trait`로 표현했다."
+	},
+	{
+		"id": "type-alias",
+		"topic": "types",
+		"title": "type 별칭",
+		"code": "type Grid = Vector[Vector[Int]]\ntype Pair[A] = (A, A)\nval g: Grid = Vector(Vector(1, 2), Vector(3, 4)) // => Vector(Vector(1, 2), Vector(3, 4))\nval p: Pair[String] = (\"a\", \"b\") // => (a,b)\ng(1)(0) // => 3",
+		"text": "`type 이름 = 타입`은 긴 타입에 이름만 붙이는 별칭이며 새 타입이 아니다. 타입 매개변수도 받을 수 있다(`type Pair[A]`)."
+	}
+]

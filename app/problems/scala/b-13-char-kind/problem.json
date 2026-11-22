@@ -1,0 +1,29 @@
+{
+	"id": "b-13-char-kind",
+	"order": 13,
+	"level": 1,
+	"topic": "pattern",
+	"kind": "write",
+	"refs": [
+		"match-alternatives",
+		"match-guard"
+	],
+	"title": "문자 분류",
+	"limitSec": 120,
+	"targets": [
+		"| 패턴",
+		"가드"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "문자 `c`가 소문자 모음(`a e i o u`)이면 `\"모음\"`, 그 밖의 영어 소문자면 `\"자음\"`, 숫자면 `\"숫자\"`, 나머지는 `\"기타\"`를 반환하라.",
+	"starter": "def charKind(c: Char): String =\n  ???\n",
+	"hints": [
+		"여러 값을 한 `case`로 묶는 `|`와, 조건을 붙이는 `if` 가드를 함께 쓴다.",
+		"공백이나 쉼표를 구분하는 경우라면: `c match { case ' ' | ',' => \"구분\"; case x if x.isLetter => \"글자\"; case _ => \"기타\" }`"
+	],
+	"notes": "`case 'a' | 'e'`처럼 `|`로 이은 패턴은 변수를 바인딩할 수 없다. 케이스는 위에서부터 평가되므로 모음을 가드 케이스보다 먼저 둬야 한다. `isLetter`는 대문자도 참이니 소문자 범위는 `c >= 'a' && c <= 'z'`로 확인한다."
+}

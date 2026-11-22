@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "errors",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"either-for",
+		"either-convert",
+		"to-int-option",
+		"string-split"
+	],
 	"title": "쌍 파싱과 오류 메시지",
 	"limitSec": 500,
 	"targets": [

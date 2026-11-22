@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "errors",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"option-create",
+		"option-map",
+		"option-get"
+	],
 	"title": "양수의 평균",
 	"limitSec": 300,
 	"targets": [

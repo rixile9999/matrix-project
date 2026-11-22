@@ -1,0 +1,29 @@
+{
+	"id": "b-11-add-stock",
+	"order": 11,
+	"level": 1,
+	"topic": "maps",
+	"kind": "write",
+	"refs": [
+		"map-update",
+		"map-get"
+	],
+	"title": "재고 더하기",
+	"limitSec": 100,
+	"targets": [
+		"getOrElse",
+		"updated"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "재고 `inv`(품목 -> 수량)에 `item`을 `n`개 더한 새 `Map`을 반환하라. 없던 품목이면 `n`개로 새로 들어간다.",
+	"starter": "def addStock(inv: Map[String, Int], item: String, n: Int): Map[String, Int] =\n  ???\n",
+	"hints": [
+		"없는 키의 기본값을 정해 읽는 메서드와, 값을 바꾼 새 `Map`을 만드는 메서드를 함께 쓴다.",
+		"점수를 1 올리는 경우라면: `m.updated(k, m.getOrElse(k, 0) + 1)`"
+	],
+	"notes": "`Map`은 불변이라 `updated`는 새 `Map`을 돌려준다. `inv + (item -> n)`은 기존 수량을 덮어쓰기만 하니 틀린다. `updatedWith(item)(o => Some(o.getOrElse(0) + n))`도 같은 결과다."
+}

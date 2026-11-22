@@ -1,0 +1,10 @@
+@main def tests(): Unit =
+  val a = Item("a", 300)
+  val b = Item("b", 100)
+  val c = Item("c", 100)
+  val d = Item("d", 200)
+  Judge.check("가격 오름차순")(cheapestFirst(List(a, d, b)), List(b, d, a))
+  Judge.check("같은 가격은 이름순")(cheapestFirst(List(c, b)), List(b, c))
+  Judge.check("섞인 입력")(cheapestFirst(List(c, a, d, b)), List(b, c, d, a))
+  Judge.check("빈 리스트")(cheapestFirst(Nil), Nil)
+  Judge.check("하나")(cheapestFirst(List(a)), List(a))

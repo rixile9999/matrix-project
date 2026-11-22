@@ -1,0 +1,27 @@
+{
+	"id": "b-14-field-count",
+	"order": 14,
+	"level": 1,
+	"topic": "strings",
+	"kind": "fix",
+	"refs": [
+		"string-split"
+	],
+	"title": "쉼표 필드 수 (버그 수정)",
+	"limitSec": 120,
+	"targets": [
+		"split 두 번째 인자"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`fieldCount`는 쉼표로 구분된 한 줄의 필드 수를 빈 필드까지 세어 반환해야 한다. 예: `\"a,b,,\"`는 4. 지금 구현에는 버그가 하나 있다. 고쳐라.",
+	"starter": "def fieldCount(line: String): Int =\n  line.split(\",\").length\n",
+	"hints": [
+		"`split`은 기본적으로 끝쪽의 빈 조각을 버린다. 이를 막는 옵션이 있다.",
+		"탭으로 나누며 빈 조각을 남기는 경우라면: `line.split(\"\\t\", -1)`"
+	],
+	"notes": "`split(구분자, -1)`처럼 `limit`에 음수를 주면 끝의 빈 조각도 유지된다. 중간의 빈 필드는 기본 `split`도 남긴다. 빈 문자열을 나누면 빈 조각 하나가 나와 길이가 1이다."
+}

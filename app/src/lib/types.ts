@@ -70,24 +70,35 @@ export type HistoryData = {
 // Language study pack (Scala). Problem files: see src/lib/core/lang.ts (LangProblem),
 // judged by src/lib/server/judge.ts. Hints, notes, targets and the model solution are
 // withheld from the client until the session state allows them.
-import type { JudgeResult } from './core/lang.ts';
+import type { CheatEntry, JudgeResult, LangProblem, TopicId } from './core/lang.ts';
+
+export type LangLevel = LangProblem['level'];
+export type LangKind = LangProblem['kind'];
 
 export type LangListItem = {
 	id: string;
 	order: number;
+	level: LangLevel;
+	topic: TopicId;
+	kind: LangKind;
 	title: string;
 	limitSec: number;
 	status: 'new' | 'attempted' | 'passed'; // passed = at least one session passed
 	bestSec: number | null; // fastest passing session
 	clean: boolean; // some passing session used none of the problem's `avoid` keywords
-	targets: string[] | null; // null until status is 'passed'
 };
+
+/** One topic of the /lang matrix; `levels[0..2]` are levels 1..3, each in problem order. Only topics with problems appear. */
+export type LangTopicRow = { topic: TopicId; label: string; levels: [LangListItem[], LangListItem[], LangListItem[]] };
+
+/** continue = next unpassed level 2 · warmup = a level 1 (see suggestWarmup in core/study.ts) · challenge = next unpassed level 3. */
+export type LangSuggestion = { key: 'continue' | 'warmup' | 'challenge'; label: string; problemId: string; title: string };
 
 /** `/lang` load. Action ?/start (field: problemId) creates a session and redirects to /lang/[id]. */
 export type LangHomeData = {
-	problems: LangListItem[]; // curriculum order
-	nextId: string | null; // first problem that is not passed
-	passedCount: number;
+	topics: LangTopicRow[]; // TOPICS order
+	levels: { level: LangLevel; label: string; passed: number; total: number }[]; // always 3 entries
+	suggestions: LangSuggestion[]; // only those with a candidate
 };
 
 export type LangFinished = {
@@ -98,23 +109,35 @@ export type LangFinished = {
 	solution: string; // model answer (Scala source)
 	notes: string;
 	targets: string[];
+	lookedUp: string[]; // cheat sheet entry ids opened during this session, first-opened order, deduplicated
 };
 
 /** `/lang/[id]` load: the latest session of that problem; redirects to /lang if there is none. */
 export type LangSessionData = {
-	problem: { id: string; order: number; title: string; limitSec: number; statement: string; starter: string };
+	problem: {
+		id: string; order: number; level: LangLevel; topic: TopicId; kind: LangKind; title: string; limitSec: number; statement: string; starter: string;
+		avoid: string[]; // only for kind 'refactor' (shown in the header note), else []
+	};
 	session: {
 		id: number;
 		startedAt: number;
 		code: string; // code of the last run, or the starter
 		hints: string[]; // hints revealed so far (0–2)
+		refs: string[]; // related cheat entry ids: [] until hint 1 is revealed or the session is finished (withheld otherwise)
 		lastResult: JudgeResult | null;
 		finished: LangFinished | null;
 	};
+	cheat: CheatEntry[]; // the whole cheat sheet (static), topic order; topics not written yet are absent
 	now: number;
-	nextId: string | null; // next problem in curriculum order
+	nextId: string | null; // next problem of the same level in order
 };
 // `/lang/[id]` form actions: ?/restart (new session for this problem, same page), ?/reveal (give up -> finished.outcome 'revealed')
-// POST /lang/[id]/run   JSON body { code: string } -> LangRunResponse (judges, records the run; first pass finishes the session)
-// POST /lang/[id]/hint  no body -> { hints: string[] } (reveals the next hint)
+// POST /lang/[id]/run     JSON body { code: string } -> LangRunResponse (judges, records the run; first pass finishes the session)
+// POST /lang/[id]/hint    no body -> LangHintResponse (reveals the next hint; refs appear with hint 1)
+// POST /lang/[id]/lookup  JSON body { entryId: string } -> LangLookupResponse (append-only; ignored without an open session)
 export type LangRunResponse = { result: JudgeResult; finished: boolean; error?: string };
+export type LangHintResponse = { hints: string[]; refs: string[]; error?: string };
+export type LangLookupResponse = { recorded: boolean };
+
+/** `/lang/cheatsheet` load. `passedBy[entryId]`: problems already passed that list the entry in `refs` (others would leak hints). */
+export type LangCheatData = { entries: CheatEntry[]; passedBy: Record<string, { id: string; title: string }[]> };

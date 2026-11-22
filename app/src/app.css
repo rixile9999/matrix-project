@@ -173,5 +173,82 @@ code { font: 0.92em var(--f-mono); background: color-mix(in srgb, var(--ink) 8%,
 .lang-done { display: flex; flex-direction: column; gap: 10px; }
 .lang-done .tags { justify-content: flex-start; }
 
+/* language list: topic x level matrix */
+.lang-h { font: 700 20px var(--f-display); margin: 0; }
+.lang-head .grow { flex: 1; }
+.lang-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.lang-levels .lang-progress { min-width: 0; }
+.lang-levels .lang-progress b { font-size: 22px; }
+.lang-sug { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.lang-sug form { display: contents; }
+.sug { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); cursor: pointer; min-width: 0; }
+.sug.main { border-color: var(--accent); }
+.sug:hover { border-color: var(--accent); }
+.sug:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sug-t { font-weight: 600; overflow-wrap: anywhere; }
+.lt-row { display: grid; grid-template-columns: 104px repeat(3, minmax(0, 1fr)); gap: 0 14px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.lt-row:last-child { border-bottom: 1px solid var(--line); }
+.lt-top { border-top: 0; padding: 0 0 6px; }
+.lt-topic { font: 700 14px var(--f-display); margin: 0; padding-top: 6px; }
+.lt-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lt-cell form { display: contents; }
+.li { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.li:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.li:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.li-t { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.li-m { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.li-m .clean { margin-left: 0; }
+.kind { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+.lang-meta { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.lang-kindnote { margin: 6px 0 -6px; }
+@media (max-width: 760px) {
+	.lang-levels, .lang-sug { grid-template-columns: minmax(0, 1fr); }
+	.lang-levels { gap: 10px; }
+	.lt-top { display: none; }
+	.lt-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+	.lt-cell.none { display: none; }
+	.lt-cell::before { content: attr(data-level); font-size: 12px; color: var(--muted); letter-spacing: .04em; padding: 4px 8px 0; }
+}
+
+/* language problem: stages, related syntax, cheat sheet */
+.stage { font: 700 13px var(--f-display); margin-top: 4px; }
+.stage.ok { color: var(--ok); } .stage.no { color: var(--bad); }
+.lang-refs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { font: 12px var(--f-body); border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.chip:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.cs { display: flex; flex-direction: column; gap: 10px; }
+.cs-search { font: 14px var(--f-body); padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; box-sizing: border-box; }
+.cs-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cs-topic { all: unset; box-sizing: border-box; width: 100%; display: flex; gap: 8px; align-items: baseline; font: 700 14px var(--f-display); padding: 8px 0; cursor: pointer; border-top: 1px solid var(--line); }
+.cs-topic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-caret { width: 12px; color: var(--muted); }
+.cs-entry { padding: 2px 0 8px 20px; }
+.cs-head { all: unset; box-sizing: border-box; width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 4px 0; cursor: pointer; }
+.cs-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-title { font-size: 14px; font-weight: 600; }
+.cs-peek { background: none; padding: 0; color: var(--muted); font-size: 12px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.cs-code { margin: 6px 0; padding: 8px 10px; font: 12.5px/1.5 var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.cs-code code { background: none; padding: 0; font: inherit; }
+.cs-text { margin: 6px 0; font-size: 13px; overflow-wrap: anywhere; }
+.cs-s2 { margin: 6px 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.cs-used { margin: 4px 0 0; }
+.lang-done .cs-entry { padding-left: 0; }
+
+.cheat-panel, .cheat-scrim { display: none; }
+.cheat-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.cheat-bar .grow { flex: 1; }
+.cheat-scroll { overflow-y: auto; padding: 12px; flex: 1; min-height: 0; }
+/* narrow: drawer over the page, editor stays mounted underneath */
+.cheat-panel.open { display: flex; flex-direction: column; position: fixed; z-index: 30; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgb(0 0 0 / .18); }
+.cheat-scrim.open { display: block; position: fixed; inset: 0; z-index: 29; background: rgb(0 0 0 / .3); border: 0; padding: 0; }
+@media (min-width: 1280px) {
+	.screen.wide:has(.lang-split.with-cheat) { max-width: 1560px; }
+	.lang-split.with-cheat { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) 360px; }
+	.cheat-panel.open { position: sticky; z-index: auto; top: 16px; width: auto; max-height: calc(100vh - 32px); box-shadow: none; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+	.cheat-scrim.open { display: none; }
+}
+
 /* Code must show the characters actually typed: no `=>` / `==` / `<-` ligatures. */
-code, pre, .cm-editor, .cm-editor * { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; }
+code, pre, .cm-editor, .cm-editor *, .cs-code, .cs-peek, .lang-out, .case .detail { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; }

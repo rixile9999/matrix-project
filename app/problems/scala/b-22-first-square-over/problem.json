@@ -1,0 +1,29 @@
+{
+	"id": "b-22-first-square-over",
+	"order": 22,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "refactor",
+	"refs": [
+		"lazylist",
+		"find-index"
+	],
+	"title": "n보다 큰 첫 제곱수",
+	"limitSec": 120,
+	"targets": [
+		"LazyList.from",
+		"find"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`firstSquareOver(n)`은 `n`보다 큰 가장 작은 제곱수(1, 4, 9, 16, ...)를 반환한다. 지금 코드는 맞게 동작하지만 `var`와 `while`을 쓴다. 이를 쓰지 않고 다시 써라.",
+	"starter": "def firstSquareOver(n: Int): Int =\n  var k = 1\n  while k * k <= n do k += 1\n  k * k\n",
+	"hints": [
+		"끝없는 수열을 만들어 두고 조건을 만족하는 첫 원소를 찾는 메서드를 쓰면 반복문이 필요 없다.",
+		"처음으로 1000을 넘는 2의 거듭제곱이라면: `LazyList.iterate(1)(_ * 2).find(_ > 1000).get`"
+	],
+	"notes": "`find`는 `Option`을 돌려주므로 끝없는 수열에서는 항상 찾는다는 확신이 있을 때만 `.get`을 쓴다. `LazyList.from(1).map(k => k * k)`처럼 `map`도 필요한 만큼만 계산된다."
+}

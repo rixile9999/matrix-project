@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS lang_runs (
 	status TEXT NOT NULL, code TEXT NOT NULL, result TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS lang_runs_session ON lang_runs(session_id);
+CREATE TABLE IF NOT EXISTS lang_lookups (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL, entry_id TEXT NOT NULL, at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lang_lookups_session ON lang_lookups(session_id);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 

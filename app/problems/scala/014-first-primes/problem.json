@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "lazy",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"lazylist",
+		"exists-forall-count",
+		"range",
+		"take-drop"
+	],
 	"title": "처음 n개의 소수",
 	"limitSec": 500,
 	"targets": [

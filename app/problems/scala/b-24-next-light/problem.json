@@ -1,0 +1,29 @@
+{
+	"id": "b-24-next-light",
+	"order": 24,
+	"level": 1,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"enum-simple",
+		"match-expr"
+	],
+	"title": "신호등 다음 색",
+	"limitSec": 90,
+	"targets": [
+		"enum",
+		"match"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "신호등 `enum Light`가 주어진다. `next(l)`은 다음 색을 반환한다. `Green`은 `Yellow`로, `Yellow`는 `Red`로, `Red`는 `Green`으로 바뀐다.",
+	"starter": "enum Light:\n  case Red, Green, Yellow\n\ndef next(l: Light): Light =\n  ???\n",
+	"hints": [
+		"`enum`의 각 값을 `match`로 하나씩 처리하면 한 가지도 빠뜨리지 않았는지 컴파일러가 검사해 준다.",
+		"요일 `Mon`, `Tue`, `Wed`에서 주말 여부라면: `case Day.Mon | Day.Tue => false`와 `case Day.Wed => true`"
+	],
+	"notes": "`case Light.Red =>`처럼 `Light.` 접두사를 붙여 쓰며, 줄이려면 `import Light.*`를 쓴다. 마지막에 `case _`를 두면 새 값이 추가돼도 컴파일러가 알려 주지 못하니 쓰지 않는 편이 좋다."
+}

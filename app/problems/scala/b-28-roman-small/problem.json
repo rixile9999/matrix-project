@@ -1,0 +1,29 @@
+{
+	"id": "b-28-roman-small",
+	"order": 28,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"partial-function",
+		"case-lambda"
+	],
+	"title": "1~3만 정의된 부분 함수",
+	"limitSec": 120,
+	"targets": [
+		"PartialFunction",
+		"isDefinedAt"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`romanSmall`은 1은 `\"I\"`, 2는 `\"II\"`, 3은 `\"III\"`로 바꾸고 그 밖의 수에는 정의되지 않는 `PartialFunction[Int, String]`이다. 기본값을 만들어 돌려주면 안 된다.",
+	"starter": "def romanSmall: PartialFunction[Int, String] =\n  ???\n",
+	"hints": [
+		"`case`만 나열한 중괄호 블록은 `PartialFunction`이 될 수 있고, 나열하지 않은 값에는 정의되지 않는다.",
+		"짝수의 반만 정의된 함수라면: `{ case n if n % 2 == 0 => n / 2 }`"
+	],
+	"notes": "`PartialFunction`은 `isDefinedAt`, `lift`(`Option` 반환), `collect`와 함께 쓴다. `case _ =>`를 넣으면 모든 값에 정의돼 버려서 부분 함수의 의미가 사라진다."
+}

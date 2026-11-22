@@ -1,0 +1,27 @@
+{
+	"id": "b-07-product-of-all",
+	"order": 7,
+	"level": 1,
+	"topic": "folds",
+	"kind": "fix",
+	"refs": [
+		"foldleft"
+	],
+	"title": "곱 구하기 (버그 수정)",
+	"limitSec": 90,
+	"targets": [
+		"foldLeft 초기값"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`product`는 리스트의 모든 원소를 곱한 값을 반환해야 하고 빈 리스트의 곱은 1이다. 지금 구현에는 버그가 하나 있다. 고쳐라.",
+	"starter": "def product(xs: List[Int]): Int =\n  xs.foldLeft(0)(_ * _)\n",
+	"hints": [
+		"`foldLeft`의 첫 번째 인자는 연산에 맞는 항등원이어야 한다.",
+		"문자열을 이어 붙이는 경우라면: `xs.foldLeft(\"\")(_ + _)`에서 초기값은 빈 문자열이다."
+	],
+	"notes": "합의 항등원은 0, 곱의 항등원은 1이다. 초기값이 틀리면 컴파일은 되지만 결과가 늘 0이 된다. 초기값이 필요 없으면 `reduceOption(_ * _)`로 빈 리스트를 `None`으로 다룰 수도 있다."
+}

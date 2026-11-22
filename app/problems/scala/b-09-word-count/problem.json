@@ -1,0 +1,27 @@
+{
+	"id": "b-09-word-count",
+	"order": 9,
+	"level": 1,
+	"topic": "maps",
+	"kind": "write",
+	"refs": [
+		"groupmap"
+	],
+	"title": "단어 빈도 세기",
+	"limitSec": 120,
+	"targets": [
+		"groupMapReduce"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "단어 리스트 `words`에서 각 단어가 몇 번 나왔는지 `Map[String, Int]`로 반환하라. 빈 리스트는 빈 `Map`이다.",
+	"starter": "def wordCount(words: List[String]): Map[String, Int] =\n  ???\n",
+	"hints": [
+		"키로 묶고, 각 원소를 값으로 바꾼 뒤, 같은 키의 값을 합치는 한 번에 처리하는 메서드가 있다.",
+		"글자별 길이 합이라면: `ws.groupMapReduce(_.head)(_.length)(_ + _)`"
+	],
+	"notes": "`groupMapReduce(키)(값)(합치기)`는 `groupBy`, `map`, `reduce`를 한 번에 한다. `groupBy(identity).view.mapValues(_.size).toMap`으로도 쓸 수 있다."
+}

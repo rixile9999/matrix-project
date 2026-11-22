@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "recursion",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"tailrec",
+		"tailrec-loop",
+		"local-def"
+	],
 	"title": "콜라츠 단계 수",
 	"limitSec": 400,
 	"targets": [

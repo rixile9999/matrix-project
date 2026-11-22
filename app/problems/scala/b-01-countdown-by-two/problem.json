@@ -1,0 +1,27 @@
+{
+	"id": "b-01-countdown-by-two",
+	"order": 1,
+	"level": 1,
+	"topic": "syntax",
+	"kind": "write",
+	"refs": [
+		"range"
+	],
+	"title": "2씩 카운트다운",
+	"limitSec": 90,
+	"targets": [
+		"범위 by"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 `n`부터 0까지(0 포함) 2씩 줄여 가며 만든 리스트를 반환하라. 예: `countdown(7)`은 `List(7, 5, 3, 1)`이고, `n`이 음수면 빈 리스트다.",
+	"starter": "def countdown(n: Int): List[Int] =\n  ???\n",
+	"hints": [
+		"`to`와 `by`로 만드는 범위에서 간격을 음수로 줄 수 있다.",
+		"10부터 1까지 3씩 줄이는 범위라면: `(10 to 1 by -3).toList`는 `List(10, 7, 4, 1)`이다."
+	],
+	"notes": "`to`는 끝 값을 포함하고 `until`은 포함하지 않는다. `n until 0 by -2`로 쓰면 0이 빠져 짝수 입력에서 틀린다. 범위는 지연 컬렉션이 아니라 `Range`이므로 `List`가 필요하면 `.toList`를 붙인다."
+}

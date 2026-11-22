@@ -1,0 +1,57 @@
+[
+	{
+		"id": "extension",
+		"topic": "context",
+		"title": "extension 메서드",
+		"code": "extension (s: String)\n  def shout: String = s.toUpperCase + \"!\"\n  def vowels: Int = s.count(\"aeiou\".toSet)\n\"hi\".shout // => HI!\n\"banana\".vowels // => 3\nextension [A](xs: List[A]) def second: Option[A] = xs.drop(1).headOption\nList(1, 2, 3).second // => Some(2)",
+		"text": "`extension (값: 타입)` 아래에 메서드를 나열하면 기존 타입에 메서드를 붙인 것처럼 호출할 수 있다. 타입 매개변수는 `extension [A](xs: List[A])`처럼 앞에 둔다.",
+		"scala2": "`implicit class RichString(val s: String) extends AnyVal { def shout = ... }`로 썼다."
+	},
+	{
+		"id": "given-instance",
+		"topic": "context",
+		"title": "given 인스턴스",
+		"code": "trait Show[A]:\n  def show(a: A): String\ngiven Show[Int] with\n  def show(a: Int) = s\"#$a\"\ngiven listShow[A](using s: Show[A]): Show[List[A]] = xs => xs.map(s.show).mkString(\",\")\nsummon[Show[Int]].show(5) // => #5\nsummon[Show[List[Int]]].show(List(1, 2)) // => #1,#2",
+		"text": "`given 타입 with ...` 또는 `given 이름: 타입 = 값`으로 기본 인스턴스를 등록한다. 다른 given이 필요하면 `using` 절로 받고, 이름은 생략해도 된다.",
+		"scala2": "`implicit val`/`implicit def`/`implicit object`로 썼고, 조건부 인스턴스는 `implicit def ...(implicit s: Show[A])`였다."
+	},
+	{
+		"id": "using-clause",
+		"topic": "context",
+		"title": "using 절",
+		"code": "def sumAll[A](xs: List[A])(using n: Numeric[A]): A = xs.foldLeft(n.zero)(n.plus)\nsumAll(List(1, 2, 3)) // => 6\ngiven String = \"bo\"\ndef greet(using name: String): String = s\"hi $name\"\ngreet // => hi bo\ngreet(using \"al\") // => hi al",
+		"text": "`(using x: T)` 매개변수는 호출할 때 범위 안의 given에서 자동으로 채워진다. 직접 넘길 때는 `f(using 값)`처럼 `using`을 반드시 붙인다.",
+		"scala2": "`(implicit n: Numeric[A])`로 썼고 직접 넘길 때는 `using` 없이 `f(값)`이었다."
+	},
+	{
+		"id": "summon",
+		"topic": "context",
+		"title": "summon",
+		"code": "summon[Ordering[Int]].compare(1, 2) // => -1\nsummon[Ordering[Int]].max(3, 9) // => 9\nsummon[Numeric[Double]].zero // => 0.0\ngiven Int = 10\nsummon[Int] // => 10",
+		"text": "`summon[T]`는 범위 안에서 `T`에 해당하는 given 인스턴스를 꺼낸다. 없으면 컴파일 오류이다.",
+		"scala2": "`implicitly[T]`이다."
+	},
+	{
+		"id": "context-bound",
+		"topic": "context",
+		"title": "컨텍스트 바운드 [A: Ordering]",
+		"code": "def biggest[A: Ordering](xs: List[A]): A = xs.max\nbiggest(List(3, 9, 2)) // => 9\ndef smallest[A](xs: List[A])(using ord: Ordering[A]): A = xs.min\nsmallest(List(\"b\", \"a\")) // => a\ndef twice[A: Numeric](x: A): A = summon[Numeric[A]].plus(x, x)\ntwice(2.5) // => 5.0",
+		"text": "`[A: Ordering]`은 `(using Ordering[A])` 매개변수를 이름 없이 추가하는 축약이다. 인스턴스를 직접 쓰려면 `summon[Ordering[A]]`로 꺼낸다.",
+		"scala2": "문법은 같고 꺼낼 때만 `implicitly[Ordering[A]]`였다."
+	},
+	{
+		"id": "ordering",
+		"topic": "context",
+		"title": "Ordering.by · reverse · orElse",
+		"code": "case class P(name: String, age: Int)\nval ps = List(P(\"b\", 30), P(\"a\", 30), P(\"c\", 20))\nval byAge = Ordering.by[P, Int](_.age)\nps.sorted(byAge).map(_.name) // => List(c, b, a)\nps.sorted(byAge.reverse).map(_.name) // => List(b, a, c)\nps.sorted(byAge.orElse(Ordering.by(_.name))).map(_.name) // => List(c, a, b)\nps.sortBy(p => (-p.age, p.name)).map(_.name) // => List(a, b, c)",
+		"text": "`Ordering.by[T, K](키)`로 정렬 기준을 만들고 `reverse`로 뒤집고 `orElse`로 동점 기준을 잇는다. 정렬은 안정적이라 동점은 원래 순서를 유지한다."
+	},
+	{
+		"id": "typeclass",
+		"topic": "context",
+		"title": "타입 클래스 패턴",
+		"code": "trait Show[A]:\n  def show(a: A): String\nobject Show:\n  given Show[Int] = n => s\"Int($n)\"\n  given [A](using s: Show[A]): Show[List[A]] = xs => xs.map(s.show).mkString(\"[\", \",\", \"]\")\nextension [A](a: A)(using s: Show[A]) def show: String = s.show(a)\n5.show // => Int(5)\nList(1, 2).show // => [Int(1),Int(2)]",
+		"text": "`trait` + 동반 객체의 `given` + `extension`이 타입 클래스의 기본 틀이다. 동반 객체 안의 given은 import 없이도 자동으로 찾아진다.",
+		"scala2": "`implicit val`/`implicit def`를 동반 객체에 두고 `implicit class`로 문법을 붙였다."
+	}
+]

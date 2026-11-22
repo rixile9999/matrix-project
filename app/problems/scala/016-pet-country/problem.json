@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "errors",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"option-for",
+		"map-get",
+		"option-map"
+	],
 	"title": "반려동물의 나라 찾기",
 	"limitSec": 400,
 	"targets": [

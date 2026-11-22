@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "context",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"given-instance",
+		"using-clause",
+		"typeclass",
+		"foldleft"
+	],
 	"title": "Monoid given과 combineAll",
 	"limitSec": 600,
 	"targets": [

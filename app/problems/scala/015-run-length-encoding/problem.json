@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "recursion",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"recursion-list",
+		"takewhile-span",
+		"val-destructure",
+		"tailrec"
+	],
 	"title": "연속 문자 압축",
 	"limitSec": 500,
 	"targets": [

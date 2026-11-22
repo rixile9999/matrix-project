@@ -1,0 +1,29 @@
+{
+	"id": "b-06-is-sorted",
+	"order": 6,
+	"level": 1,
+	"topic": "collections",
+	"kind": "write",
+	"refs": [
+		"zip",
+		"exists-forall-count"
+	],
+	"title": "오름차순인지 검사",
+	"limitSec": 120,
+	"targets": [
+		"zip",
+		"forall"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 리스트 `xs`가 오름차순(같은 값이 이어져도 된다)으로 정렬되어 있으면 `true`를 반환하라. 비었거나 원소가 하나면 `true`다.",
+	"starter": "def isSorted(xs: List[Int]): Boolean =\n  ???\n",
+	"hints": [
+		"이웃한 두 원소를 짝지은 뒤 모든 짝이 조건을 만족하는지 확인한다.",
+		"모든 이웃 차이가 1인지 검사하는 경우라면: `xs.zip(xs.drop(1)).forall((a, b) => b - a == 1)`"
+	],
+	"notes": "`xs.zip(xs.drop(1))`은 `tail`과 달리 빈 리스트에서도 예외가 나지 않는다. `xs.sliding(2).forall(w => w(0) <= w(1))`도 되지만 원소가 하나일 때 창이 1개짜리가 되어 `w(1)`이 터지니 주의한다."
+}

@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "maps",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"groupmap",
+		"map-sort",
+		"sort",
+		"take-drop"
+	],
 	"title": "가장 많이 나온 단어 3개",
 	"limitSec": 500,
 	"targets": [

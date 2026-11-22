@@ -1,0 +1,29 @@
+{
+	"id": "b-20-sum-to",
+	"order": 20,
+	"level": 1,
+	"topic": "recursion",
+	"kind": "fix",
+	"refs": [
+		"tailrec",
+		"tailrec-loop"
+	],
+	"title": "1부터 n까지의 합",
+	"limitSec": 90,
+	"targets": [
+		"@tailrec",
+		"누산기"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`sumTo(n)`은 1부터 `n`까지의 합을 반환해야 하고 `n`이 0이면 0이다. 코드에 버그가 하나 있으니 고쳐라.",
+	"starter": "import scala.annotation.tailrec\n\ndef sumTo(n: Int): Int =\n  @tailrec def go(i: Int, acc: Int): Int =\n    if i >= n then acc else go(i + 1, acc + i)\n  go(1, 0)\n",
+	"hints": [
+		"꼬리 재귀의 종료 조건이 마지막 값까지 더한 뒤에 걸리는지, 그 전에 걸리는지 확인한다.",
+		"1부터 `n`까지 곱(팩토리얼)이라면: `if i > n then acc else go(i + 1, acc * i)`"
+	],
+	"notes": "누산기 재귀에서는 종료 조건이 `>`인지 `>=`인지에 따라 마지막 항이 빠져 한 칸 어긋난다. `n = 1`처럼 가장 작은 입력을 손으로 따라가 보면 바로 드러난다."
+}

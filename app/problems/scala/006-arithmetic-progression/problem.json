@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "collections",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"zip",
+		"take-drop",
+		"distinct",
+		"sliding-grouped"
+	],
 	"title": "등차수열 판별",
 	"limitSec": 400,
 	"targets": [

@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "recursion",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"tailrec",
+		"tailrec-loop",
+		"vector",
+		"local-def"
+	],
 	"title": "이진 탐색 하한",
 	"limitSec": 600,
 	"targets": [

@@ -1,0 +1,29 @@
+{
+	"id": "b-26-inc-double",
+	"order": 26,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"compose",
+		"hof"
+	],
+	"title": "더하고 곱하기, 곱하고 더하기",
+	"limitSec": 120,
+	"targets": [
+		"andThen",
+		"compose"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`inc`(1을 더함)와 `double`(2배)이 주어진다. `incThenDouble`은 먼저 1을 더하고 그다음 2배 하는 함수, `doubleThenInc`는 먼저 2배 하고 그다음 1을 더하는 함수다. 둘 다 `inc`와 `double`을 조합해 만들어라.",
+	"starter": "val inc: Int => Int = _ + 1\nval double: Int => Int = _ * 2\n\nval incThenDouble: Int => Int = ???\nval doubleThenInc: Int => Int = ???\n",
+	"hints": [
+		"함수끼리 이어 붙이는 메서드는 둘이고, 하나는 왼쪽부터 오른쪽으로, 다른 하나는 오른쪽부터 왼쪽으로 실행한다.",
+		"`inc` 후 `toString`이라면: `inc.andThen(_.toString)`이고, 같은 일을 `((x: Int) => x.toString).compose(inc)`로도 쓴다."
+	],
+	"notes": "`f.andThen(g)`는 `g(f(x))`이고 `f.compose(g)`는 `f(g(x))`라서 읽는 순서가 반대다. `andThen`과 `compose`는 `Function1`의 메서드라서 `def`로 만든 메서드에는 바로 붙일 수 없고 함수 값이어야 한다."
+}

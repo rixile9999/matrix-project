@@ -1,0 +1,28 @@
+{
+	"id": "b-10-key-of-max",
+	"order": 10,
+	"level": 1,
+	"topic": "maps",
+	"kind": "write",
+	"refs": [
+		"map-get",
+		"sum-min-max"
+	],
+	"title": "최댓값을 가진 키",
+	"limitSec": 100,
+	"targets": [
+		"maxByOption"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`Map[String, Int]`에서 값이 가장 큰 항목의 키를 `Option[String]`으로 반환하라. 빈 `Map`이면 `None`이다.",
+	"starter": "def keyOfMax(m: Map[String, Int]): Option[String] =\n  ???\n",
+	"hints": [
+		"`Map`도 (키, 값) 쌍의 컬렉션이라 기준을 주고 최대를 찾는 메서드를 쓸 수 있다. 빈 경우를 `Option`으로 돌려주는 버전을 고른다.",
+		"값이 가장 작은 항목의 값만 꺼내는 경우라면: `m.minByOption(_._2).map(_._2)`"
+	],
+	"notes": "`maxBy`는 빈 컬렉션에서 예외를 던지고 `maxByOption`은 `None`을 준다. `m.keys.maxOption`은 값이 아니라 키의 최댓값이므로 헷갈리지 않게 한다."
+}

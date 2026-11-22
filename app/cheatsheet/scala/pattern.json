@@ -1,0 +1,81 @@
+[
+	{
+		"id": "match-basic",
+		"topic": "pattern",
+		"title": "값과 와일드카드",
+		"code": "def name(n: Int) = n match\n  case 0 => \"zero\"\n  case _ => \"other\"\nname(0) // => zero\nname(9) // => other\nval five = 5\ndef f(x: Int) = x match\n  case `five` => \"five\"\n  case other => s\"got $other\"\nf(5) // => five\nf(7) // => got 7",
+		"text": "소문자 이름은 새 변수를 바인딩하므로 기존 값과 비교하려면 백틱(`` `five` ``)이나 대문자 상수를 쓴다. `_`는 값을 버리고, 이름을 쓰면 값을 받는다."
+	},
+	{
+		"id": "match-guard",
+		"topic": "pattern",
+		"title": "가드 if",
+		"code": "def sign(n: Int) = n match\n  case 0 => \"zero\"\n  case x if x < 0 => \"neg\"\n  case _ => \"pos\"\nsign(-4) // => neg\nsign(0) // => zero\nsign(9) // => pos\n(5: Any) match { case i: Int if i > 3 => \"big\"; case _ => \"small\" } // => big",
+		"text": "`case 패턴 if 조건 =>`으로 패턴이 맞은 뒤 조건을 더 건다. 가드가 거짓이면 다음 `case`로 넘어가고 모두 실패하면 `MatchError`이다."
+	},
+	{
+		"id": "match-list",
+		"topic": "pattern",
+		"title": "리스트 패턴 :: · Nil",
+		"code": "def sum(xs: List[Int]): Int = xs match\n  case Nil => 0\n  case h :: t => h + sum(t)\nsum(List(1, 2, 3)) // => 6\nList(1, 2, 3) match { case a :: b :: rest => (a, b, rest); case _ => (0, 0, Nil) } // => (1,2,List(3))\nList(1, 2) match { case List(a, b) => a + b; case _ => -1 } // => 3\nList(1, 2, 3) match { case List(first, _*) => first; case _ => 0 } // => 1",
+		"text": "`h :: t`는 머리와 꼬리, `Nil`은 빈 리스트이며 `List(a, b)`는 길이가 정확히 2일 때만 맞는다. 나머지를 무시하려면 `_*`를 쓴다."
+	},
+	{
+		"id": "match-tuple",
+		"topic": "pattern",
+		"title": "튜플 패턴",
+		"code": "def fizz(n: Int) = (n % 3, n % 5) match\n  case (0, 0) => \"FizzBuzz\"\n  case (0, _) => \"Fizz\"\n  case (_, 0) => \"Buzz\"\n  case _ => n.toString\nfizz(15) // => FizzBuzz\nfizz(9) // => Fizz\nfizz(7) // => 7\n(1, \"a\") match { case (n, s) if n > 0 => s * n; case _ => \"\" } // => a",
+		"text": "여러 값을 튜플로 묶어 한 번에 매칭하면 `if`/`else` 사슬이 깔끔해진다. 위에서부터 평가하므로 구체적인 패턴을 먼저 둔다."
+	},
+	{
+		"id": "match-case-class",
+		"topic": "pattern",
+		"title": "case class 분해",
+		"code": "sealed trait Shape\ncase class Circle(r: Double) extends Shape\ncase class Rect(w: Double, h: Double) extends Shape\ndef area(s: Shape) = s match\n  case Circle(r) => 3 * r * r\n  case Rect(w, h) => w * h\narea(Rect(2, 3)) // => 6.0\narea(Circle(1)) // => 3.0\nSome(Rect(1, 2)) match { case Some(Rect(w, _)) => w; case _ => 0.0 } // => 1.0",
+		"text": "`case class`는 `unapply`가 자동으로 생겨 `Circle(r)`처럼 필드를 바로 분해하고 중첩도 된다. `sealed`로 선언하면 빠뜨린 경우를 컴파일러가 경고해 준다."
+	},
+	{
+		"id": "match-alternatives",
+		"topic": "pattern",
+		"title": "여러 값 묶기 |",
+		"code": "def kind(c: Char) = c match\n  case 'a' | 'e' | 'i' | 'o' | 'u' => \"vowel\"\n  case ' ' => \"space\"\n  case _ => \"other\"\nkind('e') // => vowel\nkind('z') // => other\n(3 match { case 1 | 2 | 3 => \"low\"; case _ => \"high\" }) // => low\nList(2, 9) match { case (1 | 2) :: _ => \"starts 1 or 2\"; case _ => \"no\" } // => starts 1 or 2",
+		"text": "`|`로 여러 패턴을 한 `case`에 묶으며 안쪽 패턴에도 괄호로 묶어 쓸 수 있다. 대안 패턴 안에서는 변수를 바인딩할 수 없다(`@`로 바깥에서 받는다)."
+	},
+	{
+		"id": "match-bind",
+		"topic": "pattern",
+		"title": "이름 붙이기 @",
+		"code": "List(1, 2, 3) match { case all @ (h :: _) => (h, all.size); case _ => (0, 0) } // => (1,3)\nSome(5) match { case Some(n @ (1 | 5)) => n * 2; case _ => 0 } // => 10\ndef f(x: Int) = x match\n  case n @ (1 | 2) => s\"low $n\"\n  case n => s\"other $n\"\nf(2) // => low 2\nf(7) // => other 7",
+		"text": "`이름 @ 패턴`은 패턴이 맞은 값 전체(또는 일부)에 이름을 붙인다. 대안 `|`와 함께 쓰면 어느 값이 맞았는지 알 수 있다."
+	},
+	{
+		"id": "match-type",
+		"topic": "pattern",
+		"title": "타입 패턴",
+		"code": "def show(x: Any) = x match\n  case i: Int => s\"int $i\"\n  case s: String => s\"str $s\"\n  case l: List[?] => s\"list ${l.size}\"\n  case _ => \"other\"\nshow(1) // => int 1\nshow(\"a\") // => str a\nshow(List(1, 2)) // => list 2\nshow(2.5) // => other",
+		"text": "`이름: 타입`으로 런타임 타입을 검사하면서 그 타입으로 좁혀 쓸 수 있다. 타입 인자는 지워지므로 `List[Int]`가 아니라 `List[?]`로 쓴다.",
+		"scala2": "타입 인자 와일드카드는 `List[_]`이고 Scala 3에서는 `List[?]`를 권장한다."
+	},
+	{
+		"id": "match-option",
+		"topic": "pattern",
+		"title": "Option 패턴",
+		"code": "def f(o: Option[Int]) = o match\n  case Some(n) if n > 0 => s\"pos $n\"\n  case Some(_) => \"non-pos\"\n  case None => \"none\"\nf(Some(3)) // => pos 3\nf(Some(-1)) // => non-pos\nf(None) // => none\n(Some(1), None) match { case (Some(a), None) => a; case _ => 0 } // => 1",
+		"text": "`Some(x)`와 `None` 두 경우를 모두 다뤄야 컴파일러가 경고하지 않는다. 단순한 변환이면 `match`보다 `map`/`getOrElse`가 짧다."
+	},
+	{
+		"id": "case-lambda",
+		"topic": "pattern",
+		"title": "{ case … } 함수 리터럴",
+		"code": "val ps = List((1, \"a\"), (2, \"b\"))\nps.map { case (n, s) => s\"$n$s\" } // => List(1a, 2b)\nps.map((n, s) => s\"$n$s\") // => List(1a, 2b)\nList(Some(1), None).map { case Some(x) => x; case None => 0 } // => List(1, 0)\nval f: PartialFunction[Int, String] = { case 1 => \"one\" }\nf.isDefinedAt(2) // => false\nList(1, 2).collect { case 1 => \"x\" } // => List(x)",
+		"text": "`{ case … }`는 인자를 패턴으로 분해하는 함수 리터럴이며 `collect`에 넣으면 부분 함수로 쓰인다. 튜플만 분해하는 거라면 Scala 3에서는 `(a, b) => …`로 충분하다.",
+		"scala2": "튜플 분해는 반드시 `{ case (a, b) => … }`로 써야 한다."
+	},
+	{
+		"id": "val-destructure",
+		"topic": "pattern",
+		"title": "val 분해 대입",
+		"code": "val (a, b) = (1, \"x\")\na // => 1\nval List(x, y) = List(7, 8)\nx + y // => 15\ncase class P(x: Int, y: Int)\nval P(px, py) = P(3, 4)\npx + py // => 7\nval (evens, odds) = (1 to 6).partition(_ % 2 == 0)\nevens // => Vector(2, 4, 6)",
+		"text": "`val` 왼쪽에 패턴을 쓰면 튜플, 리스트, `case class`를 한 번에 분해한다. 리스트처럼 맞지 않을 수 있는 패턴은 런타임에 `MatchError`가 날 수 있다."
+	}
+]

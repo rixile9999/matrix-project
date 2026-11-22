@@ -1,0 +1,144 @@
+[
+	{
+		"id": "list-build",
+		"topic": "collections",
+		"title": "List 만들기: :: · ++ · :+",
+		"code": "val xs = List(1, 2)\n0 :: xs // => List(0, 1, 2)\n0 +: xs // => List(0, 1, 2)\nxs :+ 3 // => List(1, 2, 3)\nxs ++ List(3, 4) // => List(1, 2, 3, 4)\nList.empty[Int] // => List()\n1 :: 2 :: Nil // => List(1, 2)",
+		"text": "`::`는 앞에 붙이는 O(1) 연산이고 `:+`는 뒤에 붙이는 O(n) 연산이다. 콜론이 컬렉션 쪽을 가리킨다고 기억한다(`x :: xs`, `xs :+ x`)."
+	},
+	{
+		"id": "map",
+		"topic": "collections",
+		"title": "map",
+		"code": "val xs = List(1, 2, 3)\nxs.map(_ * 2) // => List(2, 4, 6)\nxs.map(x => (x, x * x)) // => List((1,1), (2,4), (3,9))\nList((1, 2), (3, 4)).map((a, b) => a + b) // => List(3, 7)\nxs.map(_.toString + \"!\") // => List(1!, 2!, 3!)",
+		"text": "각 원소에 함수를 적용해 같은 길이의 새 컬렉션을 만든다. 튜플 리스트는 `(a, b) => …`로 바로 분해한다.",
+		"scala2": "튜플 분해 람다가 없어 `.map { case (a, b) => a + b }`로 써야 한다."
+	},
+	{
+		"id": "filter",
+		"topic": "collections",
+		"title": "filter · filterNot",
+		"code": "val xs = List(1, 2, 3, 4, 5)\nxs.filter(_ % 2 == 1) // => List(1, 3, 5)\nxs.filterNot(_ > 2) // => List(1, 2)\nxs.filter(_ > 9) // => List()\nxs.withFilter(_ > 3).map(_ * 10) // => List(40, 50)",
+		"text": "조건이 참인 원소만 남기고 `filterNot`은 반대로 거른다. 걸러내는 것은 안 되는 원소가 아니라 조건에 맞는 원소를 남기는 것임에 주의한다."
+	},
+	{
+		"id": "flatmap",
+		"topic": "collections",
+		"title": "flatMap · flatten",
+		"code": "val xs = List(1, 2, 3)\nxs.flatMap(x => List(x, x * 10)) // => List(1, 10, 2, 20, 3, 30)\nList(List(1), Nil, List(2, 3)).flatten // => List(1, 2, 3)\nxs.flatMap(x => if x > 1 then Some(x) else None) // => List(2, 3)\n\"ab\".flatMap(c => s\"$c$c\") // => aabb",
+		"text": "`map` 뒤 `flatten`과 같으며 `Option`을 돌려주는 함수를 넣으면 `None`이 걸러지는 필터처럼 쓸 수 있다. `flatten`은 원소가 컬렉션(또는 `Option`)일 때만 컴파일된다."
+	},
+	{
+		"id": "collect",
+		"topic": "collections",
+		"title": "collect",
+		"code": "val xs = List(1, 2, 3, 4)\nxs.collect { case x if x % 2 == 0 => x * 10 } // => List(20, 40)\nList(Some(1), None, Some(3)).collect { case Some(v) => v } // => List(1, 3)\nList(1, \"a\", 2).collect { case i: Int => i } // => List(1, 2)\nxs.collectFirst { case x if x > 2 => x * 100 } // => Some(300)",
+		"text": "부분 함수가 정의된 원소만 변환해 `filter`와 `map`을 한 번에 한다. 첫 하나만 필요하면 `collectFirst`가 `Option`을 돌려준다."
+	},
+	{
+		"id": "zip",
+		"topic": "collections",
+		"title": "zip · zipWithIndex · unzip",
+		"code": "val a = List(1, 2, 3)\nval b = List(\"x\", \"y\")\na.zip(b) // => List((1,x), (2,y))\na.zipWithIndex // => List((1,0), (2,1), (3,2))\nList((1, \"x\"), (2, \"y\")).unzip // => (List(1, 2),List(x, y))\na.zip(a.tail).map((p, q) => q - p) // => List(1, 1)\na.zipAll(b, 0, \"-\") // => List((1,x), (2,y), (3,-))",
+		"text": "`zip`은 짧은 쪽에 맞춰 자르고, 긴 쪽까지 채우려면 `zipAll`을 쓴다. `zipWithIndex`는 `(원소, 인덱스)` 순서이다."
+	},
+	{
+		"id": "sliding-grouped",
+		"topic": "collections",
+		"title": "sliding · grouped",
+		"code": "val xs = List(1, 2, 3, 4, 5)\nxs.sliding(2).toList // => List(List(1, 2), List(2, 3), List(3, 4), List(4, 5))\nxs.sliding(3, 2).toList // => List(List(1, 2, 3), List(3, 4, 5))\nxs.grouped(2).toList // => List(List(1, 2), List(3, 4), List(5))\nList(1).sliding(2).toList // => List(List(1))",
+		"text": "`sliding(n)`은 한 칸씩 밀리는 창, `grouped(n)`은 겹치지 않는 묶음이며 둘 다 `Iterator`를 돌려주므로 `.toList`가 필요하다. 원소가 창보다 적으면 `sliding`은 짧은 창 하나를 낸다."
+	},
+	{
+		"id": "take-drop",
+		"topic": "collections",
+		"title": "take · drop · slice",
+		"code": "val xs = List(1, 2, 3, 4, 5)\nxs.take(2) // => List(1, 2)\nxs.drop(2) // => List(3, 4, 5)\nxs.slice(1, 3) // => List(2, 3)\nxs.takeRight(2) // => List(4, 5)\nxs.dropRight(2) // => List(1, 2, 3)\nxs.take(99) // => List(1, 2, 3, 4, 5)\nxs.splitAt(2) // => (List(1, 2),List(3, 4, 5))",
+		"text": "범위를 벗어나도 예외 없이 가능한 만큼만 돌려준다. `slice(from, until)`은 끝 인덱스를 포함하지 않는다."
+	},
+	{
+		"id": "takewhile-span",
+		"topic": "collections",
+		"title": "takeWhile · dropWhile · span",
+		"code": "val xs = List(1, 2, 5, 1)\nxs.takeWhile(_ < 3) // => List(1, 2)\nxs.dropWhile(_ < 3) // => List(5, 1)\nxs.span(_ < 3) // => (List(1, 2),List(5, 1))\nxs.filter(_ < 3) // => List(1, 2, 1)",
+		"text": "처음으로 조건이 깨지는 곳에서 멈춘다. `span`은 `(takeWhile, dropWhile)`을 한 번에 얻고, 전체를 거르는 `filter`와 결과가 다르다."
+	},
+	{
+		"id": "partition",
+		"topic": "collections",
+		"title": "partition",
+		"code": "val xs = List(1, 2, 3, 4)\nxs.partition(_ % 2 == 0) // => (List(2, 4),List(1, 3))\nval (ev, od) = xs.partition(_ % 2 == 0)\nev // => List(2, 4)\nList(1, 2).partition(_ > 5) // => (List(),List(1, 2))\nxs.partitionMap(x => if x > 2 then Right(x) else Left(x)) // => (List(1, 2),List(3, 4))",
+		"text": "조건을 만족하는 쪽이 튜플의 첫 번째이다. 나누면서 변환까지 하려면 `Either`를 돌려주는 `partitionMap`을 쓴다."
+	},
+	{
+		"id": "distinct",
+		"topic": "collections",
+		"title": "distinct · distinctBy",
+		"code": "val xs = List(3, 1, 3, 2, 1)\nxs.distinct // => List(3, 1, 2)\nList(\"a\", \"bb\", \"c\", \"dd\").distinctBy(_.length) // => List(a, bb)\nxs.sorted.distinct // => List(1, 2, 3)\nxs.toSet.size // => 3",
+		"text": "처음 나온 순서를 유지하며 중복을 없앤다. `toSet`은 순서를 보장하지 않으니 순서가 필요하면 `distinct`를 쓴다."
+	},
+	{
+		"id": "sum-min-max",
+		"topic": "collections",
+		"title": "sum · min · max · minBy · maxBy",
+		"code": "val xs = List(3, 1, 2)\nxs.sum // => 6\nxs.min // => 1\nList(\"aa\", \"b\", \"cc\").maxBy(_.length) // => aa\nList(\"aa\", \"b\", \"cc\").minBy(_.length) // => b\nList.empty[Int].sum // => 0\nList.empty[Int].maxOption // => None",
+		"text": "빈 컬렉션에서 `sum`은 0이지만 `min`/`max`/`maxBy`는 예외를 던지므로 비어 있을 수 있으면 `minOption`/`maxOption`을 쓴다. 동점이면 `maxBy`와 `minBy` 모두 먼저 나온 원소를 돌려준다."
+	},
+	{
+		"id": "exists-forall-count",
+		"topic": "collections",
+		"title": "exists · forall · count",
+		"code": "val xs = List(1, 2, 3, 4)\nxs.exists(_ > 3) // => true\nxs.forall(_ > 0) // => true\nxs.count(_ % 2 == 0) // => 2\nList.empty[Int].exists(_ > 0) // => false\nList.empty[Int].forall(_ > 0) // => true",
+		"text": "빈 컬렉션에서 `exists`는 `false`, `forall`은 `true`이다. `count`는 조건 없이 개수를 세는 `size`와 달리 조건을 받는다."
+	},
+	{
+		"id": "find-index",
+		"topic": "collections",
+		"title": "find · indexWhere · indexOf",
+		"code": "val xs = List(5, 7, 9, 7)\nxs.find(_ > 5) // => Some(7)\nxs.find(_ > 9) // => None\nxs.indexWhere(_ > 5) // => 1\nxs.indexOf(7) // => 1\nxs.lastIndexOf(7) // => 3\nxs.indexOf(42) // => -1",
+		"text": "`find`는 `Option`으로 원소를, `indexWhere`/`indexOf`는 인덱스를 돌려준다. 못 찾으면 인덱스 계열은 `Option`이 아니라 `-1`이다."
+	},
+	{
+		"id": "sort",
+		"topic": "collections",
+		"title": "sorted · sortBy · sortWith",
+		"code": "val xs = List(3, 1, 2)\nxs.sorted // => List(1, 2, 3)\nxs.sorted(using Ordering[Int].reverse) // => List(3, 2, 1)\nval ws = List(\"bb\", \"a\", \"ccc\")\nws.sortBy(_.length) // => List(a, bb, ccc)\nws.sortBy(w => -w.length) // => List(ccc, bb, a)\nws.sortWith((a, b) => a > b) // => List(ccc, bb, a)\nList((2, \"b\"), (1, \"z\"), (1, \"a\")).sortBy((n, s) => (-n, s)) // => List((2,b), (1,a), (1,z))",
+		"text": "`sorted`는 기본 순서, `sortBy`는 키, `sortWith`는 비교 함수로 정렬하며 모두 안정 정렬이다. 여러 기준은 튜플 키로 만들고 내림차순은 숫자면 부호를 바꾼다.",
+		"scala2": "`using`이 없어 `xs.sorted(Ordering[Int].reverse)`로 명시한다."
+	},
+	{
+		"id": "head-tail",
+		"topic": "collections",
+		"title": "head · tail · last · headOption",
+		"code": "val xs = List(1, 2, 3)\nxs.head // => 1\nxs.tail // => List(2, 3)\nxs.last // => 3\nxs.init // => List(1, 2)\nxs.headOption // => Some(1)\nList.empty[Int].headOption // => None\nxs.lastOption // => Some(3)",
+		"text": "`init`은 마지막을 뺀 나머지이다. 빈 리스트에 `head`/`last`/`tail`을 부르면 예외가 나므로 비어 있을 수 있으면 `headOption`을 쓴다."
+	},
+	{
+		"id": "mkstring",
+		"topic": "collections",
+		"title": "mkString",
+		"code": "val xs = List(1, 2, 3)\nxs.mkString // => 123\nxs.mkString(\",\") // => 1,2,3\nxs.mkString(\"[\", \", \", \"]\") // => [1, 2, 3]\nList.empty[Int].mkString(\"[\", \",\", \"]\") // => []",
+		"text": "구분자만, 또는 `(앞, 구분자, 뒤)` 세 개를 줄 수 있다. 원소가 문자열이 아니어도 `toString`으로 이어 붙인다."
+	},
+	{
+		"id": "tabulate-fill",
+		"topic": "collections",
+		"title": "tabulate · fill",
+		"code": "List.tabulate(4)(i => i * i) // => List(0, 1, 4, 9)\nList.fill(3)(\"a\") // => List(a, a, a)\nList.fill(2)(List.fill(2)(0)) // => List(List(0, 0), List(0, 0))\nList.tabulate(2, 3)((r, c) => r * 3 + c) // => List(List(0, 1, 2), List(3, 4, 5))\nVector.fill(0)(1) // => Vector()",
+		"text": "`tabulate`는 인덱스로 값을 만들고 `fill`은 같은 값을 반복한다. 2차원은 `tabulate(행, 열)(…)`로 만들며 `fill(n)(식)`의 식은 원소마다 다시 평가되는 이름에 의한 호출이다."
+	},
+	{
+		"id": "vector",
+		"topic": "collections",
+		"title": "Vector와 updated",
+		"code": "val v = Vector(1, 2, 3)\nv(1) // => 2\nv.updated(1, 9) // => Vector(1, 9, 3)\nv :+ 4 // => Vector(1, 2, 3, 4)\n0 +: v // => Vector(0, 1, 2, 3)\nv.lift(5) // => None\nv.length // => 3",
+		"text": "`Vector`는 인덱스 접근과 `updated`가 사실상 상수 시간이고 원본은 바뀌지 않는다. 범위를 벗어난 `v(i)`는 예외이므로 `lift(i)`로 `Option`을 받는다."
+	},
+	{
+		"id": "reverse-contains",
+		"topic": "collections",
+		"title": "reverse · contains · isEmpty",
+		"code": "val xs = List(1, 2, 3)\nxs.reverse // => List(3, 2, 1)\nxs.contains(2) // => true\nxs.isEmpty // => false\nxs.nonEmpty // => true\nxs == List(1, 2, 3) // => true\n\"abba\".reverse == \"abba\" // => true",
+		"text": "컬렉션의 `==`는 내용을 비교하므로 `List`끼리는 원소가 같으면 참이다. `reverse`는 새 컬렉션을 만들고 문자열에도 쓸 수 있다."
+	}
+]

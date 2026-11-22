@@ -1,0 +1,72 @@
+[
+	{
+		"id": "option-create",
+		"topic": "errors",
+		"title": "Option 만들기",
+		"code": "Some(3) // => Some(3)\nOption(5) // => Some(5)\nOption.empty[Int] // => None\nOption.when(2 > 1)(\"ok\") // => Some(ok)",
+		"text": "값이 있으면 `Some(x)`, 없으면 `None`이다. 조건부로 만들 때는 `Option.when(cond)(value)`를 쓴다."
+	},
+	{
+		"id": "option-map",
+		"topic": "errors",
+		"title": "Option의 map · flatMap · filter",
+		"code": "val o = Some(4)\no.map(_ * 2) // => Some(8)\no.flatMap(x => if x > 3 then Some(x) else None) // => Some(4)\no.filter(_ > 5) // => None\no.collect { case x if x % 2 == 0 => x / 2 } // => Some(2)",
+		"text": "`map`은 값이 있을 때만 변환하고 `None`은 그대로 둔다. 변환 함수가 `Option`을 돌려주면 `map`이 아니라 `flatMap`을 쓴다."
+	},
+	{
+		"id": "option-get",
+		"topic": "errors",
+		"title": "꺼내기: getOrElse · fold · orElse",
+		"code": "val o: Option[Int] = Some(3)\nval n: Option[Int] = None\nn.getOrElse(0) // => 0\nn.orElse(Some(9)) // => Some(9)\no.fold(\"none\")(x => s\"v$x\") // => v3\nn.fold(\"none\")(x => s\"v$x\") // => none\no.contains(3) // => true",
+		"text": "`fold(없을 때 값)(있을 때 함수)` 순서이며 첫 인자가 `None`용이다. `.get`은 `None`에서 예외를 던지므로 피한다."
+	},
+	{
+		"id": "option-for",
+		"topic": "errors",
+		"title": "Option을 for로 잇기",
+		"code": "def half(x: Int): Option[Int] = if x % 2 == 0 then Some(x / 2) else None\nval r = for a <- half(8); b <- half(a) yield a + b // => Some(6)\nval r2 = for a <- half(3); b <- half(a) yield b // => None\nval r3 = for a <- half(8) if a > 10 yield a // => None",
+		"text": "중간에 하나라도 `None`이면 전체가 `None`이 된다. `if` 가드도 쓸 수 있고, 조건이 거짓이면 `None`이다."
+	},
+	{
+		"id": "option-collections",
+		"topic": "errors",
+		"title": "컬렉션 속 Option: flatten · flatMap",
+		"code": "val xs = List(Some(1), None, Some(3))\nxs.flatten // => List(1, 3)\nList(\"1\", \"x\", \"3\").flatMap(_.toIntOption) // => List(1, 3)\nxs.collect { case Some(x) => x * 10 } // => List(10, 30)",
+		"text": "컬렉션의 `flatMap`/`flatten`은 `Option`을 0개 또는 1개짜리 컬렉션처럼 취급해 `None`을 버린다. 파싱 실패를 걸러낼 때 `flatMap(_.toIntOption)`이 가장 짧다."
+	},
+	{
+		"id": "to-int-option",
+		"topic": "errors",
+		"title": "toIntOption · toDoubleOption",
+		"code": "\"42\".toIntOption // => Some(42)\n\"4x\".toIntOption // => None\n\"3.5\".toDoubleOption // => Some(3.5)\n\"12\".toLongOption // => Some(12)\n\"true\".toBooleanOption // => Some(true)",
+		"text": "예외 없이 파싱하려면 `toInt` 대신 `toIntOption`을 쓴다. 앞뒤 공백이 있으면 `None`이 되므로 필요하면 `trim`을 먼저 한다."
+	},
+	{
+		"id": "either-basic",
+		"topic": "errors",
+		"title": "Either: Left · Right",
+		"code": "val ok: Either[String, Int] = Right(3) // => Right(3)\nval bad: Either[String, Int] = Left(\"neg\") // => Left(neg)\nok.map(_ + 1) // => Right(4)\nbad.map(_ + 1) // => Left(neg)\nbad.getOrElse(0) // => 0\nok.fold(e => e.length, n => n * 10) // => 30",
+		"text": "`Right`가 정상, `Left`가 실패이며 `map`/`flatMap`은 `Right`에만 적용된다. `fold(왼쪽 함수, 오른쪽 함수)` 순서이다."
+	},
+	{
+		"id": "either-for",
+		"topic": "errors",
+		"title": "Either를 for로 잇기",
+		"code": "def pos(n: Int): Either[String, Int] = if n > 0 then Right(n) else Left(s\"bad $n\")\nval r = for a <- pos(2); b <- pos(3) yield a + b // => Right(5)\nval e = for a <- pos(2); b <- pos(-1) yield a + b // => Left(bad -1)\nList(1, -2, 3).map(pos).partitionMap(identity) // => (List(bad -2),List(1, 3))",
+		"text": "처음 만나는 `Left`에서 멈추고 그 값이 결과가 된다. 실패와 성공을 모두 모으려면 `partitionMap(identity)`로 나눈다."
+	},
+	{
+		"id": "either-convert",
+		"topic": "errors",
+		"title": "변환: toRight · toOption · left.map",
+		"code": "val e: Either[String, Int] = Right(3)\nSome(3).toRight(\"none\") // => Right(3)\nNone.toRight(\"none\") // => Left(none)\ne.toOption // => Some(3)\ne.swap // => Left(3)\nLeft(\"abc\").left.map(_.length) // => Left(3)",
+		"text": "`Option`에서 `Either`로는 `toRight(왼쪽 값)`, 반대는 `toOption`이다. `Left` 쪽을 변환하려면 `.left.map`을 쓴다."
+	},
+	{
+		"id": "try-basic",
+		"topic": "errors",
+		"title": "Try · toOption · toEither · recover",
+		"code": "import scala.util.Try\nTry(\"12\".toInt) // => Success(12)\nTry(\"x\".toInt) // => Failure(java.lang.NumberFormatException: For input string: \"x\")\nTry(\"x\".toInt).toOption // => None\nTry(\"x\".toInt).recover { case _: NumberFormatException => -1 } // => Success(-1)\nTry(\"12\".toInt).toEither // => Right(12)",
+		"text": "예외를 던지는 코드를 `Try(...)`로 감싸면 `Success`/`Failure` 값이 된다. `recover`는 `{ case ... }` 부분 함수를 받으며 `Failure`만 처리한다."
+	}
+]

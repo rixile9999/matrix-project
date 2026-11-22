@@ -1,0 +1,29 @@
+{
+	"id": "b-25-weight-union",
+	"order": 25,
+	"level": 1,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"union-type",
+		"match-type"
+	],
+	"title": "Int 또는 String의 무게",
+	"limitSec": 120,
+	"targets": [
+		"union 타입",
+		"타입 패턴"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`x`는 `Int` 또는 `String`이다. `Int`이면 그 값 자체를, `String`이면 그 길이를 반환하라.",
+	"starter": "def weight(x: Int | String): Int =\n  ???\n",
+	"hints": [
+		"`A | B` 타입의 값은 `match`의 타입 패턴으로 어느 쪽인지 갈라 처리한다.",
+		"`Boolean | Int`를 문자열로 바꾸는 경우라면: `case b: Boolean => if b then \"참\" else \"거짓\"`과 `case n: Int => n.toString`"
+	],
+	"notes": "`case n: Int =>`는 값의 실제 타입을 검사하고 그 안에서는 `n`이 `Int`로 좁혀진다. union 타입은 Scala 3 문법이며, Scala 2에서는 `Either`나 `sealed trait`로 흉내 냈다."
+}

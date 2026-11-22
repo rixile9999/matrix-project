@@ -1,0 +1,28 @@
+{
+	"id": "b-29-truncate-ext",
+	"order": 29,
+	"level": 1,
+	"topic": "context",
+	"kind": "write",
+	"refs": [
+		"extension",
+		"string-ops"
+	],
+	"title": "말줄임 확장 메서드",
+	"limitSec": 120,
+	"targets": [
+		"extension"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`String`에 `truncate(n)` 확장 메서드를 만들어라. 길이가 `n` 이하면 그대로, 넘으면 앞 `n - 1`글자 뒤에 `\"…\"`를 붙여 길이 `n`으로 만든다. `n >= 1`이다.",
+	"starter": "extension (s: String)\n  def truncate(n: Int): String =\n    ???\n",
+	"hints": [
+		"기존 타입에 메서드를 덧붙이려면 `extension (s: 타입)` 아래에 `def`를 들여쓴다.",
+		"문자열을 `k`번 반복하는 경우라면: `extension (s: String)` 아래에 `def times(k: Int): String = s * k`를 쓴다."
+	],
+	"notes": "`extension` 블록은 Scala 2의 `implicit class`를 대체하며 호출은 `\"hello\".truncate(3)`처럼 일반 메서드 같다. 같은 이름의 진짜 멤버가 있으면 그것이 먼저 선택된다."
+}

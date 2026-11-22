@@ -4,7 +4,11 @@
 	"level": 2,
 	"topic": "context",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"extension",
+		"string-chars",
+		"exists-forall-count"
+	],
 	"title": "회문 확장 메서드",
 	"limitSec": 400,
 	"targets": [

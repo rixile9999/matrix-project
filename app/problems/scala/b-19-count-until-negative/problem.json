@@ -1,0 +1,29 @@
+{
+	"id": "b-19-count-until-negative",
+	"order": 19,
+	"level": 1,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [
+		"recursion-list",
+		"match-guard"
+	],
+	"title": "음수 앞까지 세기",
+	"limitSec": 90,
+	"targets": [
+		"리스트 재귀",
+		"가드"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 리스트 `xs`에서 처음 음수가 나오기 전까지의 원소 개수를 반환하라. 음수가 없으면 전체 개수다. 재귀로 풀어라.",
+	"starter": "def countUntilNegative(xs: List[Int]): Int =\n  ???\n",
+	"hints": [
+		"리스트를 `match`로 머리와 꼬리로 나누고, 머리가 조건을 만족할 때만 꼬리로 재귀한다.",
+		"처음 0이 나오기 전까지의 합이라면: `case x :: t if x != 0 => x + f(t)`와 `case _ => 0`"
+	],
+	"notes": "`case x :: t if x >= 0 =>`처럼 가드를 붙이면 조건을 벗어난 경우는 뒤의 `case _`로 흘러가 재귀가 멈춘다. 이 형태는 꼬리 재귀가 아니라서 아주 긴 리스트에서는 스택을 쓴다."
+}

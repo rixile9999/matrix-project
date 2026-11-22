@@ -1,0 +1,29 @@
+{
+	"id": "b-23-deposit",
+	"order": 23,
+	"level": 1,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"case-class",
+		"companion"
+	],
+	"title": "입금해도 나머지는 그대로",
+	"limitSec": 90,
+	"targets": [
+		"case class",
+		"copy"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`Account`가 주어진다. `deposit(a, amount)`는 `balance`만 `amount`만큼 늘린 새 `Account`를 반환하고 `owner`와 `active`는 그대로 둔다.",
+	"starter": "case class Account(owner: String, balance: Int, active: Boolean)\n\ndef deposit(a: Account, amount: Int): Account =\n  ???\n",
+	"hints": [
+		"`case class`는 일부 필드만 바꾼 복사본을 만드는 메서드를 공짜로 준다.",
+		"이름만 바꾸는 경우라면: `p.copy(name = \"새 이름\")`"
+	],
+	"notes": "`copy(balance = ...)`는 이름 붙인 인자로 바꿀 필드만 지정하고 나머지는 원본에서 가져온다. 필드가 늘어나도 호출하는 코드를 고칠 필요가 없다는 것이 `new`로 다시 만드는 것보다 낫다."
+}

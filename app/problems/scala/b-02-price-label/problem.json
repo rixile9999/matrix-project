@@ -1,0 +1,27 @@
+{
+	"id": "b-02-price-label",
+	"order": 2,
+	"level": 1,
+	"topic": "syntax",
+	"kind": "write",
+	"refs": [
+		"string-interp"
+	],
+	"title": "가격표 문자열",
+	"limitSec": 90,
+	"targets": [
+		"f 보간"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "이름 `name`과 가격 `price`로 `\"사과: 1200.50원\"` 형태의 문자열을 만들어 반환하라. 가격은 항상 소수점 아래 두 자리로 표시한다.",
+	"starter": "def label(name: String, price: Double): String =\n  ???\n",
+	"hints": [
+		"값을 서식에 맞춰 끼워 넣는 문자열 보간을 쓴다.",
+		"소수 한 자리 퍼센트라면: `f\"$name: $rate%.1f%%\"`처럼 변수 뒤에 서식을 붙인다."
+	],
+	"notes": "`f\"…\"` 보간에서는 `$변수` 바로 뒤에 `%.2f` 같은 서식을 붙인다. 서식 없는 `s\"$price\"`는 `1200.5`처럼 자릿수가 고정되지 않는다. 리터럴 `%`는 `%%`로 쓴다."
+}

@@ -2,11 +2,14 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onDestroy, untrack } from 'svelte';
+	import CheatBody from '#lib/CheatBody.svelte';
+	import CheatSheet from '#lib/CheatSheet.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import { mmss } from '#lib/rank.ts';
-	import type { JudgeResult } from '#lib/core/lang.ts';
-	import type { LangSessionData, LangRunResponse } from '#lib/types.ts';
+	import { LEVELS, TOPICS, type JudgeResult } from '#lib/core/lang.ts';
+	import { groupStages } from '#lib/core/study.ts';
+	import type { LangHintResponse, LangKind, LangLookupResponse, LangRunResponse, LangSessionData } from '#lib/types.ts';
 
 	let { data }: { data: LangSessionData } = $props();
 
@@ -49,6 +52,8 @@
 	let runStart = 0;
 	let hinting = $state(false);
 	let confirming = $state(false);
+	let refsLocal = $state<string[]>([]);
+	let sent = new Set<string>(); // entry ids already reported as looked up in this session
 	let lastId = -1;
 	$effect(() => {
 		const id = s.id;
@@ -58,6 +63,8 @@
 			code = s.code;
 			runResult = undefined;
 			hintsLocal = [];
+			refsLocal = [];
+			sent = new Set();
 			error = '';
 			running = false;
 			confirming = false;
@@ -66,6 +73,7 @@
 
 	const result = $derived(runResult ?? s.lastResult);
 	const hints = $derived(hintsLocal.length > s.hints.length ? hintsLocal : s.hints);
+	const refs = $derived(refsLocal.length ? refsLocal : s.refs);
 	const slow = $derived(running && wall - runStart > 4000);
 
 	async function run() {
@@ -99,8 +107,9 @@
 		hinting = true;
 		try {
 			const res = await fetch(`/lang/${p.id}/hint`, { method: 'POST' });
-			const j = (await res.json()) as { hints?: string[]; error?: string };
+			const j = (await res.json()) as Partial<LangHintResponse>;
 			if (j.hints) hintsLocal = j.hints;
+			if (j.refs) refsLocal = j.refs;
 			error = j.error ?? (res.ok ? '' : `힌트 실패 (${res.status})`);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -109,6 +118,45 @@
 		}
 	}
 
+	// ---- cheat sheet panel ----
+	const byId = $derived(new Map(data.cheat.map((e) => [e.id, e])));
+	const related = $derived(refs.flatMap((id) => byId.get(id) ?? []));
+	const looked = $derived((fin?.lookedUp ?? []).flatMap((id) => byId.get(id)?.title ?? []));
+	let panelOpen = $state(false);
+	let reveal = $state<{ id: string; n: number } | null>(null);
+	let sheet: { focusSearch: () => void } | undefined;
+
+	function openPanel() {
+		panelOpen = true;
+	}
+	function openRef(id: string) {
+		panelOpen = true;
+		reveal = { id, n: (reveal?.n ?? 0) + 1 };
+	}
+	function lookup(entryId: string) {
+		if (fin || sent.has(entryId)) return;
+		sent.add(entryId);
+		fetch(`/lang/${p.id}/lookup`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entryId }) })
+			.then((r) => r.json() as Promise<LangLookupResponse>)
+			.catch(() => {});
+	}
+	function keys(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+			e.preventDefault();
+			e.stopPropagation(); // keep the editor's own Ctrl-K binding out of it
+			if (panelOpen) panelOpen = false;
+			else {
+				openPanel();
+				sheet?.focusSearch();
+			}
+		} else if (e.key === 'Escape' && panelOpen) {
+			panelOpen = false;
+		}
+	}
+
+	const KIND: Record<LangKind, string> = { write: '', fix: '버그 수정', refactor: '리팩터링', complete: '완성' };
+	const reason = $derived(result && result.status === 'failed' && result.cases.length > 0 && result.cases.every((c) => c.status === 'ok') && result.output ? result.output : '');
+	const stages = $derived(result ? groupStages(result.cases) : []);
 	const STATUS = { passed: '통과', failed: '실패', compile_error: '컴파일 오류', timeout: '시간 초과: 실행이 너무 오래 걸렸습니다' } as const;
 	const MARK = { ok: '✓', fail: '✗', error: '!' } as const;
 	const outcomeText = $derived(
@@ -118,10 +166,16 @@
 
 <svelte:head><title>{fin ? '' : `${over ? '+' : ''}${mmss(Math.abs(remaining))} · `}{p.title} · Matrix</title></svelte:head>
 
-<div class="lang-split">
+<svelte:window onkeydowncapture={keys} />
+
+<div class="lang-split" class:with-cheat={panelOpen}>
 	<div class="lang-col">
 		<div>
 			<a class="note" href="/lang">← 목록</a>
+			<div class="lang-meta">
+				<span class="label">{LEVELS[p.level]} · {TOPICS[p.topic]}</span>
+				{#if KIND[p.kind]}<span class="kind">{KIND[p.kind]}</span>{/if}
+			</div>
 			<div class="lang-title">
 				<h2>{String(p.order).padStart(2, '0')}. {p.title}</h2>
 				{#if fin}
@@ -133,12 +187,21 @@
 			{#if !fin}<span class="note">제한 {mmss(p.limitSec)}{over ? ' · 시간이 지났지만 계속 풀 수 있습니다' : ''}</span>{/if}
 		</div>
 
+		{#if p.kind === 'fix'}
+			<p class="note lang-kindnote">코드에 버그가 있습니다. 고쳐서 테스트를 통과시키세요.</p>
+		{:else if p.kind === 'refactor'}
+			<p class="note lang-kindnote">동작은 맞습니다. {@html renderInline(p.avoid.map((w) => `\`${w}\``).join('·'))} 없이 다시 쓰세요.</p>
+		{/if}
+
 		<p class="lang-stmt">{@html renderInline(p.statement)}</p>
 
 		{#if !fin}
 			{#if hints.length}
 				<div class="lang-col" style="gap:8px">
 					{#each hints as h, i (i)}<div class="lang-hint"><span class="label">힌트 {i + 1}</span><br />{@html renderInline(h)}</div>{/each}
+					{#if related.length}
+						<div class="lang-refs"><span class="label">관련 문법</span>{#each related as e (e.id)}<button class="chip" type="button" onclick={() => openRef(e.id)}>{e.title}</button>{/each}</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}
@@ -146,17 +209,23 @@
 		{#if result}
 			<div class="lang-col" style="gap:8px" aria-live="polite">
 				<span class="lang-sum" class:ok={result.status === 'passed'} class:no={result.status !== 'passed'}>{STATUS[result.status]}</span>
-				{#if result.cases.length}
+				{#each stages as g, gi (gi)}
+					{#if g.stage !== null}
+						<div class="stage" class:ok={g.ok === g.cases.length} class:no={g.ok < g.cases.length}>{g.stage} {g.ok}/{g.cases.length}</div>
+					{/if}
 					<div>
-						{#each result.cases as c, i (i)}
+						{#each g.cases as c, i (i)}
 							<div class="case">
 								<span class="mk {c.status}" aria-label={c.status}>{MARK[c.status]}</span>
 								<div>{c.name}{#if c.detail}<div class="detail">{c.detail}</div>{/if}</div>
 							</div>
 						{/each}
 					</div>
-				{/if}
-				{#if result.output}
+				{/each}
+				{#if reason}
+					<span class="label">실패 이유</span>
+					<p class="err" style="margin:0">{@html renderInline(reason)}</p>
+				{:else if result.output}
 					<span class="label">{result.status === 'compile_error' ? '컴파일러 출력' : '프로그램 출력'}</span>
 					<pre class="lang-out">{result.output}</pre>
 				{/if}
@@ -172,6 +241,15 @@
 				{#if fin.avoided.length}
 					<p class="note" style="margin:0">{@html renderInline(fin.avoided.map((w) => `\`${w}\``).join(', '))} 사용함. 모범 답안은 쓰지 않습니다.</p>
 				{/if}
+				{#if related.length}
+					<div class="lang-col" style="gap:8px">
+						<span class="label">관련 문법</span>
+						{#each related as e (e.id)}
+							<div class="cs-entry"><div class="cs-title">{e.title}</div><CheatBody entry={e} /></div>
+						{/each}
+					</div>
+				{/if}
+				<p class="note" style="margin:0">찾아본 문법: {looked.length ? looked.join(', ') : '없음'}</p>
 				{#if hints.length}
 					<details><summary class="note">힌트 다시 보기</summary>
 						{#each hints as h, i (i)}<div class="lang-hint" style="margin-top:6px">{@html renderInline(h)}</div>{/each}
@@ -202,6 +280,7 @@
 				<button class="btn" type="button" onclick={run} disabled={running}>{running ? '실행 중…' : '실행'}</button>
 				<span class="note">⌘/Ctrl + Enter</span>
 				<span class="grow"></span>
+				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen}>치트시트</button>
 				<button class="btn ghost" type="button" onclick={hint} disabled={hinting || hints.length >= 2}>힌트 보기 ({hints.length}/2)</button>
 				{#if !confirming}
 					<button class="btn ghost" type="button" onclick={() => (confirming = true)}>답 보기</button>
@@ -218,6 +297,7 @@
 				</div>
 			{/if}
 		{:else}
+			<div class="lang-bar"><button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen}>치트시트</button></div>
 			<div class="lang-box lang-sol">
 				<div class="lang-cap">모범 답안</div>
 				<div class="lang-ed short">
@@ -226,4 +306,17 @@
 			</div>
 		{/if}
 	</div>
+
+	<button class="cheat-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label="치트시트 닫기" onclick={() => (panelOpen = false)}></button>
+	<aside class="cheat-panel" class:open={panelOpen} aria-label="치트시트" aria-hidden={!panelOpen}>
+		<div class="cheat-bar">
+			<b>치트시트</b>
+			<span class="note">⌘/Ctrl + K</span>
+			<span class="grow"></span>
+			<button class="btn ghost small" type="button" onclick={() => (panelOpen = false)}>닫기</button>
+		</div>
+		<div class="cheat-scroll">
+			<CheatSheet bind:this={sheet} entries={data.cheat} {reveal} onopen={lookup} />
+		</div>
+	</aside>
 </div>

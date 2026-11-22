@@ -4,7 +4,12 @@
 	"level": 2,
 	"topic": "collections",
 	"kind": "write",
-	"refs": [],
+	"refs": [
+		"filter",
+		"map",
+		"sum-min-max",
+		"lambda"
+	],
 	"title": "짝수 제곱의 합",
 	"limitSec": 300,
 	"targets": [

@@ -1,0 +1,59 @@
+[
+	{
+		"id": "string-split",
+		"topic": "strings",
+		"title": "split과 빈 조각",
+		"code": "\"a,b,c\".split(\",\").toList // => List(a, b, c)\n\"a,,b,,\".split(\",\").toList // => List(a, , b)\n\"a,,b,,\".split(\",\", -1).toList // => List(a, , b, , )\n\" a  b \".trim.split(\"\\\\s+\").toList // => List(a, b)\n\" a b\".split(\" \").toList // => List(, a, b)\n\"\".split(\",\").length // => 1",
+		"text": "`split`은 배열을 돌려주므로 `.toList`로 바꿔 보고, 끝의 빈 조각은 버려지지만 앞과 중간의 빈 조각은 남는다. 끝의 빈 조각까지 필요하면 두 번째 인자로 `-1`을 준다."
+	},
+	{
+		"id": "string-chars",
+		"topic": "strings",
+		"title": "문자 단위 처리",
+		"code": "val s = \"hello\"\ns.toList // => List(h, e, l, l, o)\ns.map(_.toUpper) // => HELLO\ns.filter(_ != 'l') // => heo\ns.count(_ == 'l') // => 2\ns.groupBy(identity)('l') // => ll\ns.distinct // => helo\ns(1) // => e\n\"ab\".map(_.toInt).toList // => List(97, 98)",
+		"text": "`String`은 `Char` 컬렉션처럼 `map`/`filter`/`count`를 쓸 수 있다. `Char => Char`면 `String`이, 다른 타입으로 바꾸면 `ArraySeq` 같은 일반 컬렉션이 나오므로 `.toList`를 붙여 본다."
+	},
+	{
+		"id": "string-ops",
+		"topic": "strings",
+		"title": "trim · 대소문자 · startsWith · take",
+		"code": "\"  Hi There \".trim // => Hi There\n\"Hi\".toUpperCase // => HI\n\"hello\".startsWith(\"he\") // => true\n\"hello\".endsWith(\"lo\") // => true\n\"hello\".take(2) // => he\n\"hello\".drop(2) // => llo\n\"hello\".takeRight(2) // => lo\n\"hello\".substring(1, 3) // => el\n\"hello\".indexOf(\"l\") // => 2\n\"hello\".contains(\"ell\") // => true\n\"hello\".replace(\"l\", \"L\") // => heLLo\n\"hello\".capitalize // => Hello",
+		"text": "`substring(from, until)`은 끝을 포함하지 않으며 못 찾은 `indexOf`는 `-1`이다. `take`/`drop`은 범위를 벗어나도 예외가 없지만 `substring`은 던진다."
+	},
+	{
+		"id": "string-multiline",
+		"topic": "strings",
+		"title": "여러 줄 문자열과 stripMargin",
+		"code": "val text = \"\"\"x\n  |y\n  |z\"\"\".stripMargin\ntext.linesIterator.toList // => List(x, y, z)\ntext.split(\"\\n\").length // => 3\ntext.linesIterator.map(_.toUpperCase).mkString(\"-\") // => X-Y-Z\n\"\"\"a\\tb\"\"\".length // => 4\n\"a\\nb\".linesIterator.toList // => List(a, b)",
+		"text": "`\"\"\"…\"\"\"` 안에서는 이스케이프가 해석되지 않고, 각 줄의 `|` 앞까지를 `stripMargin`이 제거한다. 줄 단위로 나눌 때는 `linesIterator`(또는 `split(\"\\n\")`)를 쓴다."
+	},
+	{
+		"id": "char-arith",
+		"topic": "strings",
+		"title": "문자 연산: isDigit · asDigit · c - 'a'",
+		"code": "'7'.isDigit // => true\n'7'.asDigit // => 7\n'c' - 'a' // => 2\n('a' + 2).toChar // => c\n'a' + 1 // => 98\n'x'.isLetter // => true\n'A'.toLower // => a\n\"a1b2\".filter(_.isDigit).map(_.asDigit).sum // => 3",
+		"text": "`Char` 산술은 `Int`로 승격되므로 `'a' + 1`은 `98`이고 문자로 되돌리려면 `.toChar`가 필요하다. 숫자 문자는 `'7' - '0'`이나 `asDigit`로 값을 얻는다."
+	},
+	{
+		"id": "regex",
+		"topic": "strings",
+		"title": "정규식: r · findAllIn · 패턴 매칭",
+		"code": "val num = \"\\\\d+\".r\nnum.findAllIn(\"a12b345\").toList // => List(12, 345)\nnum.findFirstIn(\"a12b345\") // => Some(12)\nnum.replaceAllIn(\"a12b345\", \"#\") // => a#b#\nval date = raw\"(\\d+)-(\\d+)\".r\n\"10-20\" match { case date(a, b) => a.toInt + b.toInt; case _ => 0 } // => 30\n\"10-20x\" match { case date(a, b) => 1; case _ => 0 } // => 0",
+		"text": "`.r`로 `Regex`를 만들며 `raw\"…\"`를 쓰면 백슬래시를 두 번 쓰지 않아도 된다. 패턴 매칭의 `date(a, b)`는 문자열 전체가 맞아야 하고 괄호 그룹이 인자로 나온다."
+	},
+	{
+		"id": "string-compare",
+		"topic": "strings",
+		"title": "문자열 정렬과 비교",
+		"code": "\"apple\" < \"banana\" // => true\n\"b\".compareTo(\"a\") // => 1\n\"Z\" < \"a\" // => true\n\"10\" < \"9\" // => true\nList(\"b\", \"A\", \"a\").sorted // => List(A, a, b)\nList(\"b\", \"A\", \"a\").sortBy(_.toLowerCase) // => List(A, a, b)\n\"abc\".equalsIgnoreCase(\"ABC\") // => true\nList(\"bb\", \"a\", \"ccc\").sortBy(s => (-s.length, s)) // => List(ccc, bb, a)",
+		"text": "문자열 비교는 사전순이지만 코드 값 기준이라 대문자가 소문자보다 앞이고 `\"10\" < \"9\"`이다. 길이 우선 같은 복합 기준은 튜플 키로 `sortBy`한다."
+	},
+	{
+		"id": "string-builder",
+		"topic": "strings",
+		"title": "문자열 조립: mkString · *",
+		"code": "List(\"a\", \"b\").mkString(\"-\") // => a-b\n\"ab\" * 3 // => ababab\n\"x\" + 1 + 2 // => x12\n\"abc\".padTo(5, '.') // => abc..\n\"%03d|%-4s|\".format(7, \"a\") // => 007|a   |\nList(\"x\", \"y\").map(_ * 2).mkString // => xxyy\nval sb = StringBuilder()\nsb.append(\"a\").append(1).append('c')\nsb.toString // => a1c",
+		"text": "`\"ab\" * 3`은 반복이고 `mkString`은 조각을 이어 붙인다. 반복문 안에서 `+`로 계속 이으면 느리므로 `StringBuilder`를 쓴다.",
+		"scala2": "`StringBuilder()` 대신 `new StringBuilder`로 써야 한다."
+	}
+]
