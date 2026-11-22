@@ -1,0 +1,39 @@
+{
+	"id": "c-01-calculator",
+	"order": 1,
+	"level": 3,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"match-case-class",
+		"match-list",
+		"takewhile-span",
+		"either-basic",
+		"either-for",
+		"local-def",
+		"char-arith"
+	],
+	"title": "수식 계산기: 토큰, 구문 분석, 계산",
+	"limitSec": 1500,
+	"targets": [
+		"enum",
+		"ADT",
+		"재귀 하강 파서",
+		"Either",
+		"패턴 매칭",
+		"for 컴프리헨션"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "문자열로 된 정수 사칙연산 식을 계산하는 작은 계산기를 만든다. 오류는 예외가 아니라 `Either[String, …]`의 `Left`로 돌려준다. 토큰과 식 트리의 타입은 starter에 이미 있다. 다음 네 함수를 순서대로 완성한다.\n\n1단계: `tokenize(s)`는 문자열을 `Token` 목록으로 바꾼다. 공백은 건너뛰고, 이어진 숫자는 하나의 `Number`가 된다. `+ - * / ( )`는 차례로 `Plus`, `Minus`, `Star`, `Slash`, `LParen`, `RParen`이다. 그 밖의 문자를 처음 만나면 그 문자를 넣어 `Left(\"알 수 없는 문자: '$'\")`처럼 돌려준다. 빈 문자열은 `Right(Nil)`이다.\n\n2단계: `parse(tokens)`는 토큰 목록을 `Expr`로 바꾼다. 식은 항을 `+`나 `-`로 잇고, 항은 인수를 `*`나 `/`로 잇는다. 인수는 `Number`(`Lit`), 괄호로 묶은 식, 또는 앞에 `-`가 붙은 인수(`Neg`)이다. 같은 우선순위는 왼쪽부터 묶는다. 예를 들어 `8-3-2`는 `Sub(Sub(Lit(8), Lit(3)), Lit(2))`이다. 오류 메시지는 정확히 다음과 같다. 인수가 와야 할 자리에서 토큰이 바닥나면 `\"식이 갑자기 끝났습니다\"`. 인수 자리에 맞지 않는 토큰이 오거나, 식이 끝났는데 토큰이 남아 있으면 `\"예상하지 못한 토큰: \"` 뒤에 그 토큰의 `toString`을 붙인다(예: `예상하지 못한 토큰: RParen`, `예상하지 못한 토큰: Number(2)`). 여는 괄호 안의 식이 끝난 뒤 `RParen`이 오지 않으면 `\"닫는 괄호가 없습니다\"`.\n\n3단계: `eval(e)`는 식을 계산한다. 나눗셈은 Scala의 `Int` 나눗셈처럼 0 쪽으로 버린다. 0으로 나누면 `Left(\"0으로 나눌 수 없습니다\")`이고, 이 오류는 식의 어느 깊이에서 생겨도 위로 전달된다.\n\n4단계: `calc(s)`는 위 세 단계를 이어서 문자열을 곧바로 계산한다. 어느 단계에서든 `Left`가 나오면 그대로 돌려준다.",
+	"starter": "enum Token:\n  case Number(value: Int)\n  case Plus, Minus, Star, Slash, LParen, RParen\n\nenum Expr:\n  case Lit(n: Int)\n  case Neg(e: Expr)\n  case Add(l: Expr, r: Expr)\n  case Sub(l: Expr, r: Expr)\n  case Mul(l: Expr, r: Expr)\n  case Div(l: Expr, r: Expr)\n\ndef tokenize(s: String): Either[String, List[Token]] =\n  ???\n\ndef parse(tokens: List[Token]): Either[String, Expr] =\n  ???\n\ndef eval(e: Expr): Either[String, Int] =\n  ???\n\ndef calc(s: String): Either[String, Int] =\n  ???\n",
+	"hints": [
+		"1단계는 `List[Char]`를 앞에서부터 `match`로 소비하며 결과를 쌓는 재귀로 푼다. 숫자는 `span`으로 한 번에 떼어 낸다. 2단계는 식, 항, 인수를 함수 하나씩 두는 재귀 하강 파서다. 각 함수는 읽은 `Expr`와 남은 토큰을 함께 `Either`에 담아 돌려준다. 식과 항은 '피연산자를 하나 읽고, 연산자가 이어지는 동안 왼쪽으로 묶는다'는 같은 모양이다. 3단계는 `Expr`에 대한 `match`이고 두 하위 식의 결과를 `for`로 잇는다. 4단계는 세 함수를 `for`로 잇는 것이 전부다.",
+		"남은 입력을 함께 돌려주는 파서의 모양은 이렇다. 'a'가 몇 번 이어지는지 세는 `def aRun(cs: List[Char]): Either[String, (Int, List[Char])] = cs match { case 'a' :: rest => aRun(rest).map((n, left) => (n + 1, left)); case _ => Right((0, cs)) }`에서 결과와 남은 입력이 한 쌍으로 다닌다. 쓰는 쪽은 `aRun(cs).flatMap((n, left) => …)`로 이어 가고, 중간에 `Left`가 생기면 `flatMap`이 알아서 위로 전달한다."
+	],
+	"notes": "`enum` 하나에 값이 있는 케이스(`Number`)와 값이 없는 케이스(`Plus` 등)를 함께 둘 수 있고, `Expr`처럼 자기 자신을 품는 트리도 같은 문법으로 쓴다. Scala 2에서는 `sealed trait`에 `case class`와 `case object`를 따로 썼다. `Either`는 오른쪽 편향이라서 `flatMap`과 `for`로 이으면 오류 처리가 `Left`를 그대로 흘려보내는 한 줄이 된다. Scala 3에서는 `flatMap((a, b) => …)`처럼 튜플을 받는 람다를 `case` 없이 쓸 수 있다(Scala 2에서는 `{ case (a, b) => … }`). 우선순위는 문법의 계층(식, 항, 인수)에 넣고, 같은 우선순위의 왼쪽 결합은 `loop(left, rest)`처럼 누적하는 재귀로 만든다."
+}

@@ -1,0 +1,37 @@
+{
+	"id": "c-04-json-encoder",
+	"order": 4,
+	"level": 3,
+	"topic": "context",
+	"kind": "complete",
+	"refs": [
+		"typeclass",
+		"given-instance",
+		"using-clause",
+		"context-bound",
+		"extension",
+		"summon",
+		"mkstring"
+	],
+	"title": "JSON 인코더 타입 클래스",
+	"limitSec": 1080,
+	"targets": [
+		"타입 클래스",
+		"given",
+		"using",
+		"컨텍스트 바운드",
+		"extension"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "값을 JSON 비슷한 문자열로 바꾸는 타입 클래스 `Encoder[A]`를 완성한다. `Encoder[Double]` 인스턴스는 본보기로 주어져 있고, 나머지는 starter의 `???`를 채운다.\n\n1단계: `Int`, `Boolean`, `String`의 `given` 인스턴스를 만든다. `Int`는 `42`처럼, `Boolean`은 `true`나 `false`로 쓴다. `String`은 큰따옴표로 감싸는데, 안에 있는 큰따옴표는 두 글자 `\\\"`로, 역슬래시는 `\\\\`로, 줄바꿈 문자는 두 글자 `\\n`으로 바꾼다. 예를 들어 `say \"hi\"`는 `\"say \\\"hi\\\"\"`가 된다.\n\n2단계: `List[A]`와 `Option[A]`의 인스턴스를 만든다. 두 인스턴스는 `A`의 인스턴스를 `using`으로 받는 `given`이라서 `List[Option[Int]]`처럼 겹쳐도 동작해야 한다. `List`는 원소를 `,`로 이어(공백 없음) `[`와 `]`로 감싸고, 빈 목록은 `[]`이다. `Option`은 `Some`이면 안의 값을 인코딩하고 `None`이면 `null`이다.\n\n3단계: `extension` 메서드 `toJson`을 완성한다. `5.toJson`이나 `List(1, 2).toJson`처럼 `Encoder`가 있는 어떤 값에도 붙고, 그 값의 `Encoder`로 인코딩한 문자열을 돌려준다.\n\n4단계: `jsonObject(fields)`는 `(키, 값)` 목록을 `{\"a\":1,\"b\":2}` 모양의 문자열로 만든다. 값의 타입 `A`는 컨텍스트 바운드 `[A: Encoder]`로 받는다. 키는 `String`의 인코더로 인코딩하므로 이스케이프도 같게 적용된다. 키와 값 사이는 `:`, 쌍 사이는 `,`이고 공백은 없다. 필드가 없으면 `{}`이다. 3단계의 `toJson`을 쓰면 짧아진다.",
+	"starter": "trait Encoder[A]:\n  def encode(a: A): String\n\n// 본보기로 주어진 인스턴스\ngiven Encoder[Double] with\n  def encode(d: Double): String = d.toString\n\ngiven Encoder[Int] = ???\n\ngiven Encoder[Boolean] = ???\n\ngiven Encoder[String] = ???\n\ngiven [A](using e: Encoder[A]): Encoder[List[A]] = ???\n\ngiven [A](using e: Encoder[A]): Encoder[Option[A]] = ???\n\nextension [A](a: A)(using e: Encoder[A])\n  def toJson: String = ???\n\ndef jsonObject[A: Encoder](fields: List[(String, A)]): String =\n  ???\n",
+	"hints": [
+		"1단계는 인스턴스마다 `encode` 하나를 구현하는 일이다. `String`은 문자를 하나씩 보면서 따옴표, 역슬래시, 줄바꿈만 바꾸면 순서 문제가 생기지 않는다. 2단계의 두 인스턴스는 `using`으로 받은 안쪽 인스턴스의 `encode`를 원소마다 호출한다. 3단계의 `toJson`은 `using`으로 받은 인스턴스를 그대로 호출하는 한 줄이다. 4단계는 쌍마다 `키.toJson`과 `값.toJson`을 `:`로 잇고 `mkString(\"{\", \",\", \"}\")`로 감싼다.",
+		"`Show[A]`라면 이렇게 짠다. 쌍 인스턴스는 `given [A, B](using a: Show[A], b: Show[B]): Show[(A, B)] with { def show(p: (A, B)) = s\"(${a.show(p._1)}, ${b.show(p._2)})\" }`처럼 안쪽 인스턴스를 `using`으로 받는다. 확장 메서드는 `extension [A](x: A)(using s: Show[A]) def shown: String = s.show(x)`이다. 컨텍스트 바운드로 받은 함수는 `def showAll[A: Show](xs: List[A]): List[String] = xs.map(_.shown)`처럼 이름 없이도 `shown`이 그 인스턴스를 찾아 쓴다."
+	],
+	"notes": "`given [A](using e: Encoder[A]): Encoder[List[A]]`처럼 `using`을 받는 `given`은 인스턴스를 조립하는 규칙이다. 컴파일러가 `List[Option[Int]]`에 필요한 인스턴스를 이 규칙들을 이어 붙여 찾는다. `[A: Encoder]` 컨텍스트 바운드는 `(using Encoder[A])`의 줄임이어서 이름을 붙이지 않아도 `toJson` 같은 확장 메서드가 그 인스턴스를 쓴다. Scala 2에서는 `implicit val`, `implicit def`, `implicit class`로 쓰던 것을 Scala 3이 `given`, `using`, `extension`으로 나눠 놓았다. 이름 없는 `given`은 컴파일러가 타입에서 이름을 지어 주니 호출하는 쪽은 신경 쓰지 않아도 된다."
+}

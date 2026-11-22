@@ -1,0 +1,36 @@
+{
+	"id": "c-06-island-regions",
+	"order": 6,
+	"level": 3,
+	"topic": "recursion",
+	"kind": "fix",
+	"refs": [
+		"recursion-list",
+		"local-def",
+		"foldleft",
+		"foldleft-tuple",
+		"set-ops",
+		"for-guard-multi"
+	],
+	"title": "섬 세기: 버그 두 개 고치기",
+	"limitSec": 1200,
+	"targets": [
+		"재귀",
+		"foldLeft 누산기",
+		"불변 Set",
+		"for 다중 생성기",
+		"디버깅"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "격자(`List[String]`)에서 땅 `#`이 이어진 덩어리(영역)를 다루는 프로그램이다. `.`은 물이다. 위, 아래, 왼쪽, 오른쪽으로 맞닿은 땅만 이어진 것이고 대각선은 이어진 것이 아니다. 위치는 `(행, 열)` 쌍인 `Pos`이고, 격자는 직사각형이지만 정사각형이라는 보장은 없다. starter는 컴파일되지만, 서로 무관한 버그가 두 개 있어서 일부 테스트가 실패한다. 버그를 찾아 고쳐라. 보조 함수 `isLand`, `landCells`, `regions`는 이미 있다. 함수는 다음 네 가지다.\n\n1단계: `neighbours(grid, p)`는 `p`의 위, 아래, 왼쪽, 오른쪽 순서로 격자 안에 있으면서 땅인 칸만 담은 목록이다.\n\n2단계: `region(grid, start)`는 `start`에서 이어진 모든 땅 칸의 집합이다. `start` 자신도 땅이면 포함하고, 땅이 아니면 빈 집합이다. 방문한 칸은 불변 `Set`에 쌓아 가며 재귀로 넘긴다.\n\n3단계: `countRegions(grid)`는 영역의 개수다. 땅이 없으면 0이다.\n\n4단계: `largestRegion(grid)`는 가장 큰 영역의 칸 수다. 땅이 없으면 0이다.",
+	"starter": "type Pos = (Int, Int)\n\nprivate def isLand(grid: List[String], p: Pos): Boolean =\n  val (r, c) = p\n  grid.indices.contains(r) && grid(r).indices.contains(c) && grid(r)(c) == '#'\n\ndef neighbours(grid: List[String], p: Pos): List[Pos] =\n  val (r, c) = p\n  List((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)).filter(isLand(grid, _))\n\ndef region(grid: List[String], start: Pos): Set[Pos] =\n  def go(p: Pos, seen: Set[Pos]): Set[Pos] =\n    if seen(p) then seen\n    else neighbours(grid, p).foldLeft(seen + p)((acc, n) => go(n, seen + p))\n  if isLand(grid, start) then go(start, Set.empty) else Set.empty\n\nprivate def landCells(grid: List[String]): List[Pos] =\n  for\n    r <- grid.indices.toList\n    c <- 0 until grid.length\n    if grid(r)(c) == '#'\n  yield (r, c)\n\nprivate def regions(grid: List[String]): List[Set[Pos]] =\n  val (_, found) = landCells(grid).foldLeft((Set.empty[Pos], List.empty[Set[Pos]])) {\n    case ((seen, acc), p) =>\n      if seen(p) then (seen, acc)\n      else\n        val reg = region(grid, p)\n        (seen ++ reg, reg :: acc)\n  }\n  found.reverse\n\ndef countRegions(grid: List[String]): Int =\n  regions(grid).size\n\ndef largestRegion(grid: List[String]): Int =\n  regions(grid).map(_.size).maxOption.getOrElse(0)\n",
+	"hints": [
+		"어느 단계의 어느 테스트가 실패하는지부터 본다. 1단계는 이미 맞다. 2단계에서는 한 줄짜리 땅을 끝에서 시작할 때와 가운데에서 시작할 때 결과가 같아야 하는데, 가운데에서 시작해 이웃이 둘일 때 방문 집합이 어떻게 넘어가는지 손으로 따라가 본다. 3단계와 4단계에서는 정사각형 격자는 통과하고 가로로 긴 격자나 세로로 긴 격자만 실패하는지 확인한다. 그렇다면 `landCells`가 격자를 훑는 범위를 의심한다. 고친 뒤에는 모든 단계가 초록이 되는지 다시 돌려 본다.",
+		"누산기를 이웃들 사이에 이어 넘기는 방법을 보여 주는 예다. 처음 나온 단어만 남기기는 `words.foldLeft((Set.empty[String], List.empty[String])) { case ((seen, out), w) => if seen(w) then (seen, out) else (seen + w, w :: out) }._2.reverse`이다. 람다 안에서는 파라미터로 받은 누산기(`seen`)를 갱신해서 다음 걸음으로 넘기며, 람다 바깥에 있던 예전 값을 쓰지 않는다. 2차원 순회에서는 행의 수가 `rows.length`이고 한 행의 길이가 `rows(r).length`이다. 둘을 바꿔 쓰지 않는다."
+	],
+	"notes": "재귀로 영역을 퍼뜨릴 때 방문 집합은 `foldLeft`의 누산기로 이웃들 사이에 이어 넘겨야 한다. 람다 안에서 바깥의 옛 집합을 쓰면 앞 이웃에서 방문한 칸을 잊어서 결과가 조용히 틀린다. 2차원 격자는 행의 수 `grid.length`와 행의 길이 `grid(r).length`가 다르므로, 열은 `grid(r).indices`로 훑으면 직사각형이어도 안전하다. `for`의 여러 생성기와 `if` 가드는 `flatMap`과 `withFilter`로 풀리고, Scala 3에서는 `for` 아래에 줄을 맞춰 `r <-`, `c <-`, `if`, `yield`를 쓰는 들여쓰기 문법이 자연스럽다. 이처럼 틀린 결과가 에러 없이 나오는 버그는 가장 작은 입력부터 손으로 따라가는 것이 빠르다."
+}

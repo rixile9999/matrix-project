@@ -1,0 +1,40 @@
+{
+	"id": "c-05-log-analyser",
+	"order": 5,
+	"level": 3,
+	"topic": "folds",
+	"kind": "refactor",
+	"refs": [
+		"foldleft-tuple",
+		"groupmap",
+		"sort",
+		"string-split",
+		"take-drop",
+		"flatmap"
+	],
+	"title": "로그 분석기를 함수형으로 다시 쓰기",
+	"limitSec": 1200,
+	"targets": [
+		"foldLeft 튜플 누산기",
+		"groupMapReduce",
+		"튜플 키 정렬",
+		"배열 패턴",
+		"flatMap"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return",
+		"mutable",
+		"scala.collection.mutable",
+		"ListBuffer",
+		"ArrayBuffer"
+	],
+	"statement": "아래 로그 분석기는 정확히 동작하지만 `var`, `while`, `return`과 가변 컬렉션(`mutable`)으로 쓰여 있다. 함수 시그니처와 동작을 그대로 두고 함수형으로 다시 써라. `var`, `while`, `return`, `mutable`, `scala.collection.mutable`, `ListBuffer`, `ArrayBuffer`가 코드에 남아 있으면 테스트를 통과해도 실패로 처리된다. 로그 한 줄은 `시각 수준 메시지` 모양이고(예: `10:00 ERROR disk full`), 수준은 `INFO`, `WARN`, `ERROR` 가운데 하나다. 동작은 다음과 같다.\n\n1단계: `parseLine(line)`은 앞뒤 공백을 지우고, 공백 덩어리를 기준으로 최대 세 조각(시각, 수준, 메시지)으로 나눈다. 메시지 안의 공백은 그대로 남긴다. 조각이 세 개가 안 되거나 수준이 위 셋이 아니면(대소문자 구분) `None`이다.\n\n2단계: `countByLevel(entries)`는 수준별 개수를 `Map`으로 돌려준다. 나오지 않은 수준은 키가 없다.\n\n3단계: `longestErrorRun(entries)`는 `ERROR`가 끊기지 않고 이어진 가장 긴 구간의 길이다. `INFO`나 `WARN`이 끼면 끊기고, `ERROR`가 없으면 0이다.\n\n4단계: `topErrors(entries, n)`은 `ERROR` 항목만 메시지별로 세어, 횟수 내림차순과 메시지 오름차순으로 앞의 `n`개를 `(메시지, 횟수)` 목록으로 돌려준다.\n\n5단계: `analyse(lines, n)`은 줄을 `parseLine`으로 읽어 읽히지 않는 줄은 건너뛰고(건너뛴 줄 수가 `skipped`), 나머지 항목으로 위 함수들을 묶어 `Report`를 만든다. 건너뛴 줄은 `ERROR`의 연속을 끊지 않는다.",
+	"starter": "import scala.collection.mutable\n\ncase class LogEntry(level: String, message: String)\ncase class Report(skipped: Int, counts: Map[String, Int], longestErrorRun: Int, topErrors: List[(String, Int)])\n\nval Levels = Set(\"INFO\", \"WARN\", \"ERROR\")\n\ndef parseLine(line: String): Option[LogEntry] =\n  val parts = line.trim.split(\"\\\\s+\", 3)\n  if parts.length < 3 then return None\n  if !Levels.contains(parts(1)) then return None\n  Some(LogEntry(parts(1), parts(2)))\n\ndef countByLevel(entries: List[LogEntry]): Map[String, Int] =\n  val counts = mutable.Map.empty[String, Int]\n  for e <- entries do\n    counts(e.level) = counts.getOrElse(e.level, 0) + 1\n  counts.toMap\n\ndef longestErrorRun(entries: List[LogEntry]): Int =\n  val items = entries.toVector\n  var best = 0\n  var current = 0\n  var i = 0\n  while i < items.length do\n    if items(i).level == \"ERROR\" then\n      current += 1\n      if current > best then best = current\n    else\n      current = 0\n    i += 1\n  best\n\ndef topErrors(entries: List[LogEntry], n: Int): List[(String, Int)] =\n  val counts = mutable.Map.empty[String, Int]\n  for e <- entries do\n    if e.level == \"ERROR\" then\n      counts(e.message) = counts.getOrElse(e.message, 0) + 1\n  val sorted = counts.toList.sortBy(p => (-p._2, p._1))\n  val result = mutable.ListBuffer.empty[(String, Int)]\n  var i = 0\n  while i < n && i < sorted.length do\n    result += sorted(i)\n    i += 1\n  result.toList\n\ndef analyse(lines: List[String], n: Int): Report =\n  val entries = mutable.ListBuffer.empty[LogEntry]\n  var skipped = 0\n  for line <- lines do\n    parseLine(line) match\n      case Some(e) => entries += e\n      case None    => skipped += 1\n  val all = entries.toList\n  Report(skipped, countByLevel(all), longestErrorRun(all), topErrors(all, n))\n",
+	"hints": [
+		"1단계는 `split`의 결과 배열을 `match`의 배열 패턴으로 받고, 수준 검사는 가드로 쓰면 `return` 없이 끝난다. 2단계는 수준으로 묶어서 세는 한 번의 집계다. 3단계는 '지금까지 가장 긴 길이'와 '지금 이어지는 길이' 두 값을 튜플 누산기로 하는 `foldLeft`다. 4단계는 `ERROR`만 거른 뒤 메시지별로 세고, 정렬 키를 튜플로 만들어 자른다. 5단계는 `flatMap`으로 읽히는 줄만 남기면 건너뛴 줄 수는 개수 차이로 나온다.",
+		"숫자 목록에서 가장 긴 양수 연속 구간의 길이는 `xs.foldLeft((0, 0)) { case ((best, cur), x) => val next = if x > 0 then cur + 1 else 0; (best max next, next) }._1`이다. 가변 변수 둘이 하던 일을 튜플 한 쌍이 한 걸음마다 새로 만들어 넘긴다. 단어 개수 세기는 `words.groupMapReduce(identity)(_ => 1)(_ + _)`이다."
+	],
+	"notes": "`var`와 `while`로 갱신하던 '지금까지의 값'은 `foldLeft`의 누산기가 되고, 함께 움직이는 두 값은 튜플 `(best, current)`로 묶어 한 걸음마다 새로 만들어 넘긴다. 가변 `Map`에 하나씩 더하던 집계는 `groupMapReduce`가 한 번에 한다. `return`으로 일찍 빠져나가던 검증은 `match`의 케이스와 가드로 바뀐다. Scala 3에서는 `sortBy((message, count) => (-count, message))`처럼 튜플을 받는 람다를 바로 쓸 수 있어서 `p._2` 같은 접근이 필요 없다."
+}
