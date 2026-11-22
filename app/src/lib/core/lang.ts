@@ -16,7 +16,14 @@ export type LangProblem = {
 	starter: string; // signature with ??? body
 	hints: [string, string]; // 1: which construct; 2: worked example of a similar task
 	notes: string; // 2–4 sentences on the syntax that appeared, shown after passing
+	// Book-derived problems only. An optional Given.scala next to problem.json holds code the
+	// learner builds on (earlier exercises' results); it is compiled with the submission and shown read-only.
+	book?: { id: string; chapter: number; exercise: string }; // exercise label as in the book, e.g. "3.7"
+	intent?: string; // 출제 취지: why the book asks this, 2–3 Korean sentences; shown with hint 1 and after finishing
 };
+
+/** problems/<lang>/_books.json: book id -> metadata. */
+export type BookMeta = { title: string; chapters: Record<string, string> };
 
 export type CaseResult = { name: string; status: 'ok' | 'fail' | 'error'; detail: string };
 export type JudgeResult = {

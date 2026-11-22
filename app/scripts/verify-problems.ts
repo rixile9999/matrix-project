@@ -1,6 +1,6 @@
 // Checks every problem: schema, model solution passes, starter (???) does not.
 // Usage: node scripts/verify-problems.ts [lang] [idPrefix]
-import { judge, listProblems, loadSolution } from '../src/lib/server/judge.ts';
+import { judge, listProblems, loadBooks, loadSolution } from '../src/lib/server/judge.ts';
 import { cheatIndex } from '../src/lib/server/cheatsheet.ts';
 import { TOPICS } from '../src/lib/core/lang.ts';
 
@@ -9,6 +9,7 @@ let bad = 0;
 const seen = new Set<string>();
 const TOPIC_IDS = Object.keys(TOPICS);
 const cheatIds = new Set(Object.values(cheatIndex(lang)).flat().map(([id]) => id));
+const books = loadBooks(lang);
 const LIMITS = { 1: [60, 180], 2: [300, 600], 3: [900, 1500] } as const;
 for (const p of listProblems(lang).filter((p) => p.id.startsWith(prefix))) {
 	const problems: string[] = [];
@@ -23,6 +24,13 @@ for (const p of listProblems(lang).filter((p) => p.id.startsWith(prefix))) {
 	if (!['write', 'fix', 'refactor', 'complete'].includes(p.kind)) problems.push(`bad kind ${p.kind}`);
 	for (const r of p.refs ?? []) if (!cheatIds.has(r)) problems.push(`unknown cheat sheet ref ${r}`);
 	if (!p.refs) problems.push('missing refs');
+	if (p.book) {
+		const b = books[p.book.id];
+		if (!b) problems.push(`unknown book ${p.book.id}`);
+		else if (!b.chapters[String(p.book.chapter)]) problems.push(`unknown chapter ${p.book.chapter}`);
+		if (!/^\d+\.\d+$/.test(p.book.exercise ?? '')) problems.push('book.exercise must look like "3.7"');
+		if (!p.intent || p.intent.length < 30) problems.push('book problems need an intent (출제 취지)');
+	}
 	if (p.kind === 'write' || p.kind === 'complete') { if (!p.starter.includes('???')) problems.push('starter has no ???'); }
 	const sol = await judge(lang, p, loadSolution(lang, p.id));
 	if (sol.status !== 'passed') problems.push(`solution ${sol.status}: ${sol.output || JSON.stringify(sol.cases.filter((c) => c.status !== 'ok'))}`);

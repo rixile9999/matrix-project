@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, copyFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { findAvoided, parseCases, type JudgeResult, type LangProblem } from '#lib/core/lang.ts';
+import { findAvoided, parseCases, type BookMeta, type JudgeResult, type LangProblem } from '#lib/core/lang.ts';
 
 const PROBLEMS_DIR = resolve(process.env.PROBLEMS_DIR ?? 'problems');
 const WORK_DIR = resolve(process.env.JUDGE_DIR ?? 'data/judge');
@@ -28,6 +28,17 @@ export function loadProblem(lang: string, id: string): LangProblem | null {
 
 export const loadSolution = (lang: string, id: string) => readFileSync(join(problemDir(lang, id), 'Solution.scala'), 'utf8');
 
+/** Code the learner builds on (book problems), or null. */
+export function loadGiven(lang: string, id: string): string | null {
+	const f = join(problemDir(lang, id), 'Given.scala');
+	return existsSync(f) ? readFileSync(f, 'utf8') : null;
+}
+
+export function loadBooks(lang: string): Record<string, BookMeta> {
+	const f = join(PROBLEMS_DIR, lang, '_books.json');
+	return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
+}
+
 let queue: Promise<unknown> = Promise.resolve();
 
 /** Compiles `code` together with the problem's tests and runs them. Runs are serialized. */
@@ -43,6 +54,9 @@ function runOnce(lang: string, problem: LangProblem, code: string): Promise<Judg
 	mkdirSync(dir, { recursive: true });
 	copyFileSync(join(PROBLEMS_DIR, '_harness', 'Judge.scala'), join(dir, 'Judge.scala'));
 	copyFileSync(join(problemDir(lang, problem.id), 'Tests.scala'), join(dir, 'Tests.scala'));
+	const given = join(problemDir(lang, problem.id), 'Given.scala');
+	if (existsSync(given)) copyFileSync(given, join(dir, 'Given.scala'));
+	else rmSync(join(dir, 'Given.scala'), { force: true });
 	writeFileSync(join(dir, 'User.scala'), code);
 	const avoided = findAvoided(code, problem.avoid);
 
