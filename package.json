@@ -1,0 +1,11 @@
+{
+	"name": "matrix-project",
+	"private": true,
+	"scripts": {
+		"dev": "pnpm -C app dev",
+		"build": "pnpm -C app build",
+		"start": "pnpm -C app start",
+		"test": "pnpm -C app test",
+		"check": "pnpm -C app check"
+	}
+}
