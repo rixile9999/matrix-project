@@ -1,0 +1,37 @@
+{
+	"id": "fp-0608-sequence-rand",
+	"order": 1608,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"hof",
+		"tabulate-fill"
+	],
+	"title": "sequence 와 ints 다시 쓰기",
+	"limitSec": 600,
+	"targets": [
+		"sequence",
+		"foldRight",
+		"map2 활용"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `Rand[+A]`(`RNG => (A, RNG)`의 별칭), `unit`, `map`, `int`, 그리고 두 `Rand`를 합치는 `map2`가 있다.\n\n(1) `Rand`의 리스트를 리스트를 만드는 `Rand` 하나로 합치는 `def sequence[A](fs: List[Rand[A]]): Rand[List[A]]`를 구현하라. 리스트 앞쪽의 `Rand`가 먼저 실행되고(결과 리스트에서도 앞), 빈 리스트이면 `RNG`를 건드리지 않고 빈 리스트를 돌려준다.\n\n(2) `sequence`를 써서 `def randInts(count: Int): Rand[List[Int]]`를 구현하라. `int`를 `count`번 실행한 값들의 리스트이다. 구현에 `RNG`가 직접 나타나서는 안 된다.",
+	"starter": "def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =\n  ???\n\ndef randInts(count: Int): Rand[List[Int]] =\n  ???\n",
+	"hints": [
+		"빈 리스트이면 `unit(Nil)`이다. 비어 있지 않으면 \"첫 `Rand`와 나머지를 `sequence`한 `Rand`\"를 `map2`로 합쳐 `::`로 이어 붙인다. 리스트를 오른쪽부터 접는 `foldRight`로도 같은 구조가 나온다.",
+		"비슷한 예: 숫자 리스트의 합을 `foldRight(0)((x, acc) => x + acc)`로 구하듯, 여기서는 초깃값이 `unit(Nil)`이고 결합 연산이 `(f, acc) => map2(f, acc)(_ :: _)`이다. `randInts`는 `List.fill(count)(int)`로 같은 `Rand`를 `count`번 반복한 리스트를 만든다."
+	],
+	"notes": "`List.fill(n)(x)`에서 `x`는 이름에 의한 호출이라 매번 평가되지만 `int`는 값이므로 상관없다. `foldRight` 대신 재귀로 쓰면 큰 리스트에서 스택이 깊어지니 주의하라. `unit(List.empty[A])`처럼 타입을 명시하는 이유는 `Nil` 하나만으로는 `Rand[List[A]]` 추론이 흔들릴 때가 있기 때문이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.8"
+	},
+	"intent": "앞의 `ints`에서 손으로 하던 재귀를 `map2`와 `foldRight`로 일반화하는 단계이다. 이 장에서 처음으로 \"`Rand`의 리스트를 `Rand`의 리스트 하나로 뒤집는\" 연산을 만나는데, `Option`과 `Either`의 `sequence`에서도 형태가 같음을 이후 장에서 보게 된다. 결합 순서가 곧 난수 소비 순서임을 테스트가 확인한다."
+}

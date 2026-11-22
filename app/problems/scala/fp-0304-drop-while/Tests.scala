@@ -1,0 +1,10 @@
+@main def tests(): Unit =
+  val big = scala.List.range(0, 100000).foldRight(Nil: List[Int])(Cons(_, _))
+  Judge.check("앞부분만 버린다")(dropWhile(List(1, 2, 3, 4))(_ < 3), List(3, 4))
+  Judge.check("뒤에서 다시 참이어도 멈춘 뒤에는 검사하지 않는다")(dropWhile(List(1, 5, 2, 1))(_ < 3), List(5, 2, 1))
+  Judge.check("처음부터 거짓이면 그대로")(dropWhile(List(7, 1))(_ < 3), List(7, 1))
+  Judge.check("모두 참이면 Nil")(dropWhile(List(1, 2))(_ < 9), Nil)
+  Judge.check("빈 리스트")(dropWhile(Nil: List[Int])(_ < 3), Nil)
+  Judge.check("문자열 리스트와 람다 추론")(dropWhile(List("a", "bb", "c"))(_.length == 1), List("bb", "c"))
+  Judge.check("나머지를 공유한다")(dropWhile(big)(_ < 5).asInstanceOf[AnyRef] eq dropWhile(big)(_ < 5).asInstanceOf[AnyRef], true)
+  Judge.check("10만 개에서도 스택 안전")(dropWhile(big)(_ < 99999), List(99999))

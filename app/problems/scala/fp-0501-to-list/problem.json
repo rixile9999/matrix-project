@@ -1,0 +1,37 @@
+{
+	"id": "fp-0501-to-list",
+	"order": 1501,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"by-name",
+		"lazylist"
+	],
+	"title": "Stream을 List로 바꾸기",
+	"limitSec": 120,
+	"targets": [
+		"Stream",
+		"썽크",
+		"패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `toList`를 구현하라. 스트림의 원소를 앞에서부터 차례로 평가해 표준 `List`로 모아 반환하며, 빈 스트림이면 빈 리스트를 반환한다. 이 함수는 이후 문제에서 스트림의 내용을 확인하는 도구로 쓰인다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def toList: List[A] =\n    ???\n",
+	"hints": [
+		"`Cons`의 머리와 꼬리는 값이 아니라 함수이므로 `h()`, `t()`로 호출해야 값이 나온다. 스트림을 패턴 매칭으로 둘로 나누고 꼬리에 같은 일을 반복하라.",
+		"표준 리스트에서 합을 구한다면 `case x :: rest => x + sum(rest)`, 빈 경우는 0이다. `Stream`에서는 `x`에 해당하는 것이 `h()`, `rest`에 해당하는 것이 `t()`이다."
+	],
+	"notes": "이 판의 `Stream`은 Scala 2.13 이후 표준 라이브러리의 `LazyList`와 같은 개념이다. 2판 책에서는 `LazyList`라고 부르지만 여기서는 1판의 이름 `Stream`을 쓰고 Given.scala에 직접 정의했다. `h() :: t().toList`는 꼬리 재귀가 아니므로 수십만 개짜리 스트림에서는 스택이 깊어진다. 누산기를 두고 `@tailrec`로 쓰는 방법도 알아 두면 좋다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.1"
+	},
+	"intent": "5장의 첫 연습은 `Cons`의 머리와 꼬리가 값이 아니라 썽크라는 사실을 손으로 확인하게 한다. `toList`는 아직 계산되지 않은 '계산의 설명'을 끝까지 실행시키는 강제 장치이며, 이후 모든 연습에서 결과를 눈으로 확인하는 데 쓰인다. 만들기만 해서는 아무것도 계산되지 않고 `toList`를 불러야 비로소 평가된다는 점을 기억해 두자."
+}

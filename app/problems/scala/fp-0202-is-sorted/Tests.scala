@@ -1,0 +1,10 @@
+@main def tests(): Unit =
+  Judge.check("오름차순 정수")(isSorted(Array(1, 2, 3, 5), (a: Int, b: Int) => a > b), true)
+  Judge.check("순서가 깨진 정수")(isSorted(Array(1, 3, 2, 5), (a: Int, b: Int) => a > b), false)
+  Judge.check("빈 배열")(isSorted(Array.empty[Int], (a: Int, b: Int) => a > b), true)
+  Judge.check("원소 하나")(isSorted(Array(7), (a: Int, b: Int) => a > b), true)
+  Judge.check("같은 값이 이어져도 정렬됨")(isSorted(Array(2, 2, 2, 3), (a: Int, b: Int) => a > b), true)
+  Judge.check("마지막 쌍만 틀림")(isSorted(Array(1, 2, 3, 4, 0), (a: Int, b: Int) => a > b), false)
+  Judge.check("첫 쌍만 틀림")(isSorted(Array(9, 1, 2, 3), (a: Int, b: Int) => a > b), false)
+  Judge.check("비교 함수 교체: 내림차순")(isSorted(Array(5, 3, 3, 1), (a: Int, b: Int) => a < b), true)
+  Judge.check("문자열 길이순")(isSorted(Array("a", "bb", "ccc"), (a: String, b: String) => a.length > b.length), true)

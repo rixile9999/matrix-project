@@ -1,0 +1,38 @@
+{
+	"id": "fp-0323-zip-with",
+	"order": 1323,
+	"level": 2,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"zip",
+		"hof",
+		"currying",
+		"match-tuple"
+	],
+	"title": "zipWith로 일반화",
+	"limitSec": 300,
+	"targets": [
+		"일반화",
+		"고차 함수",
+		"두 리스트 재귀"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `List[+A]`를 쓴다. 두 리스트의 같은 위치 원소를 함수 `f`로 합쳐 새 리스트를 만드는 `def zipWith[A, B, C](a: List[A], b: List[B])(f: (A, B) => C): List[C]`를 구현하라. 원소 타입이 서로 달라도 되고 결과 타입도 자유롭다. 길이가 다르면 짧은 쪽이 끝날 때 멈춘다. 예: `zipWith(List(1, 2, 3), List(4, 5, 6))(_ + _)`는 `List(5, 7, 9)`이다.",
+	"starter": "def zipWith[A, B, C](a: List[A], b: List[B])(f: (A, B) => C): List[C] =\n  ???\n",
+	"hints": [
+		"바로 앞의 `addCorresponding`에서 '더한다'는 부분만 `f`로 바꾸고 `Int`였던 곳을 타입 파라미터로 바꾸면 된다.",
+		"`case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), zipWith(t1, t2)(f))`가 본체이고, 나머지 모든 경우는 `Nil`이다."
+	],
+	"notes": "`zipWith(xs, ys)(_ + _)`에서 `_ + _`가 `(A, B) => C`로 확장되며 `A`, `B`는 첫 번째 파라미터 목록에서 정해져 있어 타입 추론이 된다. `zipWith(a, b)((_, _))`처럼 튜플을 만들면 표준 `zip`이 된다. 표준 라이브러리의 `zip`과 `map`을 조합하면 같은 결과를 얻지만, 이 문제의 목적은 재귀로 직접 만드는 것이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.23"
+	},
+	"intent": "구체적인 함수를 만든 직후 일반화하는 흐름이 이 장 내내 반복된다. 여기서는 덧셈과 `Int`라는 두 가지 구체성을 동시에 인자와 타입 파라미터로 바꾸는 연습이다. 타입이 서로 다른 두 리스트를 합칠 수 있게 되면 이 함수 하나로 앞의 문제를 포함해 많은 변형을 표현할 수 있다는 점을 확인한다."
+}

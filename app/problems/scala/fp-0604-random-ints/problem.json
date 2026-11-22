@@ -1,0 +1,37 @@
+{
+	"id": "fp-0604-random-ints",
+	"order": 1604,
+	"level": 2,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [
+		"recursion-list",
+		"tailrec-loop",
+		"tuple"
+	],
+	"title": "난수 리스트 만들기",
+	"limitSec": 300,
+	"targets": [
+		"상태를 넘기는 재귀",
+		"튜플 반환",
+		"누산기"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `RNG`와 `SimpleRNG`가 있다. `def ints(count: Int)(rng: RNG): (List[Int], RNG)`를 구현하라. `rng.nextInt`로 `count`개의 난수를 만든 리스트(값을 만든 순서대로, 첫 값이 리스트의 맨 앞)와 마지막 `nextInt`가 돌려준 `RNG`를 돌려준다. `count`가 0이면 빈 리스트와 받은 `rng`를 그대로 돌려준다.",
+	"starter": "def ints(count: Int)(rng: RNG): (List[Int], RNG) =\n  ???\n",
+	"hints": [
+		"\"`count`개\"를 \"하나 뽑고 나머지 `count - 1`개\"로 쪼개는 재귀를 생각하라. 나머지를 만들 때는 하나 뽑고 나서 돌려받은 `RNG`를 넘겨야 한다.",
+		"비슷한 예: 같은 `rng`에서 두 개를 뽑는 함수는 `val (a, r1) = rng.nextInt`, `val (b, r2) = r1.nextInt`, `(List(a, b), r2)`이다. 일반화하면 `b` 자리에 \"`r1`로 나머지를 만든 결과\"가 들어간다."
+	],
+	"notes": "이 모델 풀이는 꼬리 재귀가 아닌 직선 재귀이므로 아주 큰 `count`에서는 스택이 깊어진다. 누산기 리스트와 `RNG`를 함께 넘기는 내부 `loop`로 바꿔도 되고, 그 경우 마지막에 `reverse`가 필요한지 확인하라. `(List[Int], RNG)`처럼 결과 쌍을 분해하는 `val (xs, r2) = …`는 Scala 3에서도 그대로 쓴다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.4"
+	},
+	"intent": "여기까지는 값을 몇 개 이어 붙였지만, 이제는 개수가 실행 시점에 정해져서 반복 구조가 필요해진다. 상태를 재귀 호출에 넘기고 되돌려 받는 모양을 직접 짜 보면, 이것이 가변 변수 하나 없이도 \"상태가 있는 루프\"가 됨을 알게 된다. 이후 `sequence`로 같은 함수를 더 짧게 다시 쓰게 되므로, 지금 풀이를 기억해 두면 비교가 된다."
+}

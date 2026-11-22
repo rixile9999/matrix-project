@@ -1,0 +1,11 @@
+@main def tests(): Unit =
+  val inner = scala.List.range(0, 100).foldRight(Nil: List[Int])(Cons(_, _))
+  val many = scala.List.fill(2000)(inner).foldRight(Nil: List[List[Int]])(Cons(_, _))
+  def len[A](l: List[A]): Int = foldLeft(l, 0)((n, _) => n + 1)
+  Judge.check("여러 리스트")(concat(List(List(1, 2), List(3), List(4, 5))), List(1, 2, 3, 4, 5))
+  Judge.check("빈 리스트가 섞인 경우")(concat(List(Nil, List(1), Nil, List(2, 3), Nil)), List(1, 2, 3))
+  Judge.check("바깥이 빈 경우")(concat(Nil: List[List[Int]]), Nil)
+  Judge.check("모두 빈 리스트")(concat(List(Nil: List[Int], Nil)), Nil)
+  Judge.check("문자열 순서 유지")(concat(List(List("a", "b"), List("c"))), List("a", "b", "c"))
+  Judge.check("하나뿐인 경우")(concat(List(List(1, 2, 3))), List(1, 2, 3))
+  Judge.check("큰 입력(선형 시간)")(len(concat(many)), 200000)

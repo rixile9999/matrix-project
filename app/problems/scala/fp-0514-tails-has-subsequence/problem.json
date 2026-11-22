@@ -1,0 +1,37 @@
+{
+	"id": "fp-0514-tails-has-subsequence",
+	"order": 1514,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"exists-forall-count",
+		"iterator",
+		"lazylist"
+	],
+	"title": "tails와 hasSubsequence",
+	"limitSec": 600,
+	"targets": [
+		"unfold",
+		"tails",
+		"합성"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. 두 함수를 구현하라. (1) `tails`는 스트림의 모든 접미사로 이루어진 스트림이다. 원래 스트림부터 시작해 맨 앞 원소를 하나씩 떼어 가며 마지막에 빈 스트림까지 포함한다. `Stream(1, 2, 3).tails`는 `Stream(Stream(1, 2, 3), Stream(2, 3), Stream(3), Stream())`이다. `unfold`를 써서 구현하며, 무한 스트림에도 앞부분은 읽을 수 있어야 한다. (2) `hasSubsequence(sub)`는 `s` 안에 `sub`가 연속된 부분으로 나타나면 `true`이다(떨어진 원소를 모으는 것이 아니다). 비어 있는 `sub`는 항상 포함된다. 위의 `tails`와 Given.scala의 `startsWith`, `exists`를 조합해 구현하라. Given.scala에는 `unfold`, `append`(두 스트림 잇기), `foldRight`, `take`, `toList`도 있다. (5.14의 `tails`에 `hasSubsequence`를 함께 묶었다.)",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def tails: Stream[Stream[A]] =\n    ???\n\n  def hasSubsequence(sub: Stream[A]): Boolean =\n    ???\n",
+	"hints": [
+		"`tails`는 '현재 스트림을 내보내고 꼬리로 넘어간다'는 `unfold` 한 걸음으로 만들 수 있다. 다만 `Empty`에서는 끝나므로 마지막 빈 스트림 하나가 빠진다. 끝에 빈 스트림을 이어 붙여라. `hasSubsequence`는 '어떤 접미사가 `sub`로 시작하는가'라고 바꿔 말할 수 있다.",
+		"`Stream(1, 2).tails`라면 `unfold`가 내보내는 것은 `Stream(1, 2)`, `Stream(2)`이고 여기에 `Stream(Stream.empty)`를 `append`하면 된다. `hasSubsequence`는 `tails`의 각 접미사에 `startsWith`를 적용하는 `exists`이다."
+	],
+	"notes": "`case cur @ Cons(_, t)`는 매칭한 값 전체를 `cur`로 묶으면서 분해한다. `Stream[Stream[A]]`는 값이 스트림인 스트림이라 테스트에서는 `toList.map(_.toList)`로 풀어 비교한다. `Stream.empty`는 타입 인자가 필요한 자리에서는 추론이 되지만 `Stream(Stream.empty)`처럼 중첩할 때 막히면 `Stream.empty[A]`로 명시하라. `exists`는 `foldRight`로 만들어져 단락 평가되므로 일치하는 접미사를 찾으면 나머지 접미사는 만들지 않는다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.14"
+	},
+	"intent": "3장에서 `List`로 풀 때는 루프를 직접 짜야 했던 `hasSubsequence`가 `tails`와 `startsWith`, `exists`를 이으면 한 줄이 된다. 지연 평가 덕분에 접미사들을 전부 만들지 않아도 되고 찾는 순간 멈추기 때문에 이렇게 조합해도 비용이 늘지 않는다. 이 문제는 5장 전체의 결론, 즉 작은 함수들을 이어 붙여도 효율이 유지된다는 점을 직접 확인시켜 준다."
+}

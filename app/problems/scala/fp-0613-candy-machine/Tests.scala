@@ -1,0 +1,10 @@
+@main def tests(): Unit =
+  def sim(m: Machine, is: Input*): (Int, Machine) = simulateMachine(is.toList).run(m)
+  Judge.check("규칙 › 잠긴 기계에 동전")(sim(Machine(true, 5, 10), Input.Coin), (11, Machine(false, 5, 11)))
+  Judge.check("규칙 › 풀린 기계를 돌리면 사탕이 나오고 잠긴다")(sim(Machine(false, 5, 10), Input.Turn), (10, Machine(true, 4, 10)))
+  Judge.check("규칙 › 잠긴 기계를 돌리면 무시")(sim(Machine(true, 5, 10), Input.Turn), (10, Machine(true, 5, 10)))
+  Judge.check("규칙 › 풀린 기계에 동전은 무시")(sim(Machine(false, 5, 10), Input.Coin), (10, Machine(false, 5, 10)))
+  Judge.check("규칙 › 사탕이 없으면 모두 무시")(sim(Machine(true, 0, 3), Input.Coin, Input.Turn, Input.Coin), (3, Machine(true, 0, 3)))
+  Judge.check("규칙 › 입력이 없으면 상태 불변")(sim(Machine(false, 2, 7)), (7, Machine(false, 2, 7)))
+  Judge.check("시나리오 › 동전 4개와 돌리기 4번")(sim(Machine(true, 5, 10), Input.Coin, Input.Turn, Input.Coin, Input.Turn, Input.Coin, Input.Turn, Input.Coin, Input.Turn), (14, Machine(true, 1, 14)))
+  Judge.check("시나리오 › 중복 입력과 사탕 소진")(sim(Machine(true, 1, 0), Input.Coin, Input.Coin, Input.Turn, Input.Turn, Input.Coin, Input.Turn), (1, Machine(true, 0, 1)))

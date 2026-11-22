@@ -1,0 +1,38 @@
+{
+	"id": "fp-0506-map-filter-append-flatmap",
+	"order": 1506,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"map",
+		"filter",
+		"flatmap"
+	],
+	"title": "foldRight로 map, filter, append, flatMap",
+	"limitSec": 600,
+	"targets": [
+		"foldRight",
+		"지연 평가",
+		"변성 하한 B >: A"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. Given.scala에는 `foldRight[B](z: => B)(f: (A, => B) => B)`가 있다. 두 번째 인자 `f`의 둘째 매개변수와 `z`는 이름에 의한 호출이라 필요하지 않으면 평가되지 않는다. 이것을 이용해 네 함수를 직접 패턴 매칭하지 말고 `foldRight`로 구현하라. `map(f)`는 각 원소에 `f`를 적용한 스트림, `filter(p)`는 `p`를 만족하는 원소만 남긴 스트림, `append(s2)`는 `s` 뒤에 `s2`를 이어 붙인 스트림(`s2`는 이름에 의한 호출이고 `B >: A`), `flatMap(f)`는 각 원소로 만든 스트림들을 이어 붙인 스트림이다. 모두 지연되어야 한다. 즉 만들기만 해서는 `f`나 `p`가 실행되지 않고 무한 스트림에도 쓸 수 있어야 한다. `toList`, `take`도 Given.scala에 있다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def map[B](f: A => B): Stream[B] =\n    ???\n\n  def filter(p: A => Boolean): Stream[A] =\n    ???\n\n  def append[B >: A](s2: => Stream[B]): Stream[B] =\n    ???\n\n  def flatMap[B](f: A => Stream[B]): Stream[B] =\n    ???\n",
+	"hints": [
+		"네 함수 모두 '빈 경우의 결과 `z`'와 '머리와 나머지 결과를 합치는 `f`'만 정하면 된다. 머리를 어떻게 바꾸든 결과의 나머지는 `Stream.cons`의 꼬리 자리에 넘겨 지연시켜라. `filter`는 머리를 버릴 때 나머지 결과를 그대로 돌려준다.",
+		"`foldRight`로 `Stream`을 이어 붙이는 문제와 가까운 예로, 각 원소를 두 번씩 반복하는 함수라면 `s.foldRight(Stream.empty[A])((a, b) => Stream.cons(a, Stream.cons(a, b)))`이다. `flatMap`은 `Stream.cons` 대신 이미 만든 `append`를 쓰면 된다."
+	],
+	"notes": "`map`과 `flatMap`의 결과 타입을 `foldRight[B]`로 추론하게 하려면 `z`에 `Stream.empty[B]`처럼 타입을 명시하는 편이 안전하다. `append`의 `B >: A`는 `Stream[+A]`가 공변이기 때문에 필요한 하한이다. `A` 자리에 `B`를 쓰면 공변성 오류가 난다. `filter`의 `else b`에서 `b`는 이름에 의한 호출이지만 `Stream`을 값으로 돌려주는 시점에는 평가되므로, 조건에 맞는 원소가 오랫동안 없으면 그만큼 한 번에 건너뛴다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.6"
+	},
+	"intent": "네 함수가 모두 `foldRight` 한 줄이고, 그 한 줄이 결과를 차례로 만들지 한꺼번에 만들지를 결정한다. 이 연습으로 `map(...).filter(...)` 같은 연쇄가 중간 스트림을 통째로 만들지 않고 원소 하나씩 흘려보내는 이유가 드러난다. 각 함수가 '꼬리 쪽 결과를 `Stream.cons` 안에 두는가'만으로 지연성이 정해진다는 점을 확인하라."
+}

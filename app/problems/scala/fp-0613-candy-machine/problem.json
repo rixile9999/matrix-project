@@ -1,0 +1,39 @@
+{
+	"id": "fp-0613-candy-machine",
+	"order": 1613,
+	"level": 3,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"match-tuple",
+		"match-case-class",
+		"for-yield"
+	],
+	"title": "사탕 자판기 시뮬레이션",
+	"limitSec": 1200,
+	"targets": [
+		"State 로 모델링",
+		"modify · get",
+		"sequence",
+		"튜플 패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "사탕 자판기는 입력 `Input.Coin`(동전 투입)과 `Input.Turn`(손잡이 돌리기)을 받으며, `Machine(locked, candies, coins)`로 상태(잠김 여부, 남은 사탕 수, 들어 있는 동전 수)를 나타낸다. Given.scala에 `Input`, `Machine`, 그리고 앞 문제들의 `State`, `unit`, `map`, `map2`, `flatMap`, `sequence`, `get`, `set`, `modify`가 있다.\n\n규칙: 잠긴 기계에 동전을 넣으면 사탕이 남아 있을 때 잠금이 풀리고 동전이 하나 늘어난다. 잠금이 풀린 기계의 손잡이를 돌리면 사탕이 하나 나오고 다시 잠긴다. 잠긴 기계의 손잡이를 돌리거나 풀린 기계에 동전을 넣는 것은 아무 일도 일으키지 않는다. 사탕이 없는 기계는 모든 입력을 무시한다.\n\n`def simulateMachine(inputs: List[Input]): State[Machine, Int]`를 구현하라. 입력을 앞에서부터 차례로 처리한 뒤, 기계에 들어 있는 동전 수를 값으로 돌려주고 기계의 최종 상태는 `State`의 상태로 남아야 한다.",
+	"starter": "def simulateMachine(inputs: List[Input]): State[Machine, Int] =\n  ???\n",
+	"hints": [
+		"입력 하나가 하는 일은 \"`Machine`을 다음 `Machine`으로 바꾸는 함수\"이므로, 먼저 `(Input, Machine) => Machine` 규칙을 순수 함수로 쓴다. 그 함수를 `modify`로 `State` 동작으로 올리고, 입력 리스트 전체는 `sequence`로 한 동작으로 묶는다.",
+		"구조는 이렇다. `sequence(inputs.map(i => modify[Machine](update(i))))`가 모든 입력을 처리하는 동작이고, 그 뒤에 `get`으로 최종 `Machine`을 읽어 `coins`를 값으로 돌려주는 for 식을 쓴다. 규칙 함수는 `(i, m) match`로 사탕이 0인 경우를 가장 먼저 처리하면 짧다."
+	],
+	"notes": "`enum Input`의 케이스는 `Input.Coin`, `Input.Turn`으로 참조한다(1판의 `case object Coin extends Input`과 같은 역할). `(i, m) match`는 튜플 패턴과 case class 분해 패턴을 한꺼번에 쓰며, 순서가 곧 규칙 우선순위이다. 이 풀이는 `List[State[Machine, Unit]]`를 `sequence`로 합쳐 `State[Machine, List[Unit]]`를 얻은 뒤 결과를 버린다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.13"
+	},
+	"intent": "이 장 전체를 한 번에 사용하는 종합 문제이다. 규칙 판단은 평범한 순수 함수로 작성하고, 그것을 `modify`로 상태 동작에 올린 뒤 `sequence`와 for 식으로 이어 붙이는 구조 덕분에, 가변 상태 없이도 명령형 시뮬레이션과 똑같이 읽히는 코드가 된다. 규칙의 우선순위(사탕 0이면 무조건 무시)를 놓치면 단계별 테스트가 어디서 틀렸는지 알려 준다."
+}

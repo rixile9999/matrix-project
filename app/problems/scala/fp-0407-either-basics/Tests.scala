@@ -1,0 +1,11 @@
+@main def tests(): Unit =
+  val ok: Either[String, Int] = Right(2)
+  val bad: Either[String, Int] = Left("오류")
+  Judge.check("map: Right")(ok.map(_ * 10), Right(20))
+  Judge.check("flatMap: 함수가 Left")(ok.flatMap(_ => Left("함수 실패")), Left("함수 실패"))
+  Judge.check("flatMap: Left는 함수를 호출하지 않음")(bad.flatMap(_ => throw new Exception("호출됨")), Left("오류"))
+  Judge.check("orElse: Right는 b를 평가하지 않음")(ok.orElse(throw new Exception("평가됨")), Right(2))
+  Judge.check("orElse: Left는 b")(bad.orElse(Right(0)), Right(0))
+  Judge.check("map2: 둘 다 Right")(ok.map2(Right(5))(_ + _), Right(7))
+  Judge.check("map2: 뒤가 Left")(ok.map2(Left("뒤"): Either[String, Int])(_ + _), Left("뒤"))
+  Judge.check("map2: 둘 다 Left면 앞쪽 오류")(bad.map2(Left("뒤"): Either[String, Int])(_ + _), Left("오류"))

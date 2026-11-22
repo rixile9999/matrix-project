@@ -1,0 +1,37 @@
+{
+	"id": "fp-0607-map2",
+	"order": 1607,
+	"level": 2,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"hof",
+		"currying",
+		"tuple"
+	],
+	"title": "map2 와 짝 만들기",
+	"limitSec": 420,
+	"targets": [
+		"map2",
+		"두 Rand 합성",
+		"실행 순서"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `Rand[+A]`(`RNG => (A, RNG)`의 별칭), `unit`, `map`, `int`, `nonNegativeInt`, 그리고 `[0, 1)`의 `Double`을 만드는 `randDouble: Rand[Double]`가 있다. `map`은 `Rand` 하나의 값만 바꿀 수 있어서 두 난수를 짝지을 수 없다.\n\n(1) 두 `Rand`를 이항 함수로 합치는 `def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C]`를 구현하라. `ra`를 먼저 실행하고 그 결과 `RNG`로 `rb`를 실행하며, 최종 `RNG`는 `rb`가 돌려준 것이다.\n\n(2) `map2`를 써서 `def randIntDouble: Rand[(Int, Double)]`(`int` 값, 그 다음 `randDouble` 값)와 `def randDoubleInt: Rand[(Double, Int)]`(`randDouble` 값, 그 다음 `int` 값)를 구현하라.",
+	"starter": "def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =\n  ???\n\ndef randIntDouble: Rand[(Int, Double)] =\n  ???\n\ndef randDoubleInt: Rand[(Double, Int)] =\n  ???\n",
+	"hints": [
+		"`map2`의 결과는 `RNG => (C, RNG)` 함수이므로 `rng =>`로 시작해, `ra`를 돌리고, 돌려받은 `RNG`로 `rb`를 돌리고, `f`를 적용해 값과 마지막 `RNG`를 돌려준다.",
+		"`map`의 모양이 참고가 된다: `rng => { val (a, r2) = s(rng); (f(a), r2) }`. 여기서는 `Rand` 하나가 더 있으니 `r2`를 두 번째 `Rand`에 넘기는 줄이 하나 늘어난다. 짝을 만드는 함수 `f`는 `(a, b) => (a, b)`이다."
+	],
+	"notes": "`map2`는 파라미터 목록이 둘(`(ra, rb)`와 `(f)`)인 커링 함수이다. 이렇게 하면 `f`의 타입을 `ra`, `rb`에서 먼저 추론하므로 `(_, _)` 같은 줄임 람다가 쉽게 통한다. `(_, _)`는 `(a, b) => (a, b)`와 같은 튜플 생성 람다이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.7"
+	},
+	"intent": "`map`만으로는 막히는 지점을 직접 부딪치게 한 뒤 `map2`를 만들게 하는 문제이다. 풀이가 손으로 쓴 `intDouble`과 똑같은 `val` 세 줄이지만 이번에는 한 번만 쓰고 모든 조합에 재사용된다. 실행 순서가 첫 인자 먼저라는 점이 다음 문제 `sequence`의 순서 규칙으로 이어진다."
+}

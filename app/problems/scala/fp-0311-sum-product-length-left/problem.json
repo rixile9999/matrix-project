@@ -1,0 +1,36 @@
+{
+	"id": "fp-0311-sum-product-length-left",
+	"order": 1311,
+	"level": 1,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldleft",
+		"lambda",
+		"generics"
+	],
+	"title": "foldLeft로 sum, product, length",
+	"limitSec": 180,
+	"targets": [
+		"foldLeft",
+		"초기값과 결합 함수"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `List[+A]`와 꼬리 재귀 `foldLeft`가 주어진다. `foldLeft`만 사용해(직접 재귀하지 말고) 세 함수를 작성하라. 이름은 Given.scala와 겹치지 않도록 `Left`를 붙인다. 빈 리스트의 합은 `0`, 곱은 `1.0`, 길이는 `0`이다. 10만 개짜리 리스트에서도 동작해야 한다.\n\ndef sumLeft(ints: List[Int]): Int\ndef productLeft(ds: List[Double]): Double\ndef lengthLeft[A](l: List[A]): Int",
+	"starter": "def sumLeft(ints: List[Int]): Int =\n  ???\n\ndef productLeft(ds: List[Double]): Double =\n  ???\n\ndef lengthLeft[A](l: List[A]): Int =\n  ???\n",
+	"hints": [
+		"셋 모두 \"초기값\"과 \"누산기와 원소를 합치는 규칙\" 두 가지만 다르다. 각각 무엇인지 정해 `foldLeft`에 넣으면 된다.",
+		"`sumLeft`는 초기값 `0`에 규칙 `_ + _`이다. `lengthLeft`에서는 원소는 쓰지 않고 누산기에만 1을 더한다: `(n, _) => n + 1`."
+	],
+	"notes": "`foldLeft`에서는 `f`의 첫 인자가 누산기이므로 길이의 람다는 `(n, _) => n + 1`로 쓴다. 마지막 테스트의 합은 `Int` 범위를 넘어 오버플로한 값이 기대값인데, `Int` 덧셈은 그렇게 정의되어 있으므로 정상이다. 직접 재귀로 쓴 `sum`은 10만 개에서 스택이 넘치지만 `foldLeft` 기반은 그렇지 않다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.11"
+	},
+	"intent": "앞에서 `foldRight`로 쓴 `sum`, `product`, `length`를 `foldLeft`로 다시 쓰면서, 결합 규칙이 같으면 방향을 바꿔도 결과가 같다는 것을 확인하게 하려는 문제다. 또한 이번에는 10만 개에서도 터지지 않는다는 차이가 있어 왜 `foldLeft`를 기본으로 삼는지 알게 된다. 세 함수를 쓰고 나면 \"초기값 + 결합 규칙\"이라는 폴드의 공통 틀이 더 분명해진다."
+}

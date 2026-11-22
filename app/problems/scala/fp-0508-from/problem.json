@@ -1,0 +1,35 @@
+{
+	"id": "fp-0508-from",
+	"order": 1508,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"lazylist",
+		"range"
+	],
+	"title": "n부터 시작하는 정수 스트림",
+	"limitSec": 120,
+	"targets": [
+		"무한 스트림",
+		"Stream.cons"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `n`, `n + 1`, `n + 2`, … 로 끝없이 이어지는 정수 스트림을 만드는 최상위 함수 `def from(n: Int): Stream[Int]`를 구현하라. `from(5).take(3).toList`는 `List(5, 6, 7)`이다. `toList`와 `take`는 Given.scala에 있다.",
+	"starter": "def from(n: Int): Stream[Int] =\n  ???\n",
+	"hints": [
+		"머리는 `n`이고 꼬리는 '`n + 1`부터 시작하는 같은 스트림'이다. 상수 문제와 달리 재귀 호출에 넘기는 값이 바뀐다.",
+		"예를 들어 `n`부터 시작해 매번 3씩 커지는 스트림은 `Stream.cons(n, step3(n + 3))`이다. 여기서는 증가량이 1이다."
+	],
+	"notes": "`from`은 Scala에서 예약어가 아니므로 함수 이름으로 쓸 수 있다. 정수 오버플로는 따로 처리하지 않으며 `Int.MaxValue` 다음에는 음수로 돌아간다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.8"
+	},
+	"intent": "`constant`에서 익힌 구조에 상태 하나가 더해진 문제이다. 재귀 호출 인자가 다음 상태가 되고 꼬리가 그것으로 만든 스트림이 되는 이 패턴을 반복해서 쓰다 보면, 다음 `fibs`와 `unfold`가 같은 모양의 일반화임을 알게 된다."
+}

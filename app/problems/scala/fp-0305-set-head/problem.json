@@ -1,0 +1,36 @@
+{
+	"id": "fp-0305-set-head",
+	"order": 1305,
+	"level": 1,
+	"topic": "pattern",
+	"kind": "write",
+	"refs": [
+		"match-case-class",
+		"enum-adt",
+		"generics"
+	],
+	"title": "첫 원소 교체 setHead",
+	"limitSec": 90,
+	"targets": [
+		"패턴 매칭",
+		"데이터 공유"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `List[+A]`를 쓴다. 리스트의 첫 원소를 다른 값 `h`로 바꾼 새 리스트를 돌려주는 `setHead`를 구현하라. 바꿀 첫 원소가 없는 빈 리스트에는 `Nil`을 돌려준다. 나머지 꼬리는 복사하지 않고 그대로 재사용해야 한다.\n\ndef setHead[A](l: List[A], h: A): List[A]",
+	"starter": "def setHead[A](l: List[A], h: A): List[A] =\n  ???\n",
+	"hints": [
+		"`tail`과 같은 뼈대다. `Cons`일 때 기존 머리는 버리고 새 머리와 기존 꼬리를 다시 `Cons`로 묶는다.",
+		"`Nil`이면 `Nil`, `Cons(_, t)`이면 `Cons(h, t)` 두 줄이다."
+	],
+	"notes": "`h`를 리스트 원소 타입 `A`로 받으므로 `Int` 리스트에 문자열을 넣는 호출은 타입 오류가 난다. (공변 타입이라 상위 타입으로 넓히는 `[B >: A]` 시그니처도 가능하지만 이 문제는 단순하게 간다.) 불변 구조에서 \"수정\"은 새 노드 하나를 만들고 나머지를 가리키는 것이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.5"
+	},
+	"intent": "`tail`과 짝으로, 불변 리스트에서 \"바꾸기\"가 앞부분 노드 하나만 새로 만들면 되는 값싼 연산임을 확인하게 한다. 다음 문제 `init`과 비교하면 앞쪽 변경은 O(1)인데 뒤쪽 변경은 그렇지 않다는 대비가 뚜렷해진다."
+}

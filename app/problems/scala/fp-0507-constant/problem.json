@@ -1,0 +1,35 @@
+{
+	"id": "fp-0507-constant",
+	"order": 1507,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"lazylist",
+		"lazy-val"
+	],
+	"title": "같은 값이 끝없이 이어지는 스트림",
+	"limitSec": 120,
+	"targets": [
+		"무한 스트림",
+		"Stream.cons"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. 주어진 값 `a`가 끝없이 반복되는 무한 스트림을 만드는 `constant`를 구현하라. 이 함수는 확장 메서드가 아니라 최상위 함수 `def constant[A](a: A): Stream[A]`이다. `constant(7).take(3).toList`는 `List(7, 7, 7)`이어야 한다. `toList`와 `take`는 Given.scala에 있다.",
+	"starter": "def constant[A](a: A): Stream[A] =\n  ???\n",
+	"hints": [
+		"꼬리가 '같은 함수를 다시 부른 결과'인 스트림이다. `Stream.cons`의 꼬리 인자가 이름에 의한 호출이므로 재귀 호출을 그대로 써도 무한 재귀에 빠지지 않는다.",
+		"비슷한 예로 `1, 2, 4, 8, …`을 만드는 `def pow2(n: Int): Stream[Int] = Stream.cons(n, pow2(n * 2))`가 있다. 값을 바꾸지 않고 같은 `a`를 넘기면 `constant`가 된다."
+	],
+	"notes": "`Stream.cons(a, constant(a))`는 꼬리를 요구할 때마다 새 `Cons`를 하나씩 만든다. 더 효율적인 방법은 `lazy val tail: Stream[A] = Stream.cons(a, tail)`로 자기 자신을 가리키는 스트림을 하나만 만드는 것이다. 지역 `lazy val`이 자기 자신을 참조하는 것은 Scala에서 허용된다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.7"
+	},
+	"intent": "재귀 정의가 끝나지 않는 이유는 `Stream.cons`의 꼬리 인자가 평가를 미루기 때문이라는 것을 확인하는 첫 무한 스트림이다. 값이 아니라 '값을 만드는 규칙'을 정의하는 감각을 익히는 것이 목적이며, 다음 문제 `from`과 `fibs`, 그리고 일반화인 `unfold`로 이어진다."
+}

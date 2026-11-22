@@ -1,0 +1,12 @@
+@main def tests(): Unit =
+  val big = scala.List.range(0, 10000).foldRight(Nil: List[Int])(Cons(_, _))
+  Judge.check("foldLeft 구현 › 합")(foldLeftViaFoldRight(List(1, 2, 3, 4), 0)(_ + _), 10)
+  Judge.check("foldLeft 구현 › 뺄셈은 왼쪽부터")(foldLeftViaFoldRight(List(1, 2, 3), 10)(_ - _), 4)
+  Judge.check("foldLeft 구현 › 문자열 순서")(foldLeftViaFoldRight(List("a", "b", "c"), "")(_ + _), "abc")
+  Judge.check("foldLeft 구현 › Cons로 쌓으면 뒤집힌다")(foldLeftViaFoldRight(List(1, 2, 3), Nil: List[Int])((acc, x) => Cons(x, acc)), List(3, 2, 1))
+  Judge.check("foldLeft 구현 › 빈 리스트는 z")(foldLeftViaFoldRight(Nil: List[Int], 7)(_ + _), 7)
+  Judge.check("foldRight 구현 › 뺄셈은 오른쪽부터")(foldRightViaFoldLeft(List(1, 2, 3), 10)(_ - _), -8)
+  Judge.check("foldRight 구현 › Cons로 쌓으면 그대로")(foldRightViaFoldLeft(List(1, 2, 3), Nil: List[Int])(Cons(_, _)), List(1, 2, 3))
+  Judge.check("foldRight 구현 › 문자열 순서")(foldRightViaFoldLeft(List("a", "b", "c"), "")(_ + _), "abc")
+  Judge.check("foldRight 구현 › 빈 리스트는 z")(foldRightViaFoldLeft(Nil: List[Int], 7)(_ + _), 7)
+  Judge.check("foldRight 구현 › 1만 개에서도 스택 안전")(foldRightViaFoldLeft(big, 0L)(_ + _), 49995000L)

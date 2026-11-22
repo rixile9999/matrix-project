@@ -1,0 +1,39 @@
+{
+	"id": "fp-0611-generalize-state",
+	"order": 1611,
+	"level": 3,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"extension",
+		"generics",
+		"variance",
+		"foldright"
+	],
+	"title": "State 로 일반화하기",
+	"limitSec": 1200,
+	"targets": [
+		"State 타입",
+		"extension 메서드",
+		"제네릭 일반화",
+		"sequence"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "난수 말고도 \"상태를 받아 값과 새 상태를 돌려주는 함수\"는 어디에나 있다. Given.scala의 `case class State[S, +A](run: S => (A, S))`는 그런 상태 동작을 감싼 타입이다. 상태 타입 `S`는 임의이다. 앞에서 `Rand`에 대해 만든 연산을 이 타입에 맞게 일반화하라. 메서드는 `extension` 블록으로 쓴다.\n\n(1) `def unit[S, A](a: A): State[S, A]` — 상태를 그대로 두고 `a`를 돌려준다.\n(2) `extension [S, A](s: State[S, A])` 안에 `def flatMap[B](f: A => State[S, B]): State[S, B]` — `s`를 실행해 얻은 값으로 `f`가 만든 동작을 이어서 실행한다.\n(3) 같은 블록에 `def map[B](f: A => B): State[S, B]`와 `def map2[B, C](sb: State[S, B])(f: (A, B) => C): State[S, C]` — `this`가 먼저, `sb`가 나중에 실행된다.\n(4) `def sequence[S, A](fs: List[State[S, A]]): State[S, List[A]]` — 앞의 동작이 먼저 실행되고 결과 리스트에서도 앞에 온다. 빈 리스트는 상태를 바꾸지 않는다.",
+	"starter": "def unit[S, A](a: A): State[S, A] =\n  ???\n\nextension [S, A](s: State[S, A])\n  def flatMap[B](f: A => State[S, B]): State[S, B] =\n    ???\n  def map[B](f: A => B): State[S, B] =\n    ???\n  def map2[B, C](sb: State[S, B])(f: (A, B) => C): State[S, C] =\n    ???\n\ndef sequence[S, A](fs: List[State[S, A]]): State[S, List[A]] =\n  ???\n",
+	"hints": [
+		"`Rand`에서 쓴 구현에서 `RNG`를 `S`로, 함수를 `State(...)`로 감싼 `run`으로 바꾸면 거의 그대로이다. `flatMap`만 직접 `run`을 풀어 쓰고, `map`, `map2`는 `flatMap`과 `unit`으로 정의하는 것이 가장 짧다.",
+		"`flatMap`의 뼈대는 `State(st => { val (a, st2) = s.run(st); f(a).run(st2) })`이다. `sequence`는 `foldRight`에 초깃값 `unit(Nil)`과 결합 연산 `(f, acc) => f.map2(acc)(_ :: _)`을 쓴다. 초깃값은 타입 인자를 명시(`unit[S, List[A]](Nil)`)해야 할 수 있다."
+	],
+	"notes": "`extension [S, A](s: State[S, A])` 블록은 case class에 메서드를 직접 추가할 수 없는 상황(Given.scala에 정의됨)에서 `s.flatMap(...)`처럼 호출되는 메서드를 만드는 Scala 3 방식이다. 이렇게 만든 `map`과 `flatMap`은 for 식에서도 쓸 수 있다. `State`의 `+A`는 공변 표시이며, Scala 2 시절엔 `State`를 `class State[S, +A]`의 멤버 메서드로 정의했다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.11"
+	},
+	"intent": "`RNG`를 `S`로 바꿔도 구현이 한 글자도 달라지지 않는 것을 보게 하는 문제이다. 이 장의 요지는 난수가 아니라 \"상태를 넘기는 패턴\" 자체가 하나의 추상화이고, `unit`/`map`/`map2`/`flatMap`/`sequence`가 그 패턴의 표준 도구라는 점이다. 이후 `Option`, `Par`, `Parser`에서 같은 다섯 연산이 반복되는 것을 볼 때 이 문제가 출발점이 된다."
+}

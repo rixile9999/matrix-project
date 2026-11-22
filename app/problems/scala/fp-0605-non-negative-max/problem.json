@@ -1,0 +1,37 @@
+{
+	"id": "fp-0605-non-negative-max",
+	"order": 1605,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"hof",
+		"type-alias",
+		"lambda"
+	],
+	"title": "map 으로 0 이상 n 이하 난수",
+	"limitSec": 180,
+	"targets": [
+		"Rand 타입 별칭",
+		"map",
+		"값만 변환"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "난수를 만드는 함수는 모두 `RNG => (A, RNG)` 모양이어서 Given.scala에 `type Rand[+A] = RNG => (A, RNG)`라는 별칭이 있다. `unit(a)`는 `RNG`를 건드리지 않고 `a`를 돌려주는 `Rand`이고, `map(s)(f)`는 `s`가 만든 값에만 `f`를 적용하고 `RNG`는 `s`가 돌려준 그대로 넘기는 `Rand`이다. `int`는 `nextInt`를 `Rand[Int]` 값으로 만든 것이다. 그 밖에 `nonNegativeInt`, `double`도 쓸 수 있다.\n\n`def nonNegativeMax(n: Int): Rand[Int]`를 `map`을 사용해 구현하라. 결과는 `0` 이상 `n` 이하의 정수(양 끝 포함)이고, 난수 생성기는 정확히 한 번 전진시킨다. `n`은 0 이상이며 매우 큰 값은 다루지 않는다.",
+	"starter": "def nonNegativeMax(n: Int): Rand[Int] =\n  ???\n",
+	"hints": [
+		"`[0, 1)` 구간의 값을 만드는 `double`이 이미 있으니, `map`으로 그 값을 \"`0` 이상 `n` 이하\"의 정수로 바꾸는 식만 쓰면 된다. 구간 길이가 `n`이 아니라 `n + 1`개임을 기억하라.",
+		"비슷한 예: `[0, 1)`의 `Double`을 `0` 이상 `100` 미만의 `Int`로 바꾸는 `Rand`는 `map(double)(d => (d * 100).toInt)`이다. 이 문제는 포함 범위라서 곱하는 수가 하나 더 크다."
+	],
+	"notes": "`Rand[Int]`는 함수 타입의 별칭이므로 이 함수는 \"`n`을 받아 함수를 돌려주는 함수\"이다. `map(double)`처럼 메서드 `double`을 넘기면 컴파일러가 `RNG => (Double, RNG)`로 변환해 준다(eta 확장). `i % (n + 1)`처럼 나머지로 풀어도 범위는 맞지만 값이 조금 치우치는데, 이 문제의 테스트는 범위·도달 가능성만 검사한다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.5"
+	},
+	"intent": "`Rand`라는 이름이 붙으면서 \"함수를 값처럼 조합한다\"는 쪽으로 사고가 한 칸 옮겨 가는 지점이다. `map`은 상태를 전혀 만지지 않고 값만 바꾸므로, 풀이 어디에도 `RNG`가 나타나지 않아야 한다. 구간 끝을 포함할지의 off-by-one은 테스트가 모든 값이 실제로 나오는지로 확인한다."
+}

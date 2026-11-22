@@ -1,0 +1,36 @@
+{
+	"id": "fp-0327-tree-depth",
+	"order": 1327,
+	"level": 1,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"match-case-class",
+		"sum-min-max"
+	],
+	"title": "트리의 깊이",
+	"limitSec": 150,
+	"targets": [
+		"ADT",
+		"트리 재귀"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 이진 트리 `Tree[+A]`(`Leaf(value)`, `Branch(left, right)`)가 있다. 뿌리에서 어떤 잎까지 가는 경로의 길이는 거치는 `Branch`의 수(간선의 수)이다. 가장 긴 경로의 길이를 반환하는 `def depth[A](t: Tree[A]): Int`를 구현하라. 잎 하나뿐인 트리의 깊이는 0이고, `Branch(Leaf(1), Leaf(2))`의 깊이는 1이다.",
+	"starter": "def depth[A](t: Tree[A]): Int =\n  ???\n",
+	"hints": [
+		"`Leaf`의 깊이는 0이다. `Branch`는 왼쪽과 오른쪽 중 더 깊은 쪽에 한 단계를 더한 값이다.",
+		"`1 + depth(l).max(depth(r))`처럼 쓴다. 두 쪽을 더하지 않고 큰 쪽만 취한다는 점이 `size`와 다르다."
+	],
+	"notes": "깊이를 거치는 노드 수로 정의하면 잎 하나가 1이 되어 결과가 1 커진다. 이 문제는 간선의 수 기준이라 잎이 0이다. 경계가 헷갈리면 가장 작은 트리 두 개(`Leaf`, `Branch(Leaf, Leaf)`)부터 손으로 값을 확인해 본다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.27"
+	},
+	"intent": "`maximum`과 같은 틀이지만 값이 아닌 '구조'의 속성을 계산한다는 점이 다르다. 원소의 타입과 무관하게 모양만으로 정해지는 값이 있다는 것을 보게 된다. `Leaf`의 기저값과 `Branch`의 결합 방식 두 가지만 정하면 함수가 완성된다는 감각을 확인하는 단계다."
+}

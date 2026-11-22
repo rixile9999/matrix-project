@@ -1,0 +1,35 @@
+{
+	"id": "fp-0402-variance",
+	"order": 1402,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"option-map",
+		"option-for"
+	],
+	"title": "mean으로 variance 만들기",
+	"limitSec": 300,
+	"targets": [
+		"flatMap",
+		"Option 합성"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `Option`, 그 연산(`map`, `flatMap`, `getOrElse`, `orElse`, `filter`), 그리고 평균을 구하는 `mean`이 주어진다. `mean`은 빈 시퀀스에 대해 `None`을 돌려준다. `variance(xs)`를 구현하라. 평균이 `m`일 때 분산은 각 원소 `x`에 대한 `math.pow(x - m, 2)`의 평균이다. 빈 시퀀스면 `None`이어야 한다. 새로 평균 계산 코드를 쓰지 말고 `mean`과 `flatMap`으로 조합하라.",
+	"starter": "def variance(xs: Seq[Double]): Option[Double] =\n  ???\n",
+	"hints": [
+		"평균 `m`이 있어야 편차를 계산할 수 있다. 첫 `mean`의 결과를 `flatMap`으로 받아 그 안에서 두 번째 계산을 이어 간다.",
+		"`mean(xs).flatMap(m => ...)`의 `...` 자리에 편차 제곱들로 이루어진 새 시퀀스를 만들어 다시 `mean`에 넘긴다. 마지막 `mean`이 `Option`을 돌려주므로 `map`이 아니라 `flatMap`이 맞는 이유를 확인하라."
+	],
+	"notes": "`extension` 메서드는 `mean(xs).flatMap(...)`처럼 점으로 부르는 문법이 그대로 유지된다. 이 문제의 Given에서 `mean`은 `Seq[Double]`을 받는다. `for (m <- mean(xs); v <- mean(...)) yield v`로 써도 같은 결과이며, `for`는 `map`/`flatMap` 호출로 풀리므로 우리가 정의한 extension이 쓰인다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.2"
+	},
+	"intent": "첫 연습이 `Option`의 부품을 만드는 일이었다면 이것은 처음으로 그 부품을 조립해 보는 일이다. 실패할 수 있는 계산 둘이 이어질 때, `if (xs.isEmpty)` 검사를 곳곳에 넣지 않고 `flatMap` 한 번으로 오류 전파를 맡기는 법을 보여 준다. 풀고 나서 빈 시퀀스 검사가 코드 어디에도 없다는 점을 확인하라."
+}

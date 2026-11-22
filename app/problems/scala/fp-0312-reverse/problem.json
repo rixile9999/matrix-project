@@ -1,0 +1,37 @@
+{
+	"id": "fp-0312-reverse",
+	"order": 1312,
+	"level": 1,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldleft",
+		"generics",
+		"list-build"
+	],
+	"title": "폴드로 reverse",
+	"limitSec": 180,
+	"targets": [
+		"foldLeft",
+		"누산기",
+		"Cons"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `List[+A]`와 꼬리 재귀 `foldLeft`가 주어진다. 리스트의 원소 순서를 뒤집는 `reverse`를 구현하라. 예를 들어 `List(1,2,3)`은 `List(3,2,1)`이 된다. 폴드를 사용해 보고, 10만 개짜리 리스트에서도 빠르고 안전해야 한다.\n\ndef reverse[A](l: List[A]): List[A]",
+	"starter": "def reverse[A](l: List[A]): List[A] =\n  ???\n",
+	"hints": [
+		"앞에서부터 원소를 하나씩 꺼내 새 리스트의 맨 앞에 붙이면, 먼저 꺼낸 것이 맨 뒤로 간다. 누산기가 리스트인 `foldLeft`를 떠올려 보라.",
+		"초기값은 빈 리스트(`Nil: List[A]`)이고, 합치는 규칙은 `(acc, h) => Cons(h, acc)`다. 원소를 맨 뒤에 붙이는 방식으로 쓰면 `append`가 필요해져 느려진다."
+	],
+	"notes": "`Nil: List[A]`처럼 초기값에 타입을 붙이는 이유는 `B`를 `List[A]`로 추론시키기 위해서다. `foldLeft(l, List[A]())`처럼 `apply`를 쓰는 대신 `Nil`을 쓰면 가볍다. 표준 라이브러리 `reverse`도 같은 방식으로 앞에 붙여 쌓는다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.12"
+	},
+	"intent": "폴드의 누산기가 숫자만이 아니라 리스트일 수 있음을 보여 주는 문제다. `Cons`가 앞에 붙는다는 성질과 `foldLeft`가 앞에서부터 읽는다는 성질이 맞물려 뒤집기가 한 줄로 나온다. 이 `reverse`는 바로 다음 문제에서 `foldRight`와 `foldLeft`를 서로의 말로 표현하는 열쇠가 된다."
+}

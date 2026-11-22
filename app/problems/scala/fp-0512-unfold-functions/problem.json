@@ -1,0 +1,39 @@
+{
+	"id": "fp-0512-unfold-functions",
+	"order": 1512,
+	"level": 3,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"iterator",
+		"zip",
+		"lazylist",
+		"match-tuple"
+	],
+	"title": "unfold로 map, take, takeWhile, zipWith, zipAll",
+	"limitSec": 1200,
+	"targets": [
+		"unfold",
+		"상태 설계",
+		"zipAll",
+		"Option"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. Given.scala에 `unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A]`가 있다. 초기 상태 `z`에서 `f`가 `Some((값, 다음 상태))`를 주는 동안 값을 내보내고 `None`이면 끝난다. 이것만 사용해 다섯 함수를 구현하라(앞의 `take` 등과 이름이 겹치지 않게 접미사를 붙였다). `mapViaUnfold(f)`는 각 원소에 `f`를 적용한다. `takeViaUnfold(n)`은 앞의 `n`개를 취한다. `takeWhileViaUnfold(p)`는 `p`를 만족하는 앞쪽 연속 구간을 취한다. `zipWithViaUnfold(s2)(f)`는 두 스트림의 같은 위치 원소를 `f`로 합친 스트림으로 둘 중 짧은 쪽에서 끝난다. `zipAllViaUnfold(s2)`는 둘 중 하나라도 남아 있는 동안 계속하며 `(Option[A], Option[B])` 쌍을 내보낸다(끝난 쪽은 `None`, 남은 쪽은 `Some`). 모두 무한 스트림에도 동작해야 한다. `toList`와 `take`도 Given.scala에 있다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def mapViaUnfold[B](f: A => B): Stream[B] =\n    ???\n\n  def takeViaUnfold(n: Int): Stream[A] =\n    ???\n\n  def takeWhileViaUnfold(p: A => Boolean): Stream[A] =\n    ???\n\n  def zipWithViaUnfold[B, C](s2: Stream[B])(f: (A, B) => C): Stream[C] =\n    ???\n\n  def zipAllViaUnfold[B](s2: Stream[B]): Stream[(Option[A], Option[B])] =\n    ???\n",
+	"hints": [
+		"각 함수에서 먼저 상태를 무엇으로 둘지 정하라. `map`과 `takeWhile`은 남은 스트림 하나가 상태이고, `take`는 남은 스트림과 남은 개수의 쌍, `zipWith`와 `zipAll`은 두 스트림의 쌍이다. `f`는 상태를 패턴 매칭해 `Some((내보낼 값, 다음 상태))` 또는 `None`을 주면 된다.",
+		"상태가 `(Stream, Int)`인 예로, 앞의 `k`개만 두 배로 만드는 함수는 `unfold((s, k)) { case (Cons(h, t), i) if i > 0 => Some((h() * 2, (t(), i - 1))); case _ => None }`처럼 쓴다. `zipAll`은 네 가지 경우(둘 다 빔, 왼쪽만 남음, 오른쪽만 남음, 둘 다 남음)를 모두 적어라."
+	],
+	"notes": "`unfold`의 `f`에 `{ case … }` 형태의 패턴 매칭 익명 함수를 바로 넘길 수 있다. 상태를 `(Stream[A], Stream[B])`처럼 튜플로 두면 패턴으로 한꺼번에 분해된다. `unfold`로 만든 `take`는 `n`번째 원소를 내보낼 때 다음 상태의 `t()`를 같이 평가하므로, 직접 재귀로 쓴 `take`보다 꼬리를 한 칸 더 읽는다. 이것은 상태에 썽크 대신 값을 담기 때문이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.12"
+	},
+	"intent": "다섯 함수가 서로 달라 보여도 '상태 정하기 + 한 걸음 규칙'으로 같은 틀에 들어간다는 점이 이 연습의 핵심이다. `zipAll`에서는 어느 쪽이 먼저 끝났는지를 `Option`으로 알리는 설계를 해 보게 되며, 다음 `startsWith`가 이것을 그대로 쓴다. `foldRight`로 쓴 앞의 버전과 비교하면, 소비하는 쪽(`foldRight`)과 생산하는 쪽(`unfold`)이라는 두 관점이 같은 함수를 어떻게 다르게 표현하는지 보인다."
+}

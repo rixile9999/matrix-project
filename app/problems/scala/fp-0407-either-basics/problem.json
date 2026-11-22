@@ -1,0 +1,39 @@
+{
+	"id": "fp-0407-either-basics",
+	"order": 1407,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"either-basic",
+		"either-for",
+		"extension",
+		"variance"
+	],
+	"title": "Either의 map·flatMap·orElse·map2",
+	"limitSec": 600,
+	"targets": [
+		"Either",
+		"오른쪽 편향",
+		"하한 타입",
+		"map2"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "실패의 이유까지 담을 수 있는 `enum Either[+E, +A]`가 Given.scala에 주어진다. `Left(value)`는 실패(이유 `E`), `Right(value)`는 성공(값 `A`)이다. `Right` 쪽 값을 기준으로 동작하는 네 연산을 `extension` 메서드로 구현하라. (1) `map`은 `Right`의 값에만 함수를 적용하고 `Left`는 그대로 둔다. (2) `flatMap`은 실패할 수 있는 함수를 적용하되 오류 타입은 `EE >: E`로 넓힐 수 있다. (3) `orElse`는 `Right`이면 자기 자신, `Left`이면 `b`를 돌려준다. `b`는 필요할 때만 평가한다. (4) `map2`는 두 `Either`가 모두 `Right`일 때 `f`로 합친다. 둘 다 `Left`라면 먼저 나온(앞쪽의) `Left`를 돌려준다.",
+	"starter": "extension [E, A](e: Either[E, A])\n  def map[B](f: A => B): Either[E, B] = ???\n  def flatMap[EE >: E, B](f: A => Either[EE, B]): Either[EE, B] = ???\n  def orElse[EE >: E, B >: A](b: => Either[EE, B]): Either[EE, B] = ???\n  def map2[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): Either[EE, C] = ???\n",
+	"hints": [
+		"`Option` 때의 구현과 모양이 같다. 다른 점은 `Left`가 값(오류 이유)을 가지고 있어서, 그 값을 버리지 말고 그대로 전달해야 한다는 것이다. `orElse`는 `Left`의 이유를 쓰지 않으므로 버려도 된다.",
+		"`map2`는 새로 패턴을 늘어놓지 말고, 앞 연습의 `Option` 때처럼 `flatMap`과 `map`을 중첩해서 만든다. `flatMap`이 `Left`를 그대로 전파하므로 첫 번째 실패가 자동으로 우선된다."
+	],
+	"notes": "`[EE >: E]`가 필요한 이유는 `Either[+E, +A]`가 공변이라 메서드의 인자 위치에 `E`를 둘 수 없기 때문이다. `flatMap`으로 오류 타입이 다른 `Either`를 이어 붙이면 둘의 공통 상위 타입으로 오류가 넓어진다. 표준 `scala.Either`는 2.12부터 `map`, `flatMap`이 오른쪽 편향이지만 `orElse`와 `map2`는 없으며 `map2`는 직접 만들어야 한다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.7"
+	},
+	"intent": "`Option`에서 한 일을 `Either`에 옮겨 하면서, 같은 `map`/`flatMap`이 어떻게 오류 이유까지 함께 운반하는지 보게 한다. 구현이 `Option` 때와 거의 같다는 점이 곧 교재가 보여 주려는 것으로, 서로 다른 데이터 타입이 같은 연산 모양을 공유한다. 또 `Left`를 건드리지 않고 오른쪽으로만 흐르는 `flatMap`이 `for` 컴프리헨션으로 곧바로 이어짐을 확인한다."
+}

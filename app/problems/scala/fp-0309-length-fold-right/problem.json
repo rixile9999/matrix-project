@@ -1,0 +1,36 @@
+{
+	"id": "fp-0309-length-fold-right",
+	"order": 1309,
+	"level": 1,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"generics",
+		"lambda"
+	],
+	"title": "foldRight로 length",
+	"limitSec": 120,
+	"targets": [
+		"foldRight",
+		"람다"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `List[+A]`와 `foldRight`가 주어진다. `foldRight`를 이용해 리스트의 길이를 구하는 `length`를 구현하라. 빈 리스트의 길이는 `0`이다.\n\ndef length[A](l: List[A]): Int",
+	"starter": "def length[A](l: List[A]): Int =\n  ???\n",
+	"hints": [
+		"각 원소를 만날 때마다 \"나머지의 길이\"에 1을 더하면 된다. 원소의 값 자체는 필요 없다.",
+		"`f`는 `(a, acc) => ...` 모양이다. `a`를 쓰지 않으니 `_`로 받고, `Nil` 자리에 올 `z`는 `0`이다."
+	],
+	"notes": "`(_, n) => n + 1`처럼 한 매개변수만 `_`로 버리는 경우에는 이름 있는 매개변수와 섞어 쓸 수 있다. 위치 기반 `_ + _` 약식은 각 `_`가 서로 다른 매개변수를 뜻하므로, 첫 번째 값만 무시하는 이 경우에는 쓰지 못한다. 표준 라이브러리는 `length`를 `foldRight`로 구현하지 않고 이 구현은 스택을 쓴다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.9"
+	},
+	"intent": "`foldRight`의 `f`가 \"원소와 나머지 결과를 합치는 규칙\"임을 원소 값이 필요 없는 가장 단순한 사례로 확인하게 한다. 합치는 규칙과 빈 리스트의 값, 두 가지만 정하면 함수 하나가 완성된다는 틀을 몸에 익히는 것이 목표다. 이 문제의 `foldRight`는 길이에 비례해 스택이 깊어지는데, 바로 다음 문제가 그 한계를 다룬다."
+}

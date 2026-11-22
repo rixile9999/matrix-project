@@ -1,0 +1,37 @@
+{
+	"id": "fp-0408-either-traverse",
+	"order": 1408,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"either-basic",
+		"foldright",
+		"either-for"
+	],
+	"title": "Either의 sequence와 traverse",
+	"limitSec": 480,
+	"targets": [
+		"traverse",
+		"sequence",
+		"Either"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `Either`와 그 연산(`map`, `flatMap`, `orElse`, `map2`)이 주어진다. `Option`에서 한 것과 같은 두 함수를 `Either`로 구현하라. `traverse(xs)(f)`는 실패할 수 있는 함수 `f: A => Either[E, B]`를 리스트의 각 원소에 적용해, 모두 `Right`이면 결과를 모은 `Right(List[B])`를, 하나라도 `Left`이면 처음 만난 `Left`를 돌려준다. `sequence(xs)`는 `Either` 리스트를 `Either[E, List[A]]`로 뒤집으며, `traverse`로 구현한다. 리스트는 표준 `List`다.",
+	"starter": "def traverse[E, A, B](xs: List[A])(f: A => Either[E, B]): Either[E, List[B]] =\n  ???\n\ndef sequence[E, A](xs: List[Either[E, A]]): Either[E, List[A]] =\n  ???\n",
+	"hints": [
+		"`Option`의 `traverse`를 그대로 옮기면 된다. `Some`/`None`이 `Right`/`Left`로, `Option`의 `map2`가 `Either`의 `map2`로 바뀐 것뿐이다. 달라진 점은 실패했을 때 이유가 결과에 남는다는 것이다.",
+		"접기 구조: `xs.foldRight(Right(Nil): Either[E, List[B]])((a, acc) => ...)`에서 `...`는 `f(a)`와 `acc`를 `map2`로 합쳐 리스트 앞에 붙이는 식이다. `sequence`는 각 원소를 변환 없이 그대로 쓰는 `traverse`다."
+	],
+	"notes": "`Right(Nil)`도 `Right[Nothing]`쯤으로 추론되므로 접기 초기값에 `Either[E, List[B]]` 타입을 붙인다. `either.map2(...)`처럼 `extension`으로 정의한 메서드를 점으로 부르는 것은 일반 메서드와 같다. 이 파일의 `Either`와 `Left`/`Right`는 `scala.util`의 것이 아니라 Given.scala에서 정의한 것이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.8"
+	},
+	"intent": "`Option` 때 쓴 `sequence`/`traverse`가 `Either`로 거의 글자 그대로 옮겨진다는 사실이 이 문제의 요점이다. 데이터 타입이 달라도 `map2`만 있으면 같은 리스트 접기가 성립하고, 이 반복이 나중에 추상화의 동기가 된다. 또 `Left`의 값을 통해 \"어느 원소가 왜 실패했는지\"가 보존되지만, 처음 실패에서 멈춰 나머지 오류는 사라진다는 한계를 다음 문제가 이어받는다."
+}

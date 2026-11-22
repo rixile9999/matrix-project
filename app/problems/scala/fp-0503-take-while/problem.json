@@ -1,0 +1,35 @@
+{
+	"id": "fp-0503-take-while",
+	"order": 1503,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"takewhile-span",
+		"by-name"
+	],
+	"title": "조건이 맞는 동안만 취하기",
+	"limitSec": 180,
+	"targets": [
+		"지연 평가",
+		"Stream.cons"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `takeWhile(p)`를 구현하라. 앞에서부터 조건 `p`를 만족하는 원소를 모으다가 처음으로 만족하지 않는 원소를 만나면 거기서 끝낸 스트림을 반환한다. 이후에 조건을 만족하는 원소가 있어도 포함하지 않는다. 결과는 지연되어야 하므로 무한 스트림에도 쓸 수 있어야 하고, 멈춘 지점 뒤의 꼬리는 평가하지 않아야 한다. `toList`와 `take`는 Given.scala에 있다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def takeWhile(p: A => Boolean): Stream[A] =\n    ???\n",
+	"hints": [
+		"`take`와 거의 같은 구조이다. 머리가 조건을 만족하면 `Stream.cons`로 머리를 남기고 꼬리에 같은 함수를 이어 붙이며, 만족하지 않거나 비어 있으면 빈 스트림이다.",
+		"패턴 매칭의 가드를 활용하라. `case Cons(h, t) if p(h()) => …`가 '계속 취하는' 경우이고, 나머지 모든 경우는 `case _ => Stream.empty` 하나로 처리된다."
+	],
+	"notes": "가드가 붙은 `case`가 실패하면 다음 `case`로 넘어가므로 `case _`가 '조건 불만족'과 '빈 스트림' 두 경우를 한꺼번에 처리한다. `filter`와 달리 한 번 거부된 뒤로는 되돌아가지 않는다는 점이 다르다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.3"
+	},
+	"intent": "`take`가 개수로 끊는다면 `takeWhile`은 조건으로 끊으며, 같은 뼈대에서 종료 조건만 바뀐다. 멈춘 지점 뒤를 평가하지 않는다는 성질이 있어야 `from(1).takeWhile(_ < 100)` 같은 무한 스트림 사용이 가능하다. 이 함수는 곧바로 이어지는 5.5의 `foldRight` 버전과 비교의 기준이 된다."
+}

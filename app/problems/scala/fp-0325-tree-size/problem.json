@@ -1,0 +1,37 @@
+{
+	"id": "fp-0325-tree-size",
+	"order": 1325,
+	"level": 1,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"match-case-class",
+		"recursion-list"
+	],
+	"title": "트리의 노드 수 세기",
+	"limitSec": 150,
+	"targets": [
+		"ADT",
+		"트리 재귀",
+		"패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 이진 트리 `Tree[+A]`가 있다. `Leaf(value)`는 값을 하나 가진 잎이고, `Branch(left, right)`는 왼쪽과 오른쪽 하위 트리를 가진 가지이다. `Leaf`와 `Branch`는 모두 노드 하나로 센다. 트리 전체의 노드 개수를 반환하는 `def size[A](t: Tree[A]): Int`를 구현하라. 예를 들어 `Branch(Leaf(1), Leaf(2))`의 크기는 3이다.",
+	"starter": "def size[A](t: Tree[A]): Int =\n  ???\n",
+	"hints": [
+		"`Leaf`와 `Branch`로 케이스를 나눈다. `Leaf`는 바로 답이 나오고, `Branch`는 두 하위 트리가 각자 답을 갖고 있다.",
+		"`Branch`의 크기는 자기 자신 하나에 왼쪽과 오른쪽의 크기를 더한 값이다. 리스트에서 `1 + 꼬리의 길이`를 쓰던 것의 두 갈래 버전이다."
+	],
+	"notes": "Scala 3의 `enum`은 Scala 2의 `sealed trait` 더하기 케이스 클래스에 해당하며 `case Leaf(value: A)`는 케이스 클래스처럼 패턴 매칭에 쓸 수 있다. `Tree`가 공변(`+A`)이라 `Tree[Int]`를 `Tree[Any]` 자리에 쓸 수 있다. 컴파일러가 `enum`의 케이스 누락을 경고해 주므로 모든 케이스를 다뤘는지 점검된다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.25"
+	},
+	"intent": "리스트에서 익힌 구조적 재귀를 갈래가 둘인 자료구조에 옮기는 첫 걸음이다. 각 케이스가 자기 구조에 대응하는 재귀 호출을 한다는 규칙이 트리에서도 그대로 성립한다는 것을 확인한다. 이후 `maximum`, `depth`, `map`이 같은 골격을 공유하는 것을 알아채야 마지막 `fold`가 의미를 가진다."
+}

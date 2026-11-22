@@ -1,0 +1,36 @@
+{
+	"id": "fp-0322-add-corresponding",
+	"order": 1322,
+	"level": 1,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [
+		"match-list",
+		"match-tuple",
+		"recursion-list"
+	],
+	"title": "대응하는 원소끼리 더하기",
+	"limitSec": 180,
+	"targets": [
+		"두 리스트 동시 재귀",
+		"튜플 패턴"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `List[+A]`를 쓴다. 정수 리스트 두 개를 받아 같은 위치의 원소끼리 더한 리스트를 반환하는 `def addCorresponding(a: List[Int], b: List[Int]): List[Int]`를 구현하라. 예: `List(1, 2, 3)`과 `List(4, 5, 6)`은 `List(5, 7, 9)`. 두 리스트의 길이가 다르면 짧은 쪽이 끝나는 지점에서 멈추고 나머지는 버린다.",
+	"starter": "def addCorresponding(a: List[Int], b: List[Int]): List[Int] =\n  ???\n",
+	"hints": [
+		"두 리스트를 한꺼번에 살펴야 한다. 둘 중 하나라도 `Nil`이면 끝이고, 둘 다 `Cons`일 때만 합을 만든다.",
+		"`(a, b) match`로 튜플에 대해 패턴 매칭하면 `case (Cons(h1, t1), Cons(h2, t2)) => ...`와 `case _ => Nil` 두 케이스로 충분하다."
+	],
+	"notes": "튜플 `(a, b)`를 만들어 매칭하는 것은 흔한 관용구이고, 컴파일러는 이 경우 실제로 튜플 객체를 만들지 않도록 최적화한다. 맨 마지막 `case _ => Nil`이 '둘 중 하나라도 비었다'를 모두 처리한다. 길이가 다를 때의 정책은 표준 `zip`/`zipWith`와 같다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.22"
+	},
+	"intent": "이제까지는 리스트 하나를 훑었지만 여기서는 두 리스트를 나란히 걷는 재귀를 처음 쓴다. '어느 쪽이 먼저 끝나는가'라는 경계 조건을 스스로 정리해야 해서 구조적 재귀를 한 단계 확장한다. 다음 문제에서 덧셈과 `Int`라는 구체성을 걷어내 `zipWith`로 일반화하기 위한 준비다."
+}

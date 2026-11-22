@@ -1,0 +1,35 @@
+{
+	"id": "fp-0504-for-all",
+	"order": 1504,
+	"level": 1,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"exists-forall-count",
+		"by-name"
+	],
+	"title": "모든 원소가 조건을 만족하는가",
+	"limitSec": 180,
+	"targets": [
+		"단락 평가",
+		"Stream"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `forAll(p)`를 구현하라. 모든 원소가 `p`를 만족하면 `true`이다. 빈 스트림은 `true`이다. 만족하지 않는 원소를 처음 만나는 순간 순회를 멈추고 `false`를 반환해야 하므로, 그 뒤의 원소는 평가하지 않으며 무한 스트림에서도 반례가 있으면 끝나야 한다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def forAll(p: A => Boolean): Boolean =\n    ???\n",
+	"hints": [
+		"`&&`는 왼쪽이 `false`이면 오른쪽을 평가하지 않는다. 이 성질을 이용하면 별도의 중단 장치 없이 순회가 끝난다.",
+		"표준 리스트라면 `case x :: rest => p(x) && forAll(rest)`, `Nil`이면 `true`이다. `Stream`에서는 `x`가 `h()`, `rest`가 `t()`이다."
+	],
+	"notes": "`&&`와 `||`는 오른쪽 피연산자를 이름에 의한 호출처럼 취급하기 때문에 단락 평가가 된다. 이 구현은 꼬리 호출 위치에서 `&&`를 쓰므로 컴파일러가 꼬리 재귀로 최적화한다. 무한 스트림에서 모든 원소가 만족하면 끝나지 않는 것은 어쩔 수 없다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.4"
+	},
+	"intent": "`forAll`은 `List`에서 하던 것과 똑같이 쓰이지만, 중간에 멈출 수 있다는 점이 스트림에서는 의미가 크다. 이어지는 `foldRight` 이야기에서 같은 단락 평가를 `foldRight` 위에 올려서 얻는 것이 목표이므로, 직접 재귀로 먼저 써 보며 '언제 멈추는가'를 몸으로 익히게 하는 문제이다. 이후의 `startsWith`가 이 함수에 기댄다."
+}

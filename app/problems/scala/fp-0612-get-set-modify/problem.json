@@ -1,0 +1,36 @@
+{
+	"id": "fp-0612-get-set-modify",
+	"order": 1612,
+	"level": 2,
+	"topic": "types",
+	"kind": "write",
+	"refs": [
+		"for-yield",
+		"generics"
+	],
+	"title": "get, set, modify",
+	"limitSec": 420,
+	"targets": [
+		"상태 읽기",
+		"상태 쓰기",
+		"for 식으로 State 합성"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `State[S, +A]`(상태 `S`를 받아 `(A, S)`를 돌려주는 `run` 함수를 감싼 타입)와 `unit`, 그리고 `map`/`flatMap`이 있다. 이 둘이 있으면 `State` 값을 for 식으로 이어 쓸 수 있다. 상태를 읽고 쓰는 기본 동작 둘을 직접 만들고, 그것으로 `modify`를 구현하라.\n\n`def get[S]: State[S, S]`는 상태를 바꾸지 않고 현재 상태를 값으로 돌려준다. `def set[S](s: S): State[S, Unit]`은 상태를 `s`로 바꾸고 값으로는 `()`를 돌려준다. `def modify[S](f: S => S): State[S, Unit]`은 상태를 `f`를 적용한 값으로 바꾼다. `modify`는 `get`과 `set`만 사용해, for 식으로 구현하라.",
+	"starter": "def get[S]: State[S, S] =\n  ???\n\ndef set[S](s: S): State[S, Unit] =\n  ???\n\ndef modify[S](f: S => S): State[S, Unit] =\n  ???\n",
+	"hints": [
+		"`State(s => …)`에서 `s`는 현재 상태이다. `get`은 값 자리에도 상태 자리에도 그 `s`를 넣고, `set`은 받은 상태를 무시하고 인자를 새 상태로 쓴다.",
+		"카운터를 올리는 동작을 for 식으로 쓰면 `for c <- get[Int]; _ <- set(c + 1) yield c`처럼 \"읽고, 쓰고, 값을 돌려준다\"가 된다. `modify`는 값을 돌려줄 필요 없이 `yield ()`로 끝난다."
+	],
+	"notes": "`get[S]`처럼 파라미터가 없는 제네릭 `def`는 `get[Int]`처럼 타입을 지정해 부르거나 문맥에서 추론되도록 쓴다. for 식은 `flatMap`과 `map`으로 풀리므로, Given.scala의 확장 메서드만으로도 동작한다. `_ <- set(...)`에서 `_`는 값을 버린다는 뜻으로 Scala 3에서도 같다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.12"
+	},
+	"intent": "`State`가 \"상태 변경\"이라는 능력을 갖추려면 읽기와 쓰기 두 원시 동작만 있으면 충분하다는 것을 보여 주는 문제이다. 그 둘을 for 식으로 이으면 겉모양이 명령형 프로그램과 같아지는데, 실제로는 모두 값을 돌려주는 순수 함수라는 점이 이 장의 하이라이트이다. 바로 다음 사탕 기계 문제가 이 도구들 위에서 풀린다."
+}

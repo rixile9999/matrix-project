@@ -1,0 +1,37 @@
+{
+	"id": "fp-0307-product-short-circuit",
+	"order": 1307,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"recursion-list",
+		"match-case-class"
+	],
+	"title": "foldRight로 product와 단락 평가 확인",
+	"limitSec": 420,
+	"targets": [
+		"foldRight",
+		"엄격한 평가",
+		"단락 평가"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에는 `List[+A]`와 오른쪽 폴드 `foldRight`가 주어진다. `foldRight(as, z)(f)`는 `Nil`을 `z`로, `Cons`를 `f`로 바꾼 값이다. 즉 `List(a, b)`에 대해 `f(a, f(b, z))`다. 두 가지를 하라.\n\n(1) `foldRight`로 `Double` 리스트의 곱을 구하는 `productRight`를 작성하라(빈 리스트는 `1.0`).\n(2) 리스트에 `0.0`이 있으면 곱은 `0.0`이므로 그 즉시 계산을 멈추고 싶다. 하지만 `foldRight`의 `f`는 이미 계산된 `B` 값을 받는다. `foldRight(List(0.0, 1.0, 2.0, 3.0), 1.0)(f)`를 실행할 때 `f`가 몇 번 호출되는지를 `fCalls`에 적어라.\n\ndef productRight(l: List[Double]): Double\nval fCalls: Int",
+	"starter": "def productRight(l: List[Double]): Double =\n  ???\n\nval fCalls: Int = ???\n",
+	"hints": [
+		"`foldRight`의 `z`에는 빈 리스트의 결과(곱의 항등원)를, `f`에는 원소와 \"나머지의 곱\"을 곱하는 함수를 넣는다. 호출 횟수 문제는 `f`가 `0.0`을 만났을 때 이미 나머지가 어떻게 계산된 상태인지 따라가 보면 답이 나온다.",
+		"`foldRight(List(1.0, 2.0), 1.0)(_ * _)`는 `1.0 * (2.0 * 1.0)`로 전개된다. 인자는 호출 전에 평가되므로, 맨 안쪽부터 모두 계산된 뒤에야 바깥 `f`가 불린다는 점을 길이 4인 리스트에 적용해 세어 보라."
+	],
+	"notes": "`_ * _`는 `(a, b) => a * b`의 약식이다. Scala의 함수 인자는 기본적으로 엄격하게(call-by-value) 평가되므로 `foldRight(xs, z)(f)`에서 재귀 호출 결과가 `f`에 넘어가기 전에 먼저 계산된다. 이름에 의한 호출(`=> B`)을 쓰면 달라지는데, 이는 5장 지연 평가에서 다룬다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.7"
+	},
+	"intent": "곱셈은 0을 만나면 끝낼 수 있는데 `foldRight`로 쓰면 왜 끝낼 수 없는지를 스스로 세어 보게 하는 문제다. `f`가 이미 계산된 값을 받는 구조에서는 중단이 불가능하다는 한계를 느껴야 5장에서 \"엄격성\"과 \"지연\"이 왜 필요한지가 와닿는다. 정답 숫자 4가 리스트 길이와 같다는 점을 눈여겨보라."
+}

@@ -1,9 +1,12 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { db } from './db.ts';
-import { judge, listProblems, loadProblem, loadSolution } from './judge.ts';
+import { judge, loadBooks, loadGiven, loadProblem, loadSolution } from './judge.ts';
 import { listCheatEntries, cheatIndex } from './cheatsheet.ts';
-import { LEVELS, TOPICS, type CheatEntry, type JudgeResult, type LangProblem, type TopicId } from '#lib/core/lang.ts';
+import { LEVELS, TOPICS, type BookMeta, type CheatEntry, type JudgeResult, type LangProblem, type TopicId } from '#lib/core/lang.ts';
 import { nextUnpassed, suggestWarmup, type StudyProblem, type StudySession } from '#lib/core/study.ts';
-import type { LangCheatData, LangFinished, LangHomeData, LangListItem, LangSessionData, LangSuggestion, LangTopicRow } from '#lib/types.ts';
+import { bookOrder, byChapter, firstUnpassed, nextInBook } from '#lib/core/book.ts';
+import type { LangBookCard, LangBookData, LangBookRef, LangCheatData, LangFinished, LangHomeData, LangListItem, LangSessionData, LangSuggestion, LangTopicRow } from '#lib/types.ts';
 
 const LANG = 'scala';
 const MAX_CODE = 20_000;
@@ -25,8 +28,60 @@ const latestSession = (problemId: string) =>
 	db.prepare('SELECT * FROM lang_sessions WHERE lang = ? AND problem_id = ? ORDER BY id DESC LIMIT 1').get(LANG, problemId) as SessionRow | undefined;
 const getSession = (id: number) => db.prepare('SELECT * FROM lang_sessions WHERE id = ?').get(id) as SessionRow | undefined;
 
+// ---------- problems on disk ----------
+// Authors add problems while the app runs, so a directory may be half written. Only complete ones
+// (valid problem.json, Solution.scala, Tests.scala) exist as far as the app is concerned.
+const PROBLEMS = resolve(process.env.PROBLEMS_DIR ?? 'problems', LANG);
+const isStr = (v: unknown) => typeof v === 'string';
+const strs = (v: unknown) => Array.isArray(v) && v.every(isStr);
+
+function valid(p: LangProblem, dir: string): boolean {
+	const b = p.book;
+	return (
+		p.id === dir && [1, 2, 3].includes(p.level) && Number.isFinite(p.order) && Number.isFinite(p.limitSec) && p.topic in TOPICS &&
+		['write', 'fix', 'refactor', 'complete'].includes(p.kind) && isStr(p.title) && isStr(p.statement) && isStr(p.starter) && isStr(p.notes) &&
+		Array.isArray(p.hints) && p.hints.length === 2 && strs(p.hints) && strs(p.targets) && strs(p.avoid) && (p.refs === undefined || strs(p.refs)) &&
+		(p.intent === undefined || isStr(p.intent)) &&
+		(b === undefined || (!!b && isStr(b.id) && Number.isInteger(b.chapter) && isStr(b.exercise))) &&
+		existsSync(join(PROBLEMS, dir, 'Solution.scala')) && existsSync(join(PROBLEMS, dir, 'Tests.scala'))
+	);
+}
+
+/** The complete problem `id`, or null (unknown, half written, unreadable). */
+export function findProblem(id: string): LangProblem | null {
+	try {
+		const p = loadProblem(LANG, id);
+		return p && valid(p, id) ? p : null;
+	} catch {
+		return null;
+	}
+}
+
+/** All complete problems, level then order (curriculum order). */
+function allProblems(): LangProblem[] {
+	if (!existsSync(PROBLEMS)) return [];
+	return readdirSync(PROBLEMS)
+		.flatMap((d) => findProblem(d) ?? [])
+		.sort((a, b) => a.level - b.level || a.order - b.order);
+}
+const curriculum = () => allProblems().filter((p) => !p.book);
+
+function books(): Record<string, BookMeta> {
+	try {
+		const b = loadBooks(LANG);
+		return b && typeof b === 'object' ? b : {};
+	} catch {
+		return {};
+	}
+}
+const chapterTitles = (b: BookMeta | undefined): Record<string, string> => (b && b.chapters && typeof b.chapters === 'object' ? b.chapters : {});
+
+/** Book problems of one book, in book order. */
+const bookProblems = (bookId: string, problems = allProblems()) =>
+	bookOrder(problems.flatMap((p) => (p.book?.id === bookId ? [{ ...p, id: p.id, chapter: p.book.chapter, exercise: p.book.exercise }] : [])));
+
 function requireProblem(id: string): LangProblem {
-	const p = loadProblem(LANG, id);
+	const p = findProblem(id);
 	if (!p) throw new Error('문제를 찾을 수 없습니다.');
 	return p;
 }
@@ -74,7 +129,7 @@ const lookedUp = (sessionId: number) =>
 export function cheatView(): LangCheatData {
 	const passed = new Set(passedTimes().keys());
 	const passedBy: LangCheatData['passedBy'] = {};
-	for (const p of listProblems(LANG).filter((p) => passed.has(p.id)))
+	for (const p of allProblems().filter((p) => passed.has(p.id)))
 		for (const ref of p.refs ?? []) (passedBy[ref] ??= []).push({ id: p.id, title: p.title });
 	return { entries: cheatEntries(), passedBy };
 }
@@ -91,13 +146,9 @@ const passedTimes = () =>
 
 const LEVEL_KEYS = [1, 2, 3] as const;
 
-export function listView(): LangHomeData {
-	const rows = allRows();
+function listItems(problems: LangProblem[]): Map<string, LangListItem> {
 	const by = new Map<string, Row[]>();
-	for (const r of rows) by.set(r.problem_id, [...(by.get(r.problem_id) ?? []), r]);
-	const problems = listProblems(LANG);
-	const at = passedTimes();
-
+	for (const r of allRows()) by.set(r.problem_id, [...(by.get(r.problem_id) ?? []), r]);
 	const items = new Map<string, LangListItem>();
 	for (const p of problems) {
 		const mine = by.get(p.id) ?? [];
@@ -112,9 +163,19 @@ export function listView(): LangHomeData {
 			limitSec: p.limitSec,
 			status: passes.length ? 'passed' : mine.length ? 'attempted' : 'new',
 			bestSec: passes.length ? Math.min(...passes.map((r) => r.elapsed_sec ?? 0)) : null,
-			clean: passes.some((r) => (JSON.parse(r.avoided ?? '[]') as string[]).length === 0)
+			clean: passes.some((r) => (JSON.parse(r.avoided ?? '[]') as string[]).length === 0),
+			book: p.book ? { id: p.book.id, chapter: p.book.chapter, exercise: p.book.exercise } : null
 		});
 	}
+	return items;
+}
+
+export function listView(): LangHomeData {
+	const rows = allRows();
+	const problems = allProblems();
+	const base = problems.filter((p) => !p.book); // suggestions and level progress ignore book problems
+	const at = passedTimes();
+	const items = listItems(problems);
 
 	const topics: LangTopicRow[] = (Object.keys(TOPICS) as TopicId[])
 		.map((topic) => ({
@@ -124,12 +185,12 @@ export function listView(): LangHomeData {
 		}))
 		.filter((t) => t.levels.some((l) => l.length));
 	const levels = LEVEL_KEYS.map((level) => {
-		const mine = problems.filter((p) => p.level === level);
+		const mine = base.filter((p) => p.level === level);
 		return { level, label: LEVELS[level], passed: mine.filter((p) => at.has(p.id)).length, total: mine.length };
 	});
 
-	const study: StudyProblem[] = problems.map((p) => ({ id: p.id, level: p.level, topic: p.topic, passedAt: at.get(p.id) ?? null }));
-	const level = new Map(problems.map((p) => [p.id, p]));
+	const study: StudyProblem[] = base.map((p) => ({ id: p.id, level: p.level, topic: p.topic, passedAt: at.get(p.id) ?? null }));
+	const level = new Map(base.map((p) => [p.id, p]));
 	const sessions: StudySession[] = rows.flatMap((r) => {
 		const p = level.get(r.problem_id);
 		if (!p || p.level !== 2 || r.ended_at === null || !r.outcome) return [];
@@ -141,10 +202,56 @@ export function listView(): LangHomeData {
 		['challenge', '복합 도전', nextUnpassed(study, 3)]
 	];
 	const suggestions = wanted.flatMap(([key, label, id]) => (id ? [{ key, label, problemId: id, title: items.get(id)!.title }] : []));
-	return { topics, levels, suggestions };
+	const cards: LangBookCard[] = Object.entries(books()).map(([id, meta]) => {
+		const mine = bookProblems(id, problems);
+		return { id, title: String(meta?.title ?? id), passed: mine.filter((p) => at.has(p.id)).length, total: mine.length };
+	});
+	return { books: cards, topics, levels, suggestions };
 }
 
-const nextIdAfter = (p: LangProblem) => listProblems(LANG).find((q) => q.level === p.level && q.order > p.order)?.id ?? null;
+// ---------- book ----------
+/** Null for an unknown book. */
+export function bookView(bookId: string): LangBookData | null {
+	const meta = Object.hasOwn(books(), bookId) ? books()[bookId] : undefined;
+	if (!meta) return null;
+	const problems = allProblems();
+	const mine = bookProblems(bookId, problems);
+	const items = listItems(mine);
+	const titles = chapterTitles(meta);
+	const known = Object.keys(titles).map(Number).filter(Number.isInteger);
+	const chapters = byChapter(mine, known).map(({ chapter, items: ps }) => {
+		const list = ps.map((p) => items.get(p.id)!);
+		return { chapter, title: titles[chapter] ?? '', passed: list.filter((i) => i.status === 'passed').length, total: list.length, problems: list };
+	});
+	const next = firstUnpassed(mine, new Set(mine.filter((p) => items.get(p.id)!.status === 'passed').map((p) => p.id)));
+	const target = next ? mine.find((p) => p.id === next) : undefined;
+	return {
+		id: bookId,
+		title: String(meta.title ?? bookId),
+		passed: chapters.reduce((n, c) => n + c.passed, 0),
+		total: mine.length,
+		resume: target ? { problemId: target.id, title: target.title, chapter: target.chapter, exercise: target.exercise } : null,
+		chapters
+	};
+}
+
+function bookRef(p: LangProblem): LangBookRef | null {
+	if (!p.book) return null;
+	const meta = books()[p.book.id];
+	if (!meta) return null;
+	return { id: p.book.id, title: String(meta.title ?? p.book.id), chapter: p.book.chapter, chapterTitle: chapterTitles(meta)[p.book.chapter] ?? '', exercise: p.book.exercise };
+}
+
+const nextIdAfter = (p: LangProblem) =>
+	p.book ? nextInBook(bookProblems(p.book.id), p.id) : (curriculum().find((q) => q.level === p.level && q.order > p.order)?.id ?? null);
+
+function givenCode(id: string): string | null {
+	try {
+		return loadGiven(LANG, id);
+	} catch {
+		return null;
+	}
+}
 
 // ---------- sessions ----------
 const insertSession = (problemId: string) =>
@@ -162,12 +269,13 @@ export function restartSession(problemId: string): void {
 	insertSession(problemId);
 }
 
-/** Related entries are a hint: withheld until hint 1 is revealed or the session is over. */
-const revealRefs = (p: LangProblem, hintsUsed: number, finished: boolean) => (hintsUsed > 0 || finished ? (p.refs ?? []) : []);
+/** Related entries and the 출제 취지 are a hint: withheld until hint 1 is revealed or the session is over. */
+const revealExtras = (p: LangProblem, hintsUsed: number, finished: boolean) =>
+	hintsUsed > 0 || finished ? { refs: p.refs ?? [], intent: p.intent ?? null } : { refs: [], intent: null };
 
 /** Null when the problem is unknown or has no session. */
 export function sessionView(problemId: string): LangSessionData | null {
-	const p = loadProblem(LANG, problemId);
+	const p = findProblem(problemId);
 	if (!p) return null;
 	const s = latestSession(problemId);
 	if (!s) return null;
@@ -190,14 +298,15 @@ export function sessionView(problemId: string): LangSessionData | null {
 	return {
 		problem: {
 			id: p.id, order: p.order, level: p.level, topic: p.topic, kind: p.kind, title: p.title, limitSec: p.limitSec,
-			statement: p.statement, starter: p.starter, avoid: p.kind === 'refactor' ? p.avoid : []
+			statement: p.statement, starter: p.starter, avoid: p.kind === 'refactor' ? p.avoid : [],
+			book: bookRef(p), given: p.book ? givenCode(p.id) : null
 		},
 		session: {
 			id: s.id,
 			startedAt: s.started_at,
 			code: last?.code ?? p.starter,
 			hints: p.hints.slice(0, s.hints_used),
-			refs: revealRefs(p, s.hints_used, finished !== null),
+			...revealExtras(p, s.hints_used, finished !== null),
 			lastResult: last ? (JSON.parse(last.result) as JudgeResult) : null,
 			finished
 		},
@@ -230,12 +339,12 @@ export async function runCode(problemId: string, code: unknown): Promise<{ resul
 	return { result, finished };
 }
 
-export function useHint(problemId: string): { hints: string[]; refs: string[] } {
+export function useHint(problemId: string): { hints: string[]; refs: string[]; intent: string | null } {
 	const p = requireProblem(problemId);
 	const s = openSession(problemId, '이미 끝난 세션에서는 힌트를 볼 수 없습니다.');
 	db.prepare('UPDATE lang_sessions SET hints_used = MIN(hints_used + 1, ?) WHERE id = ?').run(MAX_HINTS, s.id);
 	const used = getSession(s.id)!.hints_used;
-	return { hints: p.hints.slice(0, used), refs: revealRefs(p, used, false) };
+	return { hints: p.hints.slice(0, used), ...revealExtras(p, used, false) };
 }
 
 /** Gives up on the open session. Revealing an already finished session changes nothing. */

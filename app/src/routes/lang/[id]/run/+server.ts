@@ -1,6 +1,5 @@
 import { error, json } from '@sveltejs/kit';
 import * as l from '#lib/server/lang.ts';
-import { loadProblem } from '#lib/server/judge.ts';
 import type { LangRunResponse } from '#lib/types.ts';
 
 /** Rejections keep the LangRunResponse shape: an empty 'failed' result (no cases, the message as output) plus `error`. */
@@ -8,7 +7,7 @@ const rejected = (message: string) =>
 	json({ result: { status: 'failed', cases: [], output: message, avoided: [] }, finished: false, error: message } satisfies LangRunResponse, { status: 400 });
 
 export const POST = async ({ params, request }) => {
-	if (!loadProblem('scala', params.id)) error(404, 'Problem not found');
+	if (!l.findProblem(params.id)) error(404, 'Problem not found');
 	let code: unknown;
 	try {
 		code = ((await request.json()) as { code?: unknown } | null)?.code;

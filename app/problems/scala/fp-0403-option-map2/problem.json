@@ -1,0 +1,37 @@
+{
+	"id": "fp-0403-option-map2",
+	"order": 1403,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"option-map",
+		"option-for",
+		"generics"
+	],
+	"title": "두 Option을 합치는 map2",
+	"limitSec": 300,
+	"targets": [
+		"map2",
+		"flatMap",
+		"리프팅"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `Option`과 그 연산을 써서 `map2`를 구현하라. 두 `Option` 값 `a`, `b`와 이항 함수 `f`를 받아, 둘 다 `Some`이면 `f`를 적용한 결과를 `Some`으로 감싸 돌려주고, 하나라도 `None`이면 `None`을 돌려준다. 즉 평범한 두 인자 함수를 `Option` 값 위로 끌어올리는 함수다.",
+	"starter": "def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =\n  ???\n",
+	"hints": [
+		"둘 다 값이 있어야만 결과가 나온다. 첫 번째 `Option`을 `flatMap`으로 열고, 안쪽에서 두 번째를 `map`으로 여는 모양을 떠올려 보라.",
+		"한 인자짜리 비슷한 예: `def lift[A, B](f: A => B): Option[A] => Option[B] = o => o.map(f)`. 두 인자라면 `map`이 하나 더 필요하고, 바깥쪽은 결과가 `Option`을 낳으므로 `flatMap`이 된다."
+	],
+	"notes": "패턴 매칭으로 네 경우를 나열해도 되고 `for (x <- a; y <- b) yield f(x, y)`로 써도 된다. 커링한 두 번째 파라미터 목록 `(f: (A, B) => C)` 덕분에 `map2(a, b)(_ + _)`처럼 람다의 타입이 앞 목록에서 추론된다. 표준 라이브러리에는 `Option.map2`가 없다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.3"
+	},
+	"intent": "`map`은 인자가 하나인 함수만 올릴 수 있는데, 현실의 함수는 인자가 여럿이다. 이 문제는 두 인자 이상의 함수도 `Option` 세계로 끌어올릴 수 있음을 보여 주는 도구를 만든다. 이후 `traverse`, `Either`의 `map2`, 오류 누적 문제에서 같은 모양이 계속 반복되므로, 이 구현이 `flatMap` 안의 `map`이라는 점을 기억해 두자."
+}

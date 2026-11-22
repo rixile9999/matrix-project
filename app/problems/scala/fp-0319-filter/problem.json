@@ -1,0 +1,37 @@
+{
+	"id": "fp-0319-filter",
+	"order": 1319,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"filter",
+		"hof",
+		"match-guard"
+	],
+	"title": "filter와 홀수 제거",
+	"limitSec": 150,
+	"targets": [
+		"고차 함수",
+		"술어 함수",
+		"패턴 매칭 가드"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `List[+A]`를 쓴다. (1) `def filter[A](as: List[A])(f: A => Boolean): List[A]`는 `f`가 `true`를 돌려주는 원소만 원래 순서대로 남긴다. (2) `def removeOdds(l: List[Int]): List[Int]`는 (1)의 `filter`를 이용해 홀수를 모두 제거한다. `removeOdds`는 직접 재귀하지 말고 `filter`를 호출해서 만든다. 둘 다 이 파일에서 완성한다.",
+	"starter": "def filter[A](as: List[A])(f: A => Boolean): List[A] =\n  ???\n\ndef removeOdds(l: List[Int]): List[Int] =\n  ???\n",
+	"hints": [
+		"`Cons(h, t)`일 때 `h`가 조건을 만족하면 `h`를 결과 앞에 붙이고, 아니면 꼬리의 결과만 돌려준다. 패턴 매칭에 `if` 가드를 쓰면 케이스가 세 개로 깔끔하게 나뉜다.",
+		"`case Cons(h, t) if f(h) => Cons(h, filter(t)(f))` 다음 케이스는 `h`를 버리는 쪽이다. `removeOdds`는 짝수만 남기는 술어를 `filter`에 넘기면 된다."
+	],
+	"notes": "`case Cons(h, t) if f(h) =>`처럼 가드를 쓰면 `if/else`를 중첩하지 않아도 된다. 음수의 홀수 판정은 `x % 2 != 0`이 안전하다(`-3 % 2`는 `-1`이라 `== 1`로 비교하면 놓친다). `Boolean`을 돌려주는 함수를 술어(predicate)라고 부른다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.19"
+	},
+	"intent": "`map`이 모든 원소를 변환했다면 `filter`는 길이를 바꾸는 첫 번째 연산이다. 원소 유지 여부를 결정하는 조건도 인자로 뽑아내면 일반 함수가 된다는 점, 그리고 구체적인 문제(홀수 제거)가 일반 함수 한 줄로 풀린다는 점을 체감시킨다. 다음 `flatMap`과 `filter` 재구현 문제의 출발점이다."
+}

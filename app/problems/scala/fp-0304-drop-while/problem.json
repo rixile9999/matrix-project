@@ -1,0 +1,37 @@
+{
+	"id": "fp-0304-drop-while",
+	"order": 1304,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"currying",
+		"match-guard",
+		"tailrec"
+	],
+	"title": "조건이 참인 동안 버리기 dropWhile",
+	"limitSec": 150,
+	"targets": [
+		"고차 함수",
+		"다중 매개변수 목록",
+		"타입 추론"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `List[+A]`를 쓴다. 앞에서부터 조건 `f`를 만족하는 원소를 계속 버리고, 처음으로 만족하지 않는 원소부터의 리스트를 돌려주는 `dropWhile`을 구현하라. 조건을 만족하지 않는 원소를 만나면 그 뒤는 검사하지 않는다. 리스트와 함수를 서로 다른 매개변수 목록에 두는 시그니처를 그대로 지켜라. 이렇게 하면 호출할 때 `dropWhile(List(1, 2, 3))(_ < 2)`처럼 람다의 매개변수 타입을 적지 않아도 된다.\n\ndef dropWhile[A](l: List[A])(f: A => Boolean): List[A]",
+	"starter": "def dropWhile[A](l: List[A])(f: A => Boolean): List[A] =\n  ???\n",
+	"hints": [
+		"`drop`과 거의 같지만 개수 대신 조건으로 멈춘다. 첫 원소가 조건을 만족하면 꼬리에 대해 다시 시도하고, 아니면 지금 리스트를 그대로 돌려준다.",
+		"`match`에서 `case Cons(h, t) if f(h) => ...` 한 줄과, 그 밖의 모든 경우(`Nil` 포함)를 받는 `case _ => l` 한 줄이면 구조가 완성된다."
+	],
+	"notes": "`case Cons(h, t) if f(h)`의 가드는 패턴이 맞고 조건도 참일 때만 그 case를 선택한다. 매개변수 목록을 나누면 Scala는 첫 목록에서 `A`를 확정한 뒤 두 번째 목록의 람다 타입을 추론한다. Scala 3는 한 목록에서도 비슷한 추론을 일부 해 주지만, 이 관례는 표준 라이브러리 시그니처와도 맞는다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.4"
+	},
+	"intent": "함수를 값으로 받는 첫 문제이면서, 매개변수 목록을 나누는 이유를 체감하게 하려는 문제다. 테스트에서 타입 표기 없는 람다가 그대로 컴파일되는 것을 보면 커링이 단순한 취향이 아니라 타입 추론을 돕는 설계임을 알 수 있다. `drop`과의 차이는 \"개수\" 대신 \"조건\"뿐이라는 점도 확인해 보라."
+}

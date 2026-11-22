@@ -53,6 +53,8 @@
 	let hinting = $state(false);
 	let confirming = $state(false);
 	let refsLocal = $state<string[]>([]);
+	let intentLocal = $state<string | null>(null);
+	let givenOpen = $state(false);
 	let sent = new Set<string>(); // entry ids already reported as looked up in this session
 	let lastId = -1;
 	$effect(() => {
@@ -64,6 +66,8 @@
 			runResult = undefined;
 			hintsLocal = [];
 			refsLocal = [];
+			intentLocal = null;
+			givenOpen = givenLines <= GIVEN_OPEN_MAX;
 			sent = new Set();
 			error = '';
 			running = false;
@@ -72,6 +76,9 @@
 	});
 
 	const result = $derived(runResult ?? s.lastResult);
+	const intent = $derived(intentLocal ?? s.intent);
+	const GIVEN_OPEN_MAX = 25;
+	const givenLines = $derived(p.given ? p.given.replace(/\n$/, '').split('\n').length : 0);
 	const hints = $derived(hintsLocal.length > s.hints.length ? hintsLocal : s.hints);
 	const refs = $derived(refsLocal.length ? refsLocal : s.refs);
 	const slow = $derived(running && wall - runStart > 4000);
@@ -110,6 +117,7 @@
 			const j = (await res.json()) as Partial<LangHintResponse>;
 			if (j.hints) hintsLocal = j.hints;
 			if (j.refs) refsLocal = j.refs;
+			if (j.intent) intentLocal = j.intent;
 			error = j.error ?? (res.ok ? '' : `힌트 실패 (${res.status})`);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -172,12 +180,19 @@
 	<div class="lang-col">
 		<div>
 			<a class="note" href="/lang">← 목록</a>
+			{#if p.book}
+				<nav class="lang-crumb" aria-label="책 위치">
+					<a href="/lang/book/{p.book.id}">{p.book.title}</a> ›
+					<a href="/lang/book/{p.book.id}">{p.book.chapter}장{p.book.chapterTitle ? ` ${p.book.chapterTitle}` : ''}</a> ›
+					<span>연습 {p.book.exercise}</span>
+				</nav>
+			{/if}
 			<div class="lang-meta">
 				<span class="label">{LEVELS[p.level]} · {TOPICS[p.topic]}</span>
 				{#if KIND[p.kind]}<span class="kind">{KIND[p.kind]}</span>{/if}
 			</div>
 			<div class="lang-title">
-				<h2>{String(p.order).padStart(2, '0')}. {p.title}</h2>
+				<h2>{p.book ? p.book.exercise : String(p.order).padStart(2, '0')}. {p.title}</h2>
 				{#if fin}
 					<span class="lang-clock mono" style="font-size:15px;color:var(--muted)">{mmss(fin.elapsedSec)}</span>
 				{:else}
@@ -202,6 +217,7 @@
 					{#if related.length}
 						<div class="lang-refs"><span class="label">관련 문법</span>{#each related as e (e.id)}<button class="chip" type="button" onclick={() => openRef(e.id)}>{e.title}</button>{/each}</div>
 					{/if}
+					{#if intent}<div class="lang-hint lang-intent"><span class="label">출제 취지</span><br />{@html renderInline(intent)}</div>{/if}
 				</div>
 			{/if}
 		{/if}
@@ -237,6 +253,7 @@
 			<div class="lang-done">
 				<span class="lang-sum" class:ok={fin.outcome === 'passed'}>{outcomeText}</span>
 				{#if fin.targets.length}<div class="tags">{#each fin.targets as t (t)}<span class="tag">{t}</span>{/each}</div>{/if}
+				{#if intent}<div class="lang-hint lang-intent big"><span class="label">출제 취지</span><br />{@html renderInline(intent)}</div>{/if}
 				{#if fin.notes}<p class="insight" style="max-width:none;margin:0">{@html renderInline(fin.notes)}</p>{/if}
 				{#if fin.avoided.length}
 					<p class="note" style="margin:0">{@html renderInline(fin.avoided.map((w) => `\`${w}\``).join(', '))} 사용함. 모범 답안은 쓰지 않습니다.</p>
@@ -263,13 +280,21 @@
 							<button class="btn ghost">다음 문제</button>
 						</form>
 					{/if}
-					<a class="btn ghost" href="/lang">목록</a>
+					{#if p.book}<a class="btn ghost" href="/lang/book/{p.book.id}">책으로</a>{:else}<a class="btn ghost" href="/lang">목록</a>{/if}
 				</div>
 			</div>
 		{/if}
 	</div>
 
 	<div class="lang-col">
+		{#if p.given}
+			<details class="lang-box lang-given" bind:open={givenOpen}>
+				<summary>주어진 코드 · {givenLines}줄 — 이미 정의되어 있어 그대로 쓸 수 있습니다</summary>
+				{#if givenOpen}
+					<div class="lang-ed short">{#key p.id}<CodeEditor doc={p.given} readonly label="주어진 코드" />{/key}</div>
+				{/if}
+			</details>
+		{/if}
 		{#key s.id}
 			<div class="lang-box lang-ed">
 				<CodeEditor doc={s.code} readonly={!!fin} label="Scala 코드" onchange={(c) => (code = c)} onrun={run} />

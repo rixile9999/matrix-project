@@ -1,0 +1,37 @@
+{
+	"id": "fp-0315-concat",
+	"order": 1315,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"foldleft",
+		"list-build"
+	],
+	"title": "리스트의 리스트 평탄화 concat",
+	"limitSec": 480,
+	"targets": [
+		"foldRight",
+		"append 재사용",
+		"선형 시간"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `List[+A]`, `foldRight`, `foldLeft`, `append`가 주어진다. 리스트를 원소로 갖는 리스트를 받아 하나의 리스트로 이어 붙이는 `concat`을 구현하라. 예를 들어 `List(List(1,2), Nil, List(3))`은 `List(1,2,3)`이다. 실행 시간이 모든 리스트의 전체 원소 수에 비례해야 하며(선형), 이미 있는 함수를 활용해야 한다. 2000개의 리스트에 각 100개씩 들어 있는 입력도 처리해야 한다.\n\ndef concat[A](ll: List[List[A]]): List[A]",
+	"starter": "def concat[A](ll: List[List[A]]): List[A] =\n  ???\n",
+	"hints": [
+		"이어 붙이기는 이미 `append`로 있으니, 안쪽 리스트들을 하나씩 `append`로 합쳐 나가는 폴드를 쓴다. 어느 방향으로 접느냐에 따라 복사 비용이 크게 달라진다.",
+		"`foldRight(ll, Nil: List[A])(append)`는 `append(l1, append(l2, append(l3, Nil)))`로 전개된다. 반대 방향 폴드는 매번 점점 길어지는 누적 리스트를 복사하게 되어 선형이 아니다."
+	],
+	"notes": "`append`는 `(List[A], List[A]) => List[A]`로 eta 확장되어 `foldRight`의 `f` 자리에 그대로 들어간다. `foldLeft(ll, Nil)(append)`도 결과는 같지만 누산기를 매번 다시 복사해 시간이 제곱으로 늘고, 이 문제의 큰 입력에서 `append`의 재귀 깊이가 커져 실패한다. 표준 라이브러리의 `flatten`이 이 연산이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.15"
+	},
+	"intent": "이미 만든 `foldRight`와 `append`를 조합해 새 함수를 만들어 보는 문제이고, 같은 재료로도 접는 방향에 따라 비용이 달라진다는 점이 중요하다. 오른쪽에서 접으면 각 원소가 한 번씩만 복사되므로 선형이다. 이 함수는 다음에 나올 `flatMap`의 바탕이 되므로 정확히 이해해 두자."
+}

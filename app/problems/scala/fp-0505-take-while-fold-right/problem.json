@@ -1,0 +1,37 @@
+{
+	"id": "fp-0505-take-while-fold-right",
+	"order": 1505,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"by-name",
+		"takewhile-span"
+	],
+	"title": "foldRight로 takeWhile과 headOption",
+	"limitSec": 480,
+	"targets": [
+		"foldRight",
+		"이름에 의한 호출",
+		"지연 평가"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. Given.scala에는 `foldRight`가 있다. `s.foldRight(z)(f)`는 `Cons`이면 `f(머리, 나머지를 접은 결과)`를, `Empty`이면 `z`를 반환하는데, `z`와 `f`의 두 번째 인자가 이름에 의한 호출(`=> B`)이다. 그래서 `f`가 두 번째 인자를 쓰지 않으면 나머지 스트림은 순회되지 않는다. 이 `foldRight`만으로 두 함수를 구현하라(직접 패턴 매칭하지 않는다). (1) `takeWhile(p)`는 앞에서부터 `p`를 만족하는 원소들로 이루어진 스트림이며, 처음 불만족하는 원소에서 끝나고 지연되어야 한다. (2) `headOption`은 첫 원소를 `Some`으로, 빈 스트림이면 `None`을 반환하며 꼬리는 평가하지 않는다. `toList`, `take`도 Given.scala에 있다. (5.5와 함께 `headOption`까지 한 문제로 묶었다.)",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def takeWhile(p: A => Boolean): Stream[A] =\n    ???\n\n  def headOption: Option[A] =\n    ???\n",
+	"hints": [
+		"`foldRight`의 결합 함수가 두 번째 인자를 '쓰는가 안 쓰는가'가 곧 순회를 계속하는가 멈추는가이다. `takeWhile`에서는 조건이 참일 때만 두 번째 인자(나머지 결과)를 `Stream.cons`의 꼬리로 이어 붙인다.",
+		"`exists`를 `foldRight`로 쓰면 `s.foldRight(false)((a, b) => p(a) || b)`이다. `||`가 `p(a)`가 참이면 `b`를 건드리지 않는 것과 같이, 여기서는 `if`로 `b`를 쓸지 말지 고르면 된다."
+	],
+	"notes": "람다 `(a, b) => …`에서 `b`는 `foldRight`의 시그니처가 `=> B`라서 이름에 의한 호출로 전달되며, 사용하지 않으면 평가되지 않는다. 쓰지 않는 인자는 `(a, _) => …`처럼 `_`로 받는다. `Stream.cons`의 꼬리 인자도 이름에 의한 호출이라서 `b`를 넘겨도 그 자리에서 평가되지 않는다. 같은 `foldRight`가 `List`에서는 스택 위험이 있지만 `Stream`에서는 두 번째 인자를 지연시켜 이 문제가 사라진다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.5"
+	},
+	"intent": "앞의 `takeWhile`을 `foldRight` 한 줄로 다시 쓰면 재귀 구조를 반복해 쓸 필요 없이 '언제 멈추는가'만 남는다. `foldRight`는 두 번째 인자를 이름에 의한 호출로 받을 때에야 비로소 '왼쪽 원소만 쓰고 오른쪽을 버리는' 결합 함수를 허용하며, 이것이 지연 리스트에서 `foldRight`가 유용한 이유이다. `headOption`은 그 극단적인 예로, 결과를 만들면서 나머지 순회를 전혀 하지 않는다."
+}

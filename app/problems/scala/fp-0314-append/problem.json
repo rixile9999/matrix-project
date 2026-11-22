@@ -1,0 +1,37 @@
+{
+	"id": "fp-0314-append",
+	"order": 1314,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"foldleft",
+		"list-build"
+	],
+	"title": "폴드로 append",
+	"limitSec": 420,
+	"targets": [
+		"foldRight",
+		"데이터 공유",
+		"Cons 재조립"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `List[+A]`, `foldRight`, `foldLeft`가 주어진다. 두 리스트를 이어 붙인 새 리스트를 돌려주는 `append`를 폴드로 구현하라. `append(List(1,2), List(3))`은 `List(1,2,3)`이다. 시간은 첫 리스트의 길이에만 비례하고, 둘째 리스트는 복사하지 않고 그대로 뒤에 달려야 한다.\n\ndef append[A](a1: List[A], a2: List[A]): List[A]",
+	"starter": "def append[A](a1: List[A], a2: List[A]): List[A] =\n  ???\n",
+	"hints": [
+		"`foldRight`는 `Cons`를 다른 것으로 바꿔 끼울 수 있다. 첫 리스트의 `Nil` 자리에 둘째 리스트를 넣으면 무슨 일이 일어날지 생각해 보라.",
+		"`foldRight(a1, 초기값)(f)`에서 초기값을 `a2`로 하고 `f`를 `Cons`로 하면 끝이다. 이는 8번 문제의 `rebuild`에서 `Nil` 자리만 `a2`로 바꾼 것이다."
+	],
+	"notes": "`foldLeft`로도 쓸 수 있지만 `reverse`를 한 번 거쳐야 해서 한 단계 돌아간다. 이 구현은 `foldRight`의 재귀 때문에 첫 리스트가 매우 길면 스택을 쓴다. 표준 라이브러리의 `++`나 `:::`도 같은 의미이며 둘째 리스트를 공유한다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.14"
+	},
+	"intent": "`foldRight`가 `Nil` 자리에 아무 값이나 끼울 수 있다는 점을 활용하는 간결한 예다. 한 줄이 나왔다면 8번의 \"생성자 치환\" 관점이 몸에 붙은 것이다. 비용이 첫 리스트의 길이에만 비례하고 둘째는 공유된다는 점은 배열 이어 붙이기와 대비되는 불변 리스트의 장점이다."
+}

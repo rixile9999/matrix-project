@@ -1,0 +1,37 @@
+{
+	"id": "fp-0510-unfold",
+	"order": 1510,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"iterator",
+		"option-map",
+		"lazylist"
+	],
+	"title": "unfold: 상태에서 스트림 만들기",
+	"limitSec": 420,
+	"targets": [
+		"unfold",
+		"상태 기계",
+		"Option"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. 스트림을 만드는 가장 일반적인 함수 `unfold`를 구현하라. `def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A]`. 초기 상태 `z`에 `f`를 적용해 `Some((값, 다음 상태))`가 나오면 그 값을 머리로 하고 다음 상태로 같은 일을 이어 가는 스트림이고, `None`이 나오면 거기서 끝나는 스트림이다. 예를 들어 `unfold(1)(n => Some((n, n * 2)))`는 `1, 2, 4, 8, …`이며, `unfold(0)(n => if n < 3 then Some((n, n + 1)) else None)`는 `0, 1, 2`로 끝난다. 필요 없는 평가를 하면 안 된다. 즉 `unfold`는 꼬리를 요구할 때에야 `f`를 다시 호출해야 한다. `toList`와 `take`는 Given.scala에 있다.",
+	"starter": "def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] =\n  ???\n",
+	"hints": [
+		"`f(z)`의 결과로 경우를 나눈다. `Some((a, s))`이면 `a`가 머리이고 꼬리는 `s`를 새 상태로 `unfold`를 다시 부른 결과이며, `None`이면 빈 스트림이다.",
+		"`Option`의 `Some`/`None`이 리스트의 `Cons`/`Empty`와 같은 역할을 한다. 앞의 `from`은 상태가 `n`이고 `f`가 항상 `Some((n, n + 1))`을 주는 `unfold`로 볼 수 있다."
+	],
+	"notes": "`Some((a, s))`는 튜플을 `Some`에 담는 이중 괄호이다. 패턴 `case Some((a, s))`로 한 번에 풀 수 있다. 이 문제의 `Stream`과 달리 표준 라이브러리의 `LazyList.unfold`나 `Iterator.unfold`도 같은 시그니처이다. 상태 `S`와 값 `A`의 타입이 달라도 된다는 점이 `from`이나 `constant`보다 일반적이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.10"
+	},
+	"intent": "앞서 쓴 `constant`, `from`, `fibs`를 비교해 보면 모두 '현재 상태에서 값을 하나 꺼내고 다음 상태로 간다'는 같은 뼈대이다. `unfold`는 그 뼈대를 함수로 뽑아낸 것이며, 책은 이것을 `foldRight`가 데이터를 소비하는 쪽의 일반형인 것과 대칭으로 생성하는 쪽의 일반형(코재귀)이라고 설명한다. 이 정의는 `Stream`의 모양(`Cons`/`Empty`)과 닮아 있다는 점을 확인하라. 다음 문제에서 앞의 함수들을 이것으로 다시 쓴다."
+}

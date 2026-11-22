@@ -1,0 +1,10 @@
+@main def tests(): Unit =
+  Judge.check("map: Some")(Some(3).map(_ + 1), Some(4))
+  Judge.check("flatMap: 함수가 None을 돌려줌")(Some(10).flatMap(x => if x > 20 then Some(x) else None), None)
+  Judge.check("flatMap: None은 함수를 호출하지 않음")((None: Option[Int]).flatMap(_ => throw new Exception("호출됨")), None)
+  Judge.check("getOrElse: Some은 default를 평가하지 않음")(Some(1).getOrElse(throw new Exception("평가됨")), 1)
+  Judge.check("getOrElse: None은 default")((None: Option[Int]).getOrElse(7), 7)
+  Judge.check("orElse: Some은 ob를 평가하지 않음")(Some(1).orElse(throw new Exception("평가됨")), Some(1))
+  Judge.check("orElse: None은 ob")((None: Option[Int]).orElse(Some(9)), Some(9))
+  Judge.check("filter: 통과")(Some(4).filter(_ % 2 == 0), Some(4))
+  Judge.check("filter: 탈락")(Some(3).filter(_ % 2 == 0), None)

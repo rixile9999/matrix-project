@@ -1,0 +1,36 @@
+{
+	"id": "fp-0405-option-sequence",
+	"order": 1405,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"option-collections",
+		"recursion-list",
+		"foldright"
+	],
+	"title": "Option 리스트를 뒤집는 sequence",
+	"limitSec": 420,
+	"targets": [
+		"sequence",
+		"List[Option[A]] → Option[List[A]]"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 `Option`과 그 연산, `map2`가 주어진다. `sequence`를 구현하라. `Option` 값들의 리스트를 받아, 모두 `Some`이면 안의 값들을 같은 순서로 담은 리스트를 `Some`으로 돌려주고, 하나라도 `None`이면 전체가 `None`이어야 한다. 리스트는 표준 `List`다. 빈 리스트는 `Some(Nil)`이다.",
+	"starter": "def sequence[A](xs: List[Option[A]]): Option[List[A]] =\n  ???\n",
+	"hints": [
+		"리스트를 뒤에서부터(또는 재귀로) 접어 가며, 지금까지 쌓인 `Option[List[A]]`에 현재 원소를 붙인다고 생각하라. 현재 원소와 누적 결과가 둘 다 `Some`일 때만 성공한다.",
+		"`foldRight(초기값)((현재, 누적) => ...)`에서 초기값은 빈 리스트를 `Some`으로 감싼 것이다. 두 `Option`을 합쳐 `::`로 이어 붙이는 일은 이미 가진 `map2`가 해 준다. 초기값에 타입 표기가 필요할 수 있다."
+	],
+	"notes": "`Some(Nil)`은 `Option[Nil.type]`로 추론되므로 `foldRight`의 초기값에는 `Some(Nil): Option[List[A]]`처럼 타입을 붙이거나 `[Option[List[A]]]`를 명시한다. 표준 `List`에도 `foldRight`가 있어 재귀 없이 쓸 수 있고, 패턴 매칭 재귀로 풀어도 된다. 표준 라이브러리에는 이런 `sequence`가 없고, `Option`의 `List` 메서드로 넣을 수도 없다는 점이 교재가 주목하는 부분이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.5"
+	},
+	"intent": "`List[Option[A]]`를 `Option[List[A]]`로 뒤집는 일은 이후 `Either`, `Parser`, `State` 등에서 같은 모양으로 반복된다. 여기서는 처음으로 `map2`를 이용해 리스트를 접는 패턴을 만난다. `List`는 `Option`을 모르고 `Option`은 `List`를 모르므로 이 함수가 어느 쪽의 메서드도 될 수 없는, 독립 함수라는 점을 눈여겨보라."
+}

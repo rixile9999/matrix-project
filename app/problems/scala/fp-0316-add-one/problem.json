@@ -1,0 +1,35 @@
+{
+	"id": "fp-0316-add-one",
+	"order": 1316,
+	"level": 1,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [
+		"match-list",
+		"recursion-list"
+	],
+	"title": "리스트의 모든 원소에 1 더하기",
+	"limitSec": 120,
+	"targets": [
+		"리스트 재귀",
+		"패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 직접 정의한 단방향 리스트 `List[+A]`가 있다(`Nil`, `Cons(head, tail)`). 표준 라이브러리의 `List`가 아니라 이것을 쓴다. 정수 리스트의 모든 원소에 1을 더한 새 리스트를 반환하는 `def addOne(l: List[Int]): List[Int]`를 구현하라. 입력 리스트는 바꾸지 않고 새 리스트를 만든다. 표준 컬렉션 메서드(`map` 등)는 이 리스트에 없으므로 패턴 매칭과 재귀로 작성한다.",
+	"starter": "def addOne(l: List[Int]): List[Int] =\n  ???\n",
+	"hints": [
+		"`Nil`일 때와 `Cons(h, t)`일 때를 나눠서 생각한다. 꼬리 부분에 대해서는 같은 함수가 이미 정답을 준다고 믿고 쓰면 된다.",
+		"원소를 두 배로 만드는 함수라면 `l match`의 `case Nil => Nil` 다음에 `case Cons(h, t) => Cons(h * 2, 두배로(t))` 꼴이 된다."
+	],
+	"notes": "이 리스트의 `Cons`는 `::`가 아니라 일반 케이스 클래스 생성자이므로 `Cons(h + 1, addOne(t))`처럼 쓴다. Given.scala의 `export List.{Nil, Cons}`는 `Nil`과 `Cons`를 접두사 없이 쓰게 해 준다. 이게 없으면 `Nil`이 표준 라이브러리의 `scala.Nil`로 잡혀 패턴 매칭이 컴파일되지 않는다. 리스트가 아주 길면 이 재귀는 스택을 쓰지만, 지금은 구조를 익히는 단계라 신경 쓰지 않는다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.16"
+	},
+	"intent": "이 장에서 처음 나오는 '리스트를 새로 만들어 돌려주는' 함수다. 변경 대신 새 값을 만든다는 감각과, 빈 리스트와 비어 있지 않은 리스트로 나누는 재귀의 기본 틀을 손에 익히게 한다. 다음 문제(Double을 문자열로)와 거의 같은 모양이라는 점을 알아채면, 그 뒤의 `map`이 왜 나오는지 자연스럽게 연결된다."
+}

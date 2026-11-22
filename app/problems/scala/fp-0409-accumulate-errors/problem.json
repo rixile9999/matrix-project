@@ -1,0 +1,38 @@
+{
+	"id": "fp-0409-accumulate-errors",
+	"order": 1409,
+	"level": 3,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [
+		"either-basic",
+		"enum-adt",
+		"list-build"
+	],
+	"title": "여러 오류를 모으는 Validated",
+	"limitSec": 900,
+	"targets": [
+		"오류 누적",
+		"map2",
+		"traverse",
+		"새 데이터 타입"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`Either`로 만든 `map2`는 첫 번째 오류에서 멈추므로, 이름과 나이가 둘 다 틀려도 오류를 하나만 알려 준다. 이를 해결하기 위해 Given.scala에 오류를 모으는 타입 `Validated[+E, +A]`가 주어진다. `Valid(value)`는 성공, `Invalid(errors)`는 실패한 이유들의 목록이다. 또 `mkName`, `mkAge`가 `Validated`를 돌려주도록 주어져 있고(이름이 비었으면 `\"Name is empty.\"`, 나이가 0 미만이면 `\"Age is out of range.\"`), `case class Person(name: String, age: Int)`도 있다. 다음 셋을 구현하라. (1) `map2V(a, b)(f)`는 둘 다 `Valid`면 `f`로 합쳐 `Valid`로, 하나만 `Invalid`면 그 오류를, 둘 다 `Invalid`면 앞쪽 오류들 뒤에 뒤쪽 오류들을 이은 `Invalid`를 돌려준다. (2) `mkPerson(name, age)`는 `mkName`, `mkAge`를 `map2V`로 합쳐 `Person`을 만든다. (3) `traverseV(xs)(f)`는 `Either`의 `traverse`처럼 리스트의 각 원소에 `f`를 적용하되 모든 오류를 원소 순서대로 모은다.",
+	"starter": "def map2V[E, A, B, C](a: Validated[E, A], b: Validated[E, B])(f: (A, B) => C): Validated[E, C] =\n  ???\n\ndef mkPerson(name: String, age: Int): Validated[String, Person] =\n  ???\n\ndef traverseV[E, A, B](xs: List[A])(f: A => Validated[E, B]): Validated[E, List[B]] =\n  ???\n",
+	"hints": [
+		"`Either`의 `flatMap` 식 `map2`는 앞이 `Left`면 뒤를 보지 않는다. 오류를 모으려면 앞뒤를 항상 둘 다 들여다보고, 둘 다 `Invalid`인 경우를 따로 다뤄야 한다. 두 값을 튜플로 묶어 네 경우를 패턴 매칭하는 방법이 있다.",
+		"`map2V`의 네 경우: 둘 다 `Valid`면 합치고, 둘 다 `Invalid`면 `e1 ++ e2`이고, 한쪽만 `Invalid`면 그 오류들을 그대로 둔다. 이렇게 만든 뒤에는 `traverseV`가 `Either`의 `traverse`와 완전히 같은 접기 모양이 된다. `mkPerson`은 `map2V`에 `Person(_, _)`를 넘기는 한 줄이다."
+	],
+	"notes": "`Validated`는 `flatMap`을 일부러 갖지 않는다. 앞 결과에 의존해 다음 검증을 고르는 순간 뒤쪽을 실행하지 못해 오류를 모을 수 없기 때문이다. 같은 이유로 `map2V`는 두 검증이 서로 독립일 때만 쓸 수 있다. 이 구조는 Cats의 `Validated`나 Scalaz의 `Validation`과 같으며, `E`를 `List`로 고정하지 않고 `NonEmptyList`를 쓰는 변형도 흔하다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 4,
+		"exercise": "4.9"
+	},
+	"intent": "교재는 이 연습을 열린 질문으로 던져, `Either`의 어떤 부분이 오류 누적을 막는지 스스로 찾게 한다. 답은 `map2`를 조금 고치는 것이 아니라, `Left`가 오류를 하나만 담는 구조 자체를 목록을 담는 다른 데이터 타입으로 바꾸는 것이다. 구현해 보면 같은 `map2`/`traverse`의 뼈대가 그대로 유지되고 두 인자를 둘 다 들여다보는 규칙만 달라진다. 또 `flatMap`이 없어야 오류가 모인다는 점을 노트와 함께 눈여겨보라."
+}

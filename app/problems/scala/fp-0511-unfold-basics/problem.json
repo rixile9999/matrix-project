@@ -1,0 +1,35 @@
+{
+	"id": "fp-0511-unfold-basics",
+	"order": 1511,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"iterator",
+		"lazylist"
+	],
+	"title": "unfold로 fibs, from, constant, ones",
+	"limitSec": 300,
+	"targets": [
+		"unfold",
+		"상태 설계"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. Given.scala에 `unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A]`가 있다. 초기 상태 `z`에서 `f`가 `Some((값, 다음 상태))`를 돌려주는 동안 값을 내보내고, `None`이면 끝난다. 이것만 써서 네 스트림을 다시 구현하라(이전 풀이와 이름이 겹치지 않게 접미사를 붙였다). `fibsViaUnfold`는 `0, 1, 1, 2, 3, …`, `fromViaUnfold(n)`은 `n, n + 1, …`, `constantViaUnfold(a)`는 `a`의 반복, `onesViaUnfold`는 `1`의 반복이다. 모두 무한 스트림이다. `toList`와 `take`도 Given.scala에 있다.",
+	"starter": "def fibsViaUnfold: Stream[Int] =\n  ???\n\ndef fromViaUnfold(n: Int): Stream[Int] =\n  ???\n\ndef constantViaUnfold[A](a: A): Stream[A] =\n  ???\n\ndef onesViaUnfold: Stream[Int] =\n  ???\n",
+	"hints": [
+		"각각 '상태가 무엇이고 한 걸음마다 무엇을 내보내며 다음 상태가 무엇인가'만 정하면 된다. `fibs`의 상태는 두 값의 쌍이고, 나머지는 값 하나가 곧 상태이다. 끝나지 않으므로 `f`는 항상 `Some`을 준다.",
+		"`1, 3, 5, 7, …`이라면 `unfold(1)(k => Some((k, k + 2)))`이다. 상태 `k`가 곧 내보낼 값이며 다음 상태는 `k + 2`이다."
+	],
+	"notes": "튜플 상태를 분해하려면 `{ case (a, b) => … }` 형태의 패턴 매칭 익명 함수를 쓴다. `f`가 값을 그대로 다시 상태로 돌려주면 `constant`가 되고, `ones`는 `constant(1)`의 특수한 경우이다. 책의 원문은 `val`로 쓰지만 여기서는 `def`로 통일했다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.11"
+	},
+	"intent": "네 개 모두 한 줄이고, 지난 문제들에서 재귀로 쓰던 내용이 상태 설계 문제로 바뀐다. '상태가 무엇인가'를 정하는 것이 핵심이며 `fibs`에서는 상태가 두 값이라는 점이 눈에 들어와야 한다. 같은 일을 직접 재귀로 한 것과 비교해, `unfold`가 반복 구조를 없애 주는지 확인해 보라."
+}

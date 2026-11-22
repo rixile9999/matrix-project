@@ -1,0 +1,37 @@
+{
+	"id": "fp-0606-double-via-map",
+	"order": 1606,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"hof",
+		"type-alias",
+		"eta"
+	],
+	"title": "map 으로 double 다시 쓰기",
+	"limitSec": 120,
+	"targets": [
+		"Rand",
+		"map",
+		"RNG 를 언급하지 않기"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 `type Rand[+A] = RNG => (A, RNG)`, `unit`, `map`, `int`, `nonNegativeInt`가 있다. `map(s)(f)`는 `Rand` `s`가 만든 값에만 `f`를 적용하는 `Rand`이다. `[0, 1)` 구간의 `Double`을 만드는 `def randDouble: Rand[Double]`를 `map`으로 구현하라. 값은 `nonNegativeInt`가 만든 정수를 `Int.MaxValue.toDouble + 1`로 나눈 것이다. 구현에 `RNG` 값이나 튜플 분해가 나타나서는 안 된다.",
+	"starter": "def randDouble: Rand[Double] =\n  ???\n",
+	"hints": [
+		"`nonNegativeInt`가 곧 `Rand[Int]`이고, 우리가 바꿀 것은 그 값뿐이다. `map`에 이 `Rand`와 `Int => Double` 함수를 넘기면 끝난다.",
+		"비슷한 예: 짝수 여부를 만드는 `Rand[Boolean]`은 `map(int)(_ % 2 == 0)`이다."
+	],
+	"notes": "메서드 `nonNegativeInt`를 `map`의 첫 인자로 넘기면 `Rand[Int]`로 자동 변환된다. `_ / (…)`는 `x => x / (…)`의 줄임이다. `def randDouble`처럼 인자 없는 `def`로 두면 호출할 때마다 새로 식을 계산하지만 결과는 같은 함수이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 6,
+		"exercise": "6.6"
+	},
+	"intent": "손으로 쓴 `double`과 같은 일을 한 줄로 쓰게 하여, `map`이 상태 전달 보일러플레이트를 어떻게 없애는지 비교하게 한다. 풀이에서 `RNG`라는 이름이 사라졌다는 점이 중요하다. 상태를 다루는 코드를 \"상태 없이 보이는\" 합성으로 바꾸는 방향의 첫 걸음이다."
+}

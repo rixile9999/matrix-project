@@ -1,0 +1,39 @@
+{
+	"id": "fp-0329-tree-fold",
+	"order": 1329,
+	"level": 3,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"enum-adt",
+		"match-case-class",
+		"hof",
+		"currying",
+		"foldright"
+	],
+	"title": "트리 fold와 재구현",
+	"limitSec": 1200,
+	"targets": [
+		"fold 일반화",
+		"ADT",
+		"고차 함수"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala의 이진 트리 `Tree[+A]`(`Leaf(value)`, `Branch(left, right)`)를 쓴다. `size`(노드 수), `maximum`(정수 트리의 최댓값), `depth`(뿌리에서 잎까지 가장 긴 경로의 간선 수, 잎 하나는 0), `map`(모든 잎에 함수 적용)은 모두 `Leaf`일 때의 값과 `Branch`에서 두 결과를 합치는 방법만 다르다. 이 공통 틀을 `def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B`로 구현하라. `f`는 `Leaf`의 값을 결과로 바꾸고, `g`는 왼쪽과 오른쪽 하위 트리의 결과를 합친다. 그다음 `fold`만 사용해 `def sizeViaFold[A](t: Tree[A]): Int`, `def maximumViaFold(t: Tree[Int]): Int`, `def depthViaFold[A](t: Tree[A]): Int`, `def mapViaFold[A, B](t: Tree[A])(f: A => B): Tree[B]`를 구현하라. 이들은 `fold` 이외의 재귀나 패턴 매칭을 쓰지 않는다.",
+	"starter": "def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B =\n  ???\n\ndef sizeViaFold[A](t: Tree[A]): Int =\n  ???\n\ndef maximumViaFold(t: Tree[Int]): Int =\n  ???\n\ndef depthViaFold[A](t: Tree[A]): Int =\n  ???\n\ndef mapViaFold[A, B](t: Tree[A])(f: A => B): Tree[B] =\n  ???\n",
+	"hints": [
+		"`fold`는 한 가지 일만 한다. `Leaf(v)`이면 `f(v)`를 돌려주고, `Branch(l, r)`이면 `l`과 `r`을 각각 `fold`한 결과 두 개를 `g`로 합친다. 나머지 함수는 `f`와 `g`를 무엇으로 정하느냐의 문제다.",
+		"`maximumViaFold`라면 `fold(t)(x => x)(_.max(_))`이다. `sizeViaFold`는 잎을 1로 보고 가지에서는 자기 몫 1을 더하는 `g`가 필요하고, `mapViaFold`는 `f`가 `Tree[B]`를 돌려주도록 `Leaf(...)`를 `Tree[B]` 타입으로 지정해야 컴파일된다."
+	],
+	"notes": "`mapViaFold`에서는 `fold(t)(a => Leaf(f(a)): Tree[B])(Branch(_, _))`처럼 타입을 명시해야 `B`가 `Leaf[B]`로 좁혀 추론되는 것을 막을 수 있다. 인자 목록을 `(t)(f)(g)`로 나눈 것은 `A`와 `B`를 앞에서 확정해 뒤쪽 람다의 타입 추론을 돕기 위해서다. `Branch(_, _)`는 `(l, r) => Branch(l, r)`로 확장되는 함수 리터럴이다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 3,
+		"exercise": "3.29"
+	},
+	"intent": "네 함수가 닮았다는 것을 앞 문제들에서 느꼈다면 여기서 그 공통 구조에 이름을 붙인다. `fold`는 트리 구조를 해체하며 값을 만드는 일반 틀이고, `Leaf`용 함수와 `Branch`용 함수는 ADT의 각 생성자에 대응한다. 리스트의 `foldRight`가 `Nil`용 값과 `Cons`용 함수를 받는 것과 같은 모양이라는 점을 비교해 보는 것이 이 문제의 핵심이다. 결과로 `Int`뿐 아니라 `Tree`도 만들 수 있다는 것(`map`)을 보면 `fold`의 범용성이 드러난다."
+}

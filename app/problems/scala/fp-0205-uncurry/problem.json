@@ -1,0 +1,36 @@
+{
+	"id": "fp-0205-uncurry",
+	"order": 1205,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"currying",
+		"hof",
+		"lambda"
+	],
+	"title": "uncurry: 커링 되돌리기",
+	"limitSec": 180,
+	"targets": [
+		"커링",
+		"다형 함수"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`def uncurry[A, B, C](f: A => B => C): (A, B) => C`를 구현하라. 인자를 하나씩 받는 함수 `f`를 두 인자를 한꺼번에 받는 함수로 되돌린다. `uncurry(f)(a, b) == f(a)(b)`가 성립해야 한다. 앞 문제의 `curry`가 Given.scala에 들어 있으며, 테스트는 `uncurry(curry(g))`가 `g`와 같게 동작하는지도 확인한다.",
+	"starter": "def uncurry[A, B, C](f: A => B => C): (A, B) => C =\n  ???\n",
+	"hints": [
+		"받아야 할 것은 `A` 하나와 `B` 하나다. 이 둘로 `f`를 차례로 적용해 `C`에 도달하는 길을 찾아라.",
+		"`(a, b) => ...`로 시작하고, 먼저 `f(a)`를 얻은 뒤 그 결과(`B => C`)에 `b`를 적용한다."
+	],
+	"notes": "`f(a)(b)`처럼 함수를 반환하는 함수를 연달아 호출할 수 있다. 표준 라이브러리에는 `Function.uncurried(f)`가 있고, 다중 매개변수 목록 메서드는 `f.uncurried`와 비슷한 모양으로 변환된다. 직접 쓸 때는 타입 표기가 `A => B => C`이므로 람다 쪽 `(a, b) => ...`가 튜플 분해가 아니라 두 인자 람다라는 점을 구분하라.",
+	"book": {
+		"id": "fpis",
+		"chapter": 2,
+		"exercise": "2.5"
+	},
+	"intent": "`curry`와 정확히 반대 방향의 변환을 구현해 보며 둘이 서로의 역함수임을 느끼게 하는 짧은 연습이다. 같은 정보를 담은 두 표현 사이를 오가는 이런 변환이 FP에서 자주 나오고, 타입만 맞추면 구현이 자동으로 정해진다는 감각을 한 번 더 굳히는 것이 목적이다. 앞 문제와 달리 이번에는 인자 목록이 줄어드는 쪽이라 \"어떤 값부터 적용하는가\"에 주의하라."
+}

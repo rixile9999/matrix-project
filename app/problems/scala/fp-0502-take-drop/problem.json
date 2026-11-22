@@ -1,0 +1,37 @@
+{
+	"id": "fp-0502-take-drop",
+	"order": 1502,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"take-drop",
+		"by-name",
+		"extension"
+	],
+	"title": "take와 drop",
+	"limitSec": 420,
+	"targets": [
+		"지연 평가",
+		"Stream.cons",
+		"패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `Stream`에 대해 두 함수를 구현하라. `take(n)`은 앞의 `n`개 원소로 이루어진 스트림을 반환하고, `drop(n)`은 앞의 `n`개를 건너뛴 나머지 스트림을 반환한다. `n`이 길이보다 크면 `take`는 전체를, `drop`은 빈 스트림을 반환하고, `n`이 0 이하이면 `take`는 빈 스트림을, `drop`은 원래 스트림을 반환한다. `take`는 필요 이상으로 평가하면 안 된다. 결과의 `n`번째 원소 뒤의 꼬리는 절대 평가하지 않아야 하고, `drop`은 건너뛰는 원소의 머리를 평가하지 않아야 한다. `toList`는 Given.scala에 있다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def take(n: Int): Stream[A] =\n    ???\n\n  def drop(n: Int): Stream[A] =\n    ???\n",
+	"hints": [
+		"둘 다 `n`을 하나씩 줄이며 꼬리로 내려가는 재귀이다. `take`는 결과를 `Stream.cons`로 감싸야 지연되고, `drop`은 그냥 꼬리를 따라가면 된다. `take`에서 `n == 1`일 때 꼬리를 건드리지 않도록 경우를 따로 둬라.",
+		"머리 `k`개를 따로 취하는 상황에 비유하면 `case Cons(h, t) if n > 1 => Stream.cons(h(), t().take(n - 1))`이 일반 경우이고, 마지막 하나는 `Stream.cons(h(), Stream.empty)`로 끝낸다."
+	],
+	"notes": "`Stream.cons`의 두 번째 인자는 이름에 의한 호출이라 `t().take(n - 1)`이 실제로는 누군가 꼬리를 요구할 때에야 실행된다. `n == 1` 경우를 따로 두지 않고 `n > 0`으로 재귀하면 `t()`를 한 번 더 호출하게 되어 이 문제의 테스트에서 걸린다. 패턴 매칭의 가드 `if n > 1`은 Scala 2와 같다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.2"
+	},
+	"intent": "`take`는 지연 평가를 처음으로 느끼는 문제이다. 결과 스트림이 어디까지 계산 약속을 하는지 정확히 따져야 하며, 무한 스트림에 써도 끝나는 것이 그 증거이다. `drop`은 반대로 건너뛰는 원소의 머리 썽크는 실행하지 않고 꼬리만 따라간다. 두 함수가 '무엇을 평가하고 무엇을 미루는가'라는 점에서 대조적이라는 걸 느껴 보라."
+}

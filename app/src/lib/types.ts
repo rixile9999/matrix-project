@@ -86,7 +86,24 @@ export type LangListItem = {
 	status: 'new' | 'attempted' | 'passed'; // passed = at least one session passed
 	bestSec: number | null; // fastest passing session
 	clean: boolean; // some passing session used none of the problem's `avoid` keywords
+	book: { id: string; chapter: number; exercise: string } | null; // set for book problems (badge "책 3.7")
 };
+
+/** A book card on /lang. passed/total count only complete problems of that book. */
+export type LangBookCard = { id: string; title: string; passed: number; total: number };
+
+/** `/lang/book/[book]` load (404 for an unknown book). Action ?/start (field: problemId) creates a session and redirects to /lang/[id]. */
+export type LangBookData = {
+	id: string;
+	title: string;
+	passed: number;
+	total: number;
+	resume: { problemId: string; title: string; chapter: number; exercise: string } | null; // first unpassed in book order; null when empty or all passed
+	chapters: { chapter: number; title: string; passed: number; total: number; problems: LangListItem[] }[]; // chapter order; problems in exercise order, [] = 준비 중
+};
+
+/** Where a book problem sits, for the problem screen's breadcrumb. */
+export type LangBookRef = { id: string; title: string; chapter: number; chapterTitle: string; exercise: string };
 
 /** One topic of the /lang matrix; `levels[0..2]` are levels 1..3, each in problem order. Only topics with problems appear. */
 export type LangTopicRow = { topic: TopicId; label: string; levels: [LangListItem[], LangListItem[], LangListItem[]] };
@@ -96,9 +113,10 @@ export type LangSuggestion = { key: 'continue' | 'warmup' | 'challenge'; label: 
 
 /** `/lang` load. Action ?/start (field: problemId) creates a session and redirects to /lang/[id]. */
 export type LangHomeData = {
-	topics: LangTopicRow[]; // TOPICS order
-	levels: { level: LangLevel; label: string; passed: number; total: number }[]; // always 3 entries
-	suggestions: LangSuggestion[]; // only those with a candidate
+	books: LangBookCard[]; // _books.json order
+	topics: LangTopicRow[]; // TOPICS order; includes book problems (item.book != null), the client filters them
+	levels: { level: LangLevel; label: string; passed: number; total: number }[]; // always 3 entries; NON-book problems only
+	suggestions: LangSuggestion[]; // only those with a candidate; NON-book problems only
 };
 
 export type LangFinished = {
@@ -117,6 +135,8 @@ export type LangSessionData = {
 	problem: {
 		id: string; order: number; level: LangLevel; topic: TopicId; kind: LangKind; title: string; limitSec: number; statement: string; starter: string;
 		avoid: string[]; // only for kind 'refactor' (shown in the header note), else []
+		book: LangBookRef | null; // book problems only
+		given: string | null; // Given.scala (read-only code the problem builds on); not secret, always sent
 	};
 	session: {
 		id: number;
@@ -124,19 +144,20 @@ export type LangSessionData = {
 		code: string; // code of the last run, or the starter
 		hints: string[]; // hints revealed so far (0–2)
 		refs: string[]; // related cheat entry ids: [] until hint 1 is revealed or the session is finished (withheld otherwise)
+		intent: string | null; // 출제 취지: null under the same rule as refs, and for problems without one
 		lastResult: JudgeResult | null;
 		finished: LangFinished | null;
 	};
 	cheat: CheatEntry[]; // the whole cheat sheet (static), topic order; topics not written yet are absent
 	now: number;
-	nextId: string | null; // next problem of the same level in order
+	nextId: string | null; // non-book: next non-book problem of the same level; book: next problem in book order (crosses chapters)
 };
 // `/lang/[id]` form actions: ?/restart (new session for this problem, same page), ?/reveal (give up -> finished.outcome 'revealed')
 // POST /lang/[id]/run     JSON body { code: string } -> LangRunResponse (judges, records the run; first pass finishes the session)
 // POST /lang/[id]/hint    no body -> LangHintResponse (reveals the next hint; refs appear with hint 1)
 // POST /lang/[id]/lookup  JSON body { entryId: string } -> LangLookupResponse (append-only; ignored without an open session)
 export type LangRunResponse = { result: JudgeResult; finished: boolean; error?: string };
-export type LangHintResponse = { hints: string[]; refs: string[]; error?: string };
+export type LangHintResponse = { hints: string[]; refs: string[]; intent: string | null; error?: string };
 export type LangLookupResponse = { recorded: boolean };
 
 /** `/lang/cheatsheet` load. `passedBy[entryId]`: problems already passed that list the entry in `refs` (others would leak hints). */

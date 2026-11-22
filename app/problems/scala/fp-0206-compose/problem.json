@@ -1,0 +1,37 @@
+{
+	"id": "fp-0206-compose",
+	"order": 1206,
+	"level": 1,
+	"topic": "functions",
+	"kind": "write",
+	"refs": [
+		"compose",
+		"hof",
+		"lambda"
+	],
+	"title": "함수 합성 compose",
+	"limitSec": 180,
+	"targets": [
+		"함수 합성",
+		"고차 함수",
+		"다형 함수"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`def compose[A, B, C](f: B => C, g: A => B): A => C`를 구현하라. `g`를 먼저 적용하고 그 결과에 `f`를 적용하는 새 함수를 돌려준다. 즉 `compose(f, g)(x) == f(g(x))`이다. 표준 라이브러리의 `compose`나 `andThen`은 쓰지 말고 직접 구현하라.",
+	"starter": "def compose[A, B, C](f: B => C, g: A => B): A => C =\n  ???\n",
+	"hints": [
+		"돌려줄 것은 `A`를 받는 함수다. `A` 값에서 시작해 가진 두 함수로 `C`까지 가는 길은 하나뿐이다.",
+		"`x => ...`로 시작하고, 몸통에서 `g`를 먼저, 그 결과에 `f`를 적용한다."
+	],
+	"notes": "`f(g(x))` 모양으로 쓰면 되고, 표준 `Function1`에서는 `f compose g`가 같은 일을, `g andThen f`가 같은 결과를 낸다. 적용 순서가 이름과 반대로 보이기 쉬우니 `compose(f, g)`에서 `g`가 먼저 실행된다는 점을 기억하라. Scala 3에서는 함수 합성을 `extension`으로 연산자처럼 만들 수도 있지만 이 문제는 일반 함수로 한정한다.",
+	"book": {
+		"id": "fpis",
+		"chapter": 2,
+		"exercise": "2.6"
+	},
+	"intent": "함수도 값이라 조합해 새 함수를 만들 수 있다는 것을 가장 단순한 형태로 보여 주는 문제다. 이 장의 마지막 문제로서, 타입만 맞추면 구현이 유일하게 정해지는 다형 함수를 `partial1`, `curry`, `uncurry`에 이어 한 번 더 경험하게 한다. 이후 `map`처럼 작은 함수를 이어 붙여 큰 처리를 만드는 방식의 토대가 되며, 적용 순서(`g` 다음 `f`)를 정확히 짚는 것이 이번 연습의 포인트다."
+}

@@ -1,0 +1,11 @@
+@main def tests(): Unit =
+  val big = scala.List.range(0, 100000).foldRight(Nil: List[Int])(Cons(_, _))
+  val l = List(1, 2, 3, 4)
+  Judge.check("2개 버리기")(drop(l, 2), List(3, 4))
+  Judge.check("0개는 그대로")(drop(l, 0), List(1, 2, 3, 4))
+  Judge.check("음수는 그대로")(drop(l, -3), List(1, 2, 3, 4))
+  Judge.check("길이와 같으면 Nil")(drop(l, 4), Nil)
+  Judge.check("길이를 넘으면 Nil")(drop(l, 10), Nil)
+  Judge.check("빈 리스트")(drop(Nil, 3), Nil)
+  Judge.check("남은 부분을 복사하지 않고 공유한다")(drop(l, 3) eq (l match { case Cons(_, Cons(_, Cons(_, t))) => t; case _ => Nil }), true)
+  Judge.check("10만 개에서도 스택 안전")(drop(big, 99999), List(99999))

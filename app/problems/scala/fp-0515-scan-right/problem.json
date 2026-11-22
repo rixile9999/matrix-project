@@ -1,0 +1,39 @@
+{
+	"id": "fp-0515-scan-right",
+	"order": 1515,
+	"level": 3,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [
+		"foldright",
+		"scanleft",
+		"by-name",
+		"match-tuple"
+	],
+	"title": "scanRight",
+	"limitSec": 1500,
+	"targets": [
+		"foldRight",
+		"중간 결과 재사용",
+		"튜플 누산기",
+		"이름에 의한 호출"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "Given.scala에 지연 리스트 `Stream`이 정의되어 있다. `enum Stream[+A]`는 `Empty`와 `Cons(h: () => A, t: () => Stream[A])` 두 경우로 이루어지며, `Cons`의 머리 `h`와 꼬리 `t`는 호출(`h()`, `t()`)하기 전까지 계산되지 않는 썽크이다. 스마트 생성자 `Stream.cons(hd, tl)`는 두 인자를 이름에 의한 호출(`=> A`)로 받아 처음 필요할 때 한 번만 계산해 기억하고, `Stream.empty[A]`는 빈 스트림이며, `Stream(1, 2, 3)`은 `Stream.apply`로 만든 스트림이다. 패턴 매칭에는 `import Stream.{Cons, Empty}`를 쓴다. `scanRight`를 구현하라. `def scanRight[B](z: B)(f: (A, => B) => B): Stream[B]`. `foldRight`처럼 오른쪽에서 접되 중간 결과를 모두 스트림으로 돌려준다. 예를 들어 `Stream(1, 2, 3).scanRight(0)(_ + _).toList`는 `List(1 + 2 + 3 + 0, 2 + 3 + 0, 3 + 0, 0)`, 즉 `List(6, 5, 3, 0)`이다. 결과의 길이는 원소 수 + 1이고 마지막은 `z`이다. 중간 결과를 재사용해야 하므로 원소가 `n`개일 때 `f`를 호출하는 횟수는 `n`이다(접미사마다 처음부터 다시 접으면 `n²`). `f`의 둘째 인자는 이름에 의한 호출이다. Given.scala의 `foldRight`와 `toList`를 쓸 수 있다.",
+	"starter": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def scanRight[B](z: B)(f: (A, => B) => B): Stream[B] =\n    ???\n",
+	"hints": [
+		"접어 나가면서 '지금까지의 접힌 값'과 '지금까지 만든 결과 스트림'을 한 쌍으로 들고 가라. 각 원소에서 쌍의 앞(접힌 값)으로 새 값을 계산하고, 그 값을 결과 스트림의 맨 앞에 붙인다. 마지막에 쌍의 두 번째만 꺼낸다.",
+		"합과 함께 부분합 스트림을 만드는 같은 틀의 예로, 상태가 `(합, 지금까지 만든 스트림)`이면 원소 `a`를 만날 때 `(합 + a, Stream.cons(합 + a, 지금까지 만든 스트림))`이다. 여기서 `+`가 `f`로 바뀌고 `f`의 둘째 인자가 이름에 의한 호출이라는 점만 신경 쓰면 된다."
+	],
+	"notes": "`foldRight`의 결합 함수에서 `acc`는 이름에 의한 호출이므로 `lazy val cur = acc`로 한 번만 평가되게 붙잡아 쓴다. 그러지 않고 `acc._1`과 `acc._2`를 따로 쓰면 오른쪽 접기가 두 번 일어나 호출 횟수가 늘어난다. `unfold`로는 쓸 수 없는데, `unfold`는 앞에서 뒤로 상태를 넘기지만 `scanRight`의 각 항은 뒤쪽의 결과에 의존하기 때문이다. 쌍을 `val (b, s2) = …`로 분해하는 것도 같은 이유로 평가가 일찍 일어나니 주의하라.",
+	"book": {
+		"id": "fpis",
+		"chapter": 5,
+		"exercise": "5.15"
+	},
+	"intent": "`tails`가 '접미사들'이었다면 `scanRight`는 '각 접미사를 접은 값들'로, `tails.map(_.foldRight(z)(f))`가 정답이지만 중간 결과를 버리고 다시 계산해 느리다. 이 문제는 이전 접미사의 결과를 다음 접미사가 재사용하게 하려면 접는 동안 결과 스트림도 함께 들고 가야 한다는 점을 요구하며, 그 점이 어려운 부분이다. 또한 `unfold`처럼 '앞에서 뒤로' 흐르는 생산으로는 쓸 수 없고 `foldRight`처럼 '뒤에서 앞으로' 흐르는 계산이 필요하다는 것을 알게 해 준다."
+}

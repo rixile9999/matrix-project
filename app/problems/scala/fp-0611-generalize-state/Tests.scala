@@ -1,0 +1,11 @@
+@main def tests(): Unit =
+  val counter: State[Int, Int] = State(n => (n, n + 1))
+  Judge.check("unit › 상태를 바꾸지 않는다")(unit[Int, String]("a").run(5), ("a", 5))
+  Judge.check("flatMap › 앞 결과에 따라 다음 동작을 고른다")(counter.flatMap(a => if a % 2 == 0 then unit[Int, String]("짝수") else counter.map(_.toString)).run(3), ("4", 5))
+  Judge.check("flatMap › 상태를 이어 받는다")(counter.flatMap(a => counter.map(b => a + b)).run(5), (11, 7))
+  Judge.check("map › 값만 바꾸고 상태는 그대로 전달")(counter.map(_ * 10).run(3), (30, 4))
+  Judge.check("map2 › 첫 번째가 먼저 실행")(counter.map2(counter)(_ - _).run(1), (-1, 3))
+  Judge.check("sequence › 빈 리스트는 상태 불변")(sequence[Int, Int](scala.Nil).run(7), (scala.List.empty[Int], 7))
+  Judge.check("sequence › 앞에서부터 순서대로")(sequence(scala.List(counter, counter, counter)).run(0), (scala.List(0, 1, 2), 3))
+  val appendX: State[String, Int] = State(s => (s.length, s + "x"))
+  Judge.check("sequence › 다른 상태 타입(String)")(sequence(scala.List.fill(3)(appendX)).run(""), (scala.List(0, 1, 2), "xxx"))
