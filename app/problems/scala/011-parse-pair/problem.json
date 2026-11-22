@@ -1,0 +1,25 @@
+{
+	"id": "011-parse-pair",
+	"order": 11,
+	"title": "쌍 파싱과 오류 메시지",
+	"limitSec": 500,
+	"targets": [
+		"Either",
+		"Left",
+		"Right",
+		"for 컴프리헨션",
+		"toIntOption"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "문자열 `s`는 `\"a,b\"` 모양으로 쉼표로 구분된 두 정수여야 한다. 성공하면 `Right((a, b))`를 반환하라. 규칙은 다음과 같다. 먼저 `s`를 쉼표 기준으로 나눈다. 끝이 비어 있는 조각도 조각으로 센다(`\"1,\"`은 `\"1\"`과 `\"\"` 두 조각이다). 조각이 정확히 2개가 아니면 `Left(\"형식 오류\")`다. 각 조각은 앞뒤 공백을 지운 뒤 정수로 읽는다. 앞쪽 조각부터 보고, 처음으로 정수가 아닌 조각이 있으면 `Left(\"숫자 아님: \" + 그 조각)`을 반환한다(조각은 공백을 지운 형태, 빈 조각이면 `\"숫자 아님: \"`). `Int` 범위를 넘는 수도 정수가 아닌 것으로 본다.",
+	"starter": "def parsePair(s: String): Either[String, (Int, Int)] =\n  ???\n",
+	"hints": [
+		"실패 사유를 값으로 돌려주려면 `Either[String, A]`를 쓴다. `Option`을 `Either`로 바꿔 주는 메서드와, 두 `Either`를 `for`로 이어 붙이는 방법을 찾아보라.",
+		"`\"x\"`를 정수로 읽다 실패하면 메시지를 주는 일이라면: `\"x\".toIntOption.toRight(\"숫자 아님\")`. 두 결과를 묶을 때는 `for a <- f(p); b <- f(q) yield a + b`."
+	],
+	"notes": "`Either`는 오른쪽(`Right`)이 성공 값인 편향된 타입이라 `for`나 `map`이 `Right`에서만 이어지고 첫 `Left`에서 멈춘다. `String.split(\",\")`은 끝의 빈 조각을 버리므로 `split(\",\", -1)`처럼 한계값을 `-1`로 주어야 모든 조각이 남는다. `toIntOption`은 `try`/`catch` 없이 안전하게 읽게 해 주며(2.13부터), `toRight(msg)`가 `Option`을 `Either`로 올려 준다. 배열은 `case Array(a, b) =>`처럼 패턴으로 개수와 원소를 한 번에 확인할 수 있다."
+}

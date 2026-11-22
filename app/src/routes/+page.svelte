@@ -132,4 +132,5 @@
 			<span class="handle">@{data.handle}</span>
 		</form>
 	{/if}
+	<a class="lang-entry" href="/lang"><span>언어 5분 · Scala</span><span class="note">짧은 문제로 문법 익히기</span><span aria-hidden="true">→</span></a>
 </div>

@@ -1,0 +1,23 @@
+{
+	"id": "007-pythagorean-triples",
+	"order": 7,
+	"title": "피타고라스 세 쌍",
+	"limitSec": 400,
+	"targets": [
+		"for 컴프리헨션",
+		"가드",
+		"yield"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "양의 정수 `n`이 주어진다. `a < b < c <= n`이고 `a*a + b*b == c*c`를 만족하는 모든 `(a, b, c)`를 `List[(Int, Int, Int)]`로 반환하라. 결과는 `a`가 작은 것부터, `a`가 같으면 `b`가 작은 것부터 나열한다. 예: `n = 13`이면 `List((3, 4, 5), (5, 12, 13), (6, 8, 10))`이다. 없으면 빈 리스트다.",
+	"starter": "def triples(n: Int): List[(Int, Int, Int)] =\n  ???\n",
+	"hints": [
+		"세 변수를 차례로 고르고 조건에 맞는 것만 남기는 일은 `for`의 생성자(`<-`), `if` 가드, `yield`로 쓸 수 있다.",
+		"합이 10인 서로 다른 두 양의 정수 쌍이라면: `for a <- 1 to 10; b <- a + 1 to 10 if a + b == 10 yield (a, b)`"
+	],
+	"notes": "`for` 컴프리헨션은 `flatMap`, `withFilter`, `map`으로 풀리며, 앞 변수를 뒤 범위에 쓰면 중복 쌍(`a < b`)을 자연스럽게 막는다. `1 to n`의 결과는 `Range`이므로 `for`의 결과도 `IndexedSeq`가 되어 `List`가 필요하면 `.toList`를 붙여야 한다. Scala 3에서는 `for` 뒤의 괄호나 중괄호 없이 줄바꿈과 들여쓰기만으로 생성자를 나열하고 `yield`로 끝낼 수 있다. 여러 줄이면 `;`를 쓰지 않고 줄마다 `a <- ...`, `if ...`를 쓰면 된다."
+}

@@ -1,0 +1,24 @@
+{
+	"id": "006-arithmetic-progression",
+	"order": 6,
+	"title": "등차수열 판별",
+	"limitSec": 400,
+	"targets": [
+		"zip",
+		"drop",
+		"튜플 람다",
+		"distinct"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 리스트 `xs`가 등차수열이면 `true`, 아니면 `false`를 반환하라. 이웃한 두 원소의 차가 모두 같으면 등차수열이다. 원소가 0개, 1개, 2개인 리스트는 항상 등차수열이다.",
+	"starter": "def isArithmetic(xs: List[Int]): Boolean =\n  ???\n",
+	"hints": [
+		"리스트와 \"첫 원소를 뺀 리스트\"를 `zip`하면 이웃한 쌍이 나온다. 쌍마다 차를 구한 뒤 서로 다른 차가 몇 종류인지 보면 된다.",
+		"리스트가 비내림차순인지 확인하는 일이라면: `xs.zip(xs.drop(1)).forall((a, b) => a <= b)`"
+	],
+	"notes": "`xs.zip(xs.drop(1))`은 이웃 쌍을 만드는 관용구이며, 짧은 쪽에 맞춰 잘라 주므로 빈 리스트에서도 안전하다. `xs.tail`은 빈 리스트에서 예외를 던지니 `drop(1)`을 쓴다. `xs.sliding(2)`도 비슷하지만 원소가 하나뿐이면 길이 1짜리 창 하나가 나오는 점을 조심하라. `(a, b) => ...`로 튜플을 바로 받는 것은 Scala 3 문법이다."
+}

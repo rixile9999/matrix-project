@@ -1,0 +1,24 @@
+{
+	"id": "004-average-of-positives",
+	"order": 4,
+	"title": "양수의 평균",
+	"limitSec": 300,
+	"targets": [
+		"Option",
+		"filter",
+		"map",
+		"Option.when"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 리스트 `xs`에서 0보다 큰 수만 모아 그 평균을 `Option[Double]`로 반환하라. 양수가 하나도 없으면 `None`이다. 0은 양수가 아니다. 예: `List(-5, 4, 0, 6)`의 답은 `Some(5.0)`이다.",
+	"starter": "def averageOfPositives(xs: List[Int]): Option[Double] =\n  ???\n",
+	"hints": [
+		"\"값이 없을 수도 있다\"는 `Option`으로 표현한다. 양수 리스트가 비었는지 확인하고, 비어 있지 않을 때만 평균을 계산하도록 `Option`의 `filter`나 `map`을 이어 보라.",
+		"문자열 리스트에서 처음으로 길이가 3 이상인 것을 대문자로 바꾸는 일이라면: `words.find(_.length >= 3).map(_.toUpperCase)`"
+	],
+	"notes": "`Option`은 `map`, `filter`, `flatMap`, `getOrElse`를 `List`처럼 쓸 수 있어서 `null` 검사 대신 값을 변환 흐름에 태운다. 조건이 맞을 때만 `Some`을 만들고 싶으면 `Option.when(cond)(value)`가 있다(2.13부터). 정수끼리 나누면 소수점이 사라지니 `sum.toDouble / size`처럼 한쪽을 먼저 `Double`로 바꿔야 한다. 빈 리스트의 `sum`은 0이라 0으로 나누기 전에 `None`으로 걸러야 한다."
+}

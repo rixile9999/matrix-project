@@ -1,0 +1,23 @@
+{
+	"id": "010-expression-tree",
+	"order": 10,
+	"title": "수식 트리 계산",
+	"limitSec": 400,
+	"targets": [
+		"enum",
+		"ADT",
+		"철저한 패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 수식을 나타내는 `enum Expr`이 주어진다. `Num(n)`은 숫자, `Add(l, r)`은 덧셈, `Mul(l, r)`은 곱셈, `Neg(e)`는 부호 반전이다. `eval`은 수식의 값을 계산해 반환해야 한다.",
+	"starter": "enum Expr:\n  case Num(n: Int)\n  case Add(l: Expr, r: Expr)\n  case Mul(l: Expr, r: Expr)\n  case Neg(e: Expr)\n\ndef eval(e: Expr): Int =\n  ???\n",
+	"hints": [
+		"`enum`의 각 케이스를 `match`로 하나씩 처리하고, 하위 수식은 `eval`을 다시 호출해서 값을 얻어라.",
+		"도형 enum이라면: `enum Shape` 아래 `case Square(side: Int)`와 `case Rect(w: Int, h: Int)`를 두고, 넓이는 `case Shape.Square(s) => s * s`와 `case Shape.Rect(w, h) => w * h`로 구한다."
+	],
+	"notes": "`enum`은 Scala 2의 `sealed trait`와 `case class`들을 한 번에 정의하는 Scala 3 문법이라서, 케이스를 빠뜨리면 컴파일러가 철저성 경고를 준다. 케이스는 `Expr.Num(3)`처럼 `Expr.` 접두사로 접근하고, 줄이고 싶으면 `import Expr.*`를 쓴다(Scala 3의 `_` 대신 `*`). `case Expr.Add(l, r) =>`처럼 생성자 모양 그대로 값을 꺼내는 것이 패턴 매칭이다. 매칭 대상이 `enum`이면 마지막에 `case _`를 두지 않는 편이 낫다. 새 케이스가 추가될 때 경고로 알려 주기 때문이다."
+}

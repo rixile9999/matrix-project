@@ -20,6 +20,17 @@ CREATE TABLE IF NOT EXISTS attempts (
 	started_at INTEGER NOT NULL, limit_sec INTEGER NOT NULL,
 	ended_at INTEGER, outcome TEXT, elapsed_sec INTEGER
 );
+CREATE TABLE IF NOT EXISTS lang_sessions (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, lang TEXT NOT NULL, problem_id TEXT NOT NULL,
+	started_at INTEGER NOT NULL, hints_used INTEGER NOT NULL DEFAULT 0,
+	ended_at INTEGER, outcome TEXT CHECK (outcome IN ('passed', 'revealed')), elapsed_sec INTEGER, avoided TEXT
+);
+CREATE INDEX IF NOT EXISTS lang_sessions_problem ON lang_sessions(lang, problem_id);
+CREATE TABLE IF NOT EXISTS lang_runs (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL, at INTEGER NOT NULL,
+	status TEXT NOT NULL, code TEXT NOT NULL, result TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lang_runs_session ON lang_runs(session_id);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 

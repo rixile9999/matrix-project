@@ -1,0 +1,23 @@
+{
+	"id": "016-pet-country",
+	"order": 16,
+	"title": "반려동물의 나라 찾기",
+	"limitSec": 400,
+	"targets": [
+		"Option 체이닝",
+		"for 컴프리헨션",
+		"Map.get"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "세 개의 `Map`이 있다. `owners`는 반려동물 이름에서 주인 이름, `cities`는 주인 이름에서 사는 도시, `countries`는 도시에서 나라로 가는 대응이다. 반려동물 `pet`의 주인이 사는 도시가 속한 나라를 `Option[String]`으로 반환하라. 사슬 중 어느 한 곳이라도 끊기면 `None`이다.",
+	"starter": "def countryOfPet(\n    pet: String,\n    owners: Map[String, String],\n    cities: Map[String, String],\n    countries: Map[String, String]\n): Option[String] =\n  ???\n",
+	"hints": [
+		"`Map.get`은 `Option`을 돌려준다. 값이 있을 때만 다음 조회로 넘어가는 `Option`의 `for` 컴프리헨션(`flatMap` 연쇄)을 쓰면 된다.",
+		"이름에서 나이를 찾고, 나이로 등급표를 찾는 일이라면: `for age <- ages.get(name); grade <- grades.get(age) yield grade`"
+	],
+	"notes": "`for`에 `Option`을 쓰면 첫 `None`에서 전체 결과가 `None`이 되므로 `if (x == null)` 검사가 사라진다. 이 코드는 `owners.get(pet).flatMap(cities.get).flatMap(countries.get)`와 같으며, 깊어질수록 `for`가 읽기 쉽다. `Map(k)`는 키가 없으면 예외를 던지고 `Map.get(k)`는 `Option`을 돌려준다는 차이를 기억하라."
+}

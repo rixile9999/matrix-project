@@ -1,0 +1,24 @@
+{
+	"id": "003-collapse-duplicates",
+	"order": 3,
+	"title": "연속 중복 제거",
+	"limitSec": 400,
+	"targets": [
+		"리스트 패턴 매칭",
+		"::",
+		"Nil",
+		"재귀"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "정수 리스트 `xs`에서 같은 값이 연속으로 이어진 부분을 하나만 남기고 줄여라. 떨어져 있는 같은 값은 그대로 둔다. 예: `List(1, 1, 2, 2, 2, 1)`은 `List(1, 2, 1)`이 된다.",
+	"starter": "def collapse(xs: List[Int]): List[Int] =\n  ???\n",
+	"hints": [
+		"`match`로 리스트의 모양을 나눠 보라. 빈 리스트, 앞 두 원소를 꺼낸 모양, 그 밖의 경우를 `::` 패턴으로 구분하면 재귀가 자연스럽게 나온다.",
+		"리스트가 정렬되어 있는지 검사하는 일이라면: `def sorted(xs: List[Int]): Boolean = xs match` 아래에 `case a :: b :: rest => a <= b && sorted(b :: rest)`와 `case _ => true`를 둔다."
+	],
+	"notes": "`a :: rest`는 리스트를 머리와 꼬리로 나누는 패턴이고, 같은 기호로 리스트를 만들 수도 있다. `rest @ (b :: _)`처럼 `@`로 하위 패턴에 이름을 붙이면 꼬리를 다시 조립하지 않아도 된다. `case` 뒤의 `if` 가드는 순서대로 검사되니 더 구체적인 경우를 앞에 둬야 한다. Scala 3에서는 `match` 뒤에 중괄호 없이 들여쓰기만으로 `case`를 나열한다."
+}

@@ -1,0 +1,24 @@
+{
+	"id": "009-sort-people",
+	"order": 9,
+	"title": "나이 내림차순 정렬",
+	"limitSec": 400,
+	"targets": [
+		"case class",
+		"sortBy",
+		"Ordering.Tuple2",
+		"reverse"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`Person(name: String, age: Int)`이 주어진다. 사람 리스트를 나이가 많은 순으로 정렬하고, 나이가 같으면 이름의 사전순(오름차순)으로 정렬해 반환하라. 이름과 나이가 모두 같은 사람은 그대로 둔다.",
+	"starter": "case class Person(name: String, age: Int)\n\ndef sortPeople(people: List[Person]): List[Person] =\n  ???\n",
+	"hints": [
+		"`sortBy`에 (나이, 이름) 튜플을 키로 주되, 나이 쪽만 거꾸로 비교하는 `Ordering`을 쓰면 된다. `Ordering.Tuple2`와 `Ordering.Int.reverse`를 알아보라.",
+		"문자열을 길이 내림차순, 같으면 사전순으로 정렬하는 일이라면: `ws.sortBy(w => (w.length, w))(using Ordering.Tuple2(Ordering.Int.reverse, Ordering.String))`"
+	],
+	"notes": "`sortBy(f)`는 마지막에 `Ordering`을 암시적으로 받으며, Scala 3에서 이를 직접 넘길 때는 `(using ...)`로 쓴다(Scala 2에서는 그냥 `(...)`였다). 숫자 키만 뒤집을 때는 `-p.age`가 가장 짧지만 `Int.MinValue`나 숫자가 아닌 키에는 통하지 않으므로 `Ordering.reverse`가 일반적이다. 튜플의 기본 `Ordering`은 앞 원소부터 비교한다. `case class`는 `==`, `toString`, `copy`를 공짜로 준다."
+}

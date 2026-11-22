@@ -1,0 +1,13 @@
+@main def tests(): Unit =
+  val a = Person("Amy", 30)
+  val b = Person("Bob", 30)
+  val c = Person("Cy", 25)
+  val d = Person("Dee", 41)
+  Judge.check("빈 리스트")(sortPeople(Nil), Nil)
+  Judge.check("한 명")(sortPeople(List(a)), List(a))
+  Judge.check("나이 내림차순")(sortPeople(List(c, a, d)), List(d, a, c))
+  Judge.check("동갑은 이름 오름차순")(sortPeople(List(b, a)), List(a, b))
+  Judge.check("섞인 경우")(sortPeople(List(c, b, d, a)), List(d, a, b, c))
+  Judge.check("이미 정렬됨")(sortPeople(List(d, a, b, c)), List(d, a, b, c))
+  Judge.check("완전히 같은 사람")(sortPeople(List(c, a, c)), List(a, c, c))
+  Judge.check("이름은 사전순(대소문자)")(sortPeople(List(Person("bob", 20), Person("Zed", 20))), List(Person("Zed", 20), Person("bob", 20)))

@@ -1,0 +1,12 @@
+@main def tests(): Unit =
+  val owners = Map("Rex" -> "Ann", "Tom" -> "Bo", "Kit" -> "Cy", "Zed" -> "Dee")
+  val cities = Map("Ann" -> "Seoul", "Bo" -> "Paris", "Dee" -> "Oslo")
+  val countries = Map("Seoul" -> "Korea", "Paris" -> "France")
+  Judge.check("전체 사슬")(countryOfPet("Rex", owners, cities, countries), Some("Korea"))
+  Judge.check("다른 사슬")(countryOfPet("Tom", owners, cities, countries), Some("France"))
+  Judge.check("반려동물이 없음")(countryOfPet("Max", owners, cities, countries), None)
+  Judge.check("주인의 도시를 모름")(countryOfPet("Kit", owners, cities, countries), None)
+  Judge.check("도시의 나라를 모름")(countryOfPet("Zed", owners, cities, countries), None)
+  Judge.check("빈 맵들")(countryOfPet("Rex", Map.empty, Map.empty, Map.empty), None)
+  Judge.check("첫 맵만 있음")(countryOfPet("Rex", owners, Map.empty, countries), None)
+  Judge.check("키 이름이 겹쳐도 구분")(countryOfPet("Ann", owners, cities, countries), None)

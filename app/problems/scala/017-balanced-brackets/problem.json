@@ -1,0 +1,23 @@
+{
+	"id": "017-balanced-brackets",
+	"order": 17,
+	"title": "괄호 짝 맞추기",
+	"limitSec": 600,
+	"targets": [
+		"foldLeft",
+		"리스트를 스택으로",
+		"튜플 패턴 매칭"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "문자열 `s`에 `()`, `[]`, `{}` 세 종류의 괄호가 들어 있다. 모든 괄호가 올바르게 짝지어져 있으면(여는 괄호는 같은 종류의 닫는 괄호로, 올바른 순서로 닫혀야 한다) `true`를 반환하라. 괄호가 아닌 문자는 무시한다. 빈 문자열은 `true`다. 예: `\"([]{})\"`와 `\"a(b)c\"`는 `true`, `\"(]\"`, `\"(()\"`, `\"([)]\"`는 `false`다.",
+	"starter": "def balanced(s: String): Boolean =\n  ???\n",
+	"hints": [
+		"`List`의 맨 앞을 스택의 꼭대기로 쓰고, 문자를 하나씩 `foldLeft`로 처리하라. 누산기와 현재 문자를 묶어 `match`하면 경우를 깔끔하게 나눌 수 있다. 닫는 괄호가 잘못 나오면 이후 처리를 멈출 방법도 필요하다.",
+		"`(`와 `)`만 있는 경우라면 깊이를 `Option[Int]`로 들고 다니는 방식이다: `s.foldLeft(Option(0))`에서 `(Some(d), '(') => Some(d + 1)`, `(Some(d), ')') if d > 0 => Some(d - 1)`, `(Some(_), ')') => None`."
+	],
+	"notes": "`foldLeft`의 누산기를 `Option`으로 하면 한 번 `None`이 된 뒤에는 어떤 문자가 와도 `None`으로 남아, 실패를 끝까지 운반할 수 있다. `(acc, c) match`로 두 값을 한 번에 패턴 매칭하고, `'(' | '[' | '{'`처럼 `|`로 여러 값을 하나의 `case`로 묶는다. `Some('(' :: rest)`는 `Option`과 리스트 패턴을 중첩한 형태다. 마지막에 `result.contains(Nil)`로 \"스택이 비어 끝났는가\"를 확인한다."
+}

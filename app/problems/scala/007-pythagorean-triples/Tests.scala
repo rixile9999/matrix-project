@@ -1,0 +1,9 @@
+@main def tests(): Unit =
+  Judge.check("n = 0")(triples(0), Nil)
+  Judge.check("n = 4")(triples(4), Nil)
+  Judge.check("n = 5, c 경계 포함")(triples(5), List((3, 4, 5)))
+  Judge.check("n = 13")(triples(13), List((3, 4, 5), (5, 12, 13), (6, 8, 10)))
+  Judge.check("n = 20")(triples(20), List((3, 4, 5), (5, 12, 13), (6, 8, 10), (8, 15, 17), (9, 12, 15), (12, 16, 20)))
+  Judge.check("n = 12, 13은 제외")(triples(12), List((3, 4, 5), (6, 8, 10)))
+  Judge.check("n = 50 개수")(triples(50).size, 20)
+  Judge.check("n = 50 마지막")(triples(50).last, (30, 40, 50))

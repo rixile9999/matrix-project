@@ -1,0 +1,23 @@
+{
+	"id": "018-lower-bound",
+	"order": 18,
+	"title": "이진 탐색 하한",
+	"limitSec": 600,
+	"targets": [
+		"Vector",
+		"@tailrec",
+		"이진 탐색"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "오름차순(같은 값이 여러 개 있을 수 있음)으로 정렬된 `Vector[Int]`인 `v`와 정수 `target`이 주어진다. `v(i) >= target`을 만족하는 가장 작은 인덱스 `i`를 반환하라. 그런 원소가 없으면 `v.length`를 반환한다. 이진 탐색으로 구현하라.",
+	"starter": "import scala.annotation.tailrec\n\ndef lowerBound(v: Vector[Int], target: Int): Int =\n  ???\n",
+	"hints": [
+		"탐색 구간의 시작과 끝을 인자로 받는 `@tailrec` 보조 함수를 만들고, 가운데 값을 `target`과 비교해 구간의 절반을 버리면서 자기 자신을 호출하라. 끝 경계는 포함하지 않는 반열린 구간이 편하다.",
+		"`v(i) > target`인 첫 인덱스 문제라면 같은 틀에서 비교만 `v(mid) <= target`일 때 `go(mid + 1, hi)`로 바꾸면 된다. (이것이 이 문제와 다른 점이다.)"
+	],
+	"notes": "`Vector`는 `v(i)`로 거의 상수 시간에 임의 접근하므로 이진 탐색에 알맞고, `List`는 접근이 선형이라 맞지 않는다. 구간을 `[lo, hi)`로 정하면 종료 조건이 `lo >= hi` 하나이고 결과가 곧 삽입 위치가 되어 경계 처리가 단순해진다. `(lo + hi) / 2`는 큰 값에서 넘칠 수 있으니 `lo + (hi - lo) / 2`를 쓰는 것이 습관이다. 표준 라이브러리에도 `scala.collection.Searching`(`search`)이 있지만, 같은 값이 여럿일 때 어느 인덱스를 줄지 보장하지 않는다."
+}

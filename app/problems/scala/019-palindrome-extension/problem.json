@@ -1,0 +1,23 @@
+{
+	"id": "019-palindrome-extension",
+	"order": 19,
+	"title": "회문 확장 메서드",
+	"limitSec": 400,
+	"targets": [
+		"extension",
+		"String 메서드",
+		"count"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "`String`에 확장 메서드 `isPalindrome: Boolean`을 추가하라. 알파벳과 숫자(`isLetterOrDigit`)만 남기고 대소문자를 무시했을 때 앞에서 읽으나 뒤에서 읽으나 같으면 `true`다. 빈 문자열(또는 남는 글자가 없는 문자열)은 `true`다. 그리고 이 메서드를 사용해, 문구 리스트에서 회문인 것의 개수를 반환하는 `countPalindromes`를 완성하라. 테스트는 `\"abc\".isPalindrome`처럼 호출한다.",
+	"starter": "extension (s: String)\n  def isPalindrome: Boolean = ???\n\ndef countPalindromes(phrases: List[String]): Int =\n  ???\n",
+	"hints": [
+		"`extension (s: String)` 블록 안에 `def`를 정의하면 기존 타입에 메서드가 붙은 것처럼 `s.isPalindrome`으로 부를 수 있다. 글자를 걸러 소문자로 바꾼 뒤 뒤집은 것과 비교하라.",
+		"단어 수를 세는 확장이라면: `extension (s: String)` 아래 줄에 `def wordCount: Int = s.split(\" \").count(_.nonEmpty)`를 쓰고, `\"a b\".wordCount`로 호출한다."
+	],
+	"notes": "`extension (s: String)` 아래에 들여쓴 `def`들은 모두 `s`를 수신자로 가지며, Scala 2의 `implicit class RichString(s: String)`을 대체한다. 한 `extension` 블록에 여러 메서드를 넣을 수 있고, 메서드끼리 서로 `s.other` 형태로 부를 수 있다. 확장 메서드는 같은 이름의 진짜 멤버가 있으면 멤버가 이긴다는 점을 기억하라. `count(pred)`는 `filter(pred).size`보다 중간 리스트를 만들지 않아 낫다."
+}

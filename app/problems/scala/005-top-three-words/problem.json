@@ -1,0 +1,24 @@
+{
+	"id": "005-top-three-words",
+	"order": 5,
+	"title": "가장 많이 나온 단어 3개",
+	"limitSec": 500,
+	"targets": [
+		"groupMapReduce",
+		"sortBy",
+		"튜플 키",
+		"take"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "단어 리스트 `words`가 주어진다. 많이 등장한 순서대로 최대 3개의 서로 다른 단어를 `List[String]`으로 반환하라. 등장 횟수가 같으면 사전순(문자열 오름차순)으로 앞선 단어가 먼저다. 서로 다른 단어가 3개보다 적으면 있는 만큼만 반환한다.",
+	"starter": "def topThree(words: List[String]): List[String] =\n  ???\n",
+	"hints": [
+		"단어별 개수를 세는 `groupMapReduce`(또는 `groupBy`)와, 개수와 단어를 묶은 튜플을 정렬 키로 쓰는 `sortBy`, 그리고 `take`를 조합하라.",
+		"단어 길이별 개수라면: `words.groupMapReduce(_.length)(_ => 1)(_ + _)`. 정렬 기준이 둘이면 튜플을 키로 쓴다: `pairs.sortBy((k, v) => (v, k))`"
+	],
+	"notes": "`groupMapReduce(key)(value)(reduce)`는 `groupBy`, `map`, `reduce`를 한 번에 해 주며 결과는 `Map`이다(2.13부터). `Map`은 순서가 보장되지 않으니 정렬하려면 먼저 `toList`로 바꿔야 한다. 숫자를 내림차순으로 하려면 키에 `-c`를 쓰거나 `Ordering`에 `.reverse`를 붙인다. Scala 3에서는 `sortBy((w, c) => (-c, w))`처럼 튜플을 받는 람다의 인자를 바로 풀어 쓸 수 있다(Scala 2에서는 `case (w, c) =>`가 필요했다)."
+}

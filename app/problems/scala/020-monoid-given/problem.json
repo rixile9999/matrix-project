@@ -1,0 +1,24 @@
+{
+	"id": "020-monoid-given",
+	"order": 20,
+	"title": "Monoid given과 combineAll",
+	"limitSec": 600,
+	"targets": [
+		"given",
+		"using",
+		"타입 클래스",
+		"foldLeft"
+	],
+	"avoid": [
+		"var",
+		"while",
+		"return"
+	],
+	"statement": "타입 클래스 `Monoid[A]`가 주어진다. `empty`는 항등원이고 `combine`은 결합 연산이다. 다음 셋을 완성하라. (1) `Monoid[Int]`의 `given` 인스턴스 `intAddition` (`empty`는 0, `combine`은 덧셈). (2) `Monoid[String]`의 `given` 인스턴스 `stringConcat` (`empty`는 `\"\"`, `combine`은 문자열 이어 붙이기). (3) `combineAll`은 `xs`의 원소를 앞에서부터 차례로 `combine`한 결과를 반환하고, 빈 리스트면 `empty`를 반환한다. `Int`나 `String`만이 아니라 `Monoid` 인스턴스가 있는 모든 타입에서 동작해야 한다.",
+	"starter": "trait Monoid[A]:\n  def empty: A\n  def combine(x: A, y: A): A\n\ngiven intAddition: Monoid[Int] = ???\n\ngiven stringConcat: Monoid[String] = ???\n\ndef combineAll[A](xs: List[A])(using m: Monoid[A]): A =\n  ???\n",
+	"hints": [
+		"`given 이름: Monoid[타입] with`로 인스턴스를 만들고 그 아래에 `empty`와 `combine`을 구현한다. `combineAll`에서는 `using`으로 받은 `m`의 `empty`를 초기값으로 `foldLeft`하라.",
+		"곱셈 인스턴스라면: `given intProduct: Monoid[Int] with` 아래에 `def empty = 1`과 `def combine(x: Int, y: Int) = x * y`를 쓴다. (같은 타입의 `given`이 둘이면 모호해지니 이 문제에서는 쓰지 않는다.)"
+	],
+	"notes": "`given`은 Scala 2의 `implicit object`/`implicit val`을, `using` 절은 암시적 파라미터 목록 `(implicit m: Monoid[A])`를 대체한다. 호출하는 쪽에서는 `combineAll(List(1, 2, 3))`처럼 인스턴스를 쓰지 않아도 컴파일러가 타입으로 찾아 넣어 주며, 필요하면 `summon[Monoid[Int]]`로 직접 꺼낸다(Scala 2의 `implicitly`). 같은 타입에 후보가 둘 이상이면 모호성 오류가 나는데, 이름을 붙인 `given`이라 명시적으로 `combineAll(xs)(using intAddition)`처럼 지정할 수도 있다. 최신 3.x에는 `with` 대신 `:`로 본문을 시작하는 문법도 있다."
+}
