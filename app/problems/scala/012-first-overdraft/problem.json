@@ -1,6 +1,10 @@
 {
 	"id": "012-first-overdraft",
 	"order": 12,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [],
 	"title": "처음 잔액이 마이너스가 되는 순간",
 	"limitSec": 300,
 	"targets": [

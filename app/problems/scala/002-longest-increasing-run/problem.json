@@ -1,6 +1,10 @@
 {
 	"id": "002-longest-increasing-run",
 	"order": 2,
+	"level": 2,
+	"topic": "folds",
+	"kind": "write",
+	"refs": [],
 	"title": "가장 긴 증가 구간",
 	"limitSec": 400,
 	"targets": [

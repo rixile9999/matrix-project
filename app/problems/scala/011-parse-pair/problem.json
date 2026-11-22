@@ -1,6 +1,10 @@
 {
 	"id": "011-parse-pair",
 	"order": 11,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [],
 	"title": "쌍 파싱과 오류 메시지",
 	"limitSec": 500,
 	"targets": [

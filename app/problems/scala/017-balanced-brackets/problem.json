@@ -1,6 +1,10 @@
 {
 	"id": "017-balanced-brackets",
 	"order": 17,
+	"level": 2,
+	"topic": "pattern",
+	"kind": "write",
+	"refs": [],
 	"title": "괄호 짝 맞추기",
 	"limitSec": 600,
 	"targets": [

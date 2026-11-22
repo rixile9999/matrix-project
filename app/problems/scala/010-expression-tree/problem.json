@@ -1,6 +1,10 @@
 {
 	"id": "010-expression-tree",
 	"order": 10,
+	"level": 2,
+	"topic": "types",
+	"kind": "write",
+	"refs": [],
 	"title": "수식 트리 계산",
 	"limitSec": 400,
 	"targets": [

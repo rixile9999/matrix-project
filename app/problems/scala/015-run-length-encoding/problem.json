@@ -1,6 +1,10 @@
 {
 	"id": "015-run-length-encoding",
 	"order": 15,
+	"level": 2,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [],
 	"title": "연속 문자 압축",
 	"limitSec": 500,
 	"targets": [

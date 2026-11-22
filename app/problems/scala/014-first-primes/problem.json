@@ -1,6 +1,10 @@
 {
 	"id": "014-first-primes",
 	"order": 14,
+	"level": 2,
+	"topic": "lazy",
+	"kind": "write",
+	"refs": [],
 	"title": "처음 n개의 소수",
 	"limitSec": 500,
 	"targets": [

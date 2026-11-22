@@ -17,7 +17,7 @@ export function listProblems(lang: string): LangProblem[] {
 	return readdirSync(dir)
 		.filter((d) => existsSync(join(dir, d, 'problem.json')))
 		.map((d) => JSON.parse(readFileSync(join(dir, d, 'problem.json'), 'utf8')) as LangProblem)
-		.sort((a, b) => a.order - b.order);
+		.sort((a, b) => a.level - b.level || a.order - b.order);
 }
 
 export function loadProblem(lang: string, id: string): LangProblem | null {
@@ -59,8 +59,12 @@ function runOnce(lang: string, problem: LangProblem, code: string): Promise<Judg
 				.trim();
 			if (err && (err as { killed?: boolean }).killed) return done({ status: 'timeout', cases, output: rest, avoided });
 			if (cases.length === 0) return done({ status: 'compile_error', cases, output: clean || rest || stderr.trim(), avoided });
-			const passed = !err && cases.every((c) => c.status === 'ok');
-			done({ status: passed ? 'passed' : 'failed', cases, output: rest, avoided });
+			const allOk = !err && cases.every((c) => c.status === 'ok');
+			if (allOk && problem.kind === 'refactor' && avoided.length > 0) {
+				const used = avoided.map((w) => '`' + w + '`').join(', ');
+				return done({ status: 'failed', cases, output: `테스트는 통과했지만 ${used} 사용이 남아 있습니다. 이 문제는 그것 없이 다시 쓰는 것이 목표입니다.`, avoided });
+			}
+			done({ status: allOk ? 'passed' : 'failed', cases, output: rest, avoided });
 		});
 	});
 }

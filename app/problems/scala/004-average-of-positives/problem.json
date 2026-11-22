@@ -1,6 +1,10 @@
 {
 	"id": "004-average-of-positives",
 	"order": 4,
+	"level": 2,
+	"topic": "errors",
+	"kind": "write",
+	"refs": [],
 	"title": "양수의 평균",
 	"limitSec": 300,
 	"targets": [

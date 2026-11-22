@@ -1,0 +1,9 @@
+[
+	{
+		"id": "foldleft",
+		"topic": "folds",
+		"title": "foldLeft",
+		"code": "val xs = List(1, 2, 3)\nxs.foldLeft(0)(_ + _) // => 6\nxs.foldLeft(\"\")((acc, x) => acc + x) // => 123\nval rev = xs.foldLeft(List.empty[Int])((acc, x) => x :: acc) // => List(3, 2, 1)",
+		"text": "초기값에서 시작해 왼쪽부터 `(누산값, 원소) => 새 누산값`을 적용한다. 빈 리스트면 초기값이 그대로 나온다. 초기값이 빈 컬렉션이면 `List.empty[Int]`처럼 타입을 적어야 추론이 된다."
+	}
+]

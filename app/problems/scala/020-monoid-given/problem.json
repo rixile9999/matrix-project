@@ -1,6 +1,10 @@
 {
 	"id": "020-monoid-given",
 	"order": 20,
+	"level": 2,
+	"topic": "context",
+	"kind": "write",
+	"refs": [],
 	"title": "Monoid given과 combineAll",
 	"limitSec": 600,
 	"targets": [

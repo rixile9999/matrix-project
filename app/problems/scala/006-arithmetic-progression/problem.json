@@ -1,6 +1,10 @@
 {
 	"id": "006-arithmetic-progression",
 	"order": 6,
+	"level": 2,
+	"topic": "collections",
+	"kind": "write",
+	"refs": [],
 	"title": "등차수열 판별",
 	"limitSec": 400,
 	"targets": [

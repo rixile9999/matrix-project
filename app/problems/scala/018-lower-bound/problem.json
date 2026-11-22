@@ -1,6 +1,10 @@
 {
 	"id": "018-lower-bound",
 	"order": 18,
+	"level": 2,
+	"topic": "recursion",
+	"kind": "write",
+	"refs": [],
 	"title": "이진 탐색 하한",
 	"limitSec": 600,
 	"targets": [

@@ -1,6 +1,10 @@
 {
 	"id": "009-sort-people",
 	"order": 9,
+	"level": 2,
+	"topic": "types",
+	"kind": "write",
+	"refs": [],
 	"title": "나이 내림차순 정렬",
 	"limitSec": 400,
 	"targets": [

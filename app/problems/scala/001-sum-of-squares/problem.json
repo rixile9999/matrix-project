@@ -1,10 +1,21 @@
 {
 	"id": "001-sum-of-squares",
 	"order": 1,
+	"level": 2,
+	"topic": "collections",
+	"kind": "write",
+	"refs": [],
 	"title": "짝수 제곱의 합",
 	"limitSec": 300,
-	"targets": ["filter", "map", "sum"],
-	"avoid": ["var", "while"],
+	"targets": [
+		"filter",
+		"map",
+		"sum"
+	],
+	"avoid": [
+		"var",
+		"while"
+	],
 	"statement": "정수 리스트 `xs`가 주어진다. 짝수인 원소만 골라 각각 제곱한 뒤 모두 더한 값을 반환하라. 빈 리스트의 답은 0이다.",
 	"starter": "def sumOfEvenSquares(xs: List[Int]): Int =\n  ???\n",
 	"hints": [

@@ -1,6 +1,10 @@
 {
 	"id": "013-group-anagrams",
 	"order": 13,
+	"level": 2,
+	"topic": "maps",
+	"kind": "write",
+	"refs": [],
 	"title": "애너그램 묶기",
 	"limitSec": 500,
 	"targets": [
