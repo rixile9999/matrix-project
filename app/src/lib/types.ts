@@ -65,3 +65,56 @@ export type HistoryData = {
 	attempts: Attempt[]; // finished, newest first
 	tags: { tag: string; n: number; actual: number; expected: number; deviation: number }[]; // weakest first
 };
+
+// ---------------------------------------------------------------------------
+// Language study pack (Scala). Problem files: see src/lib/core/lang.ts (LangProblem),
+// judged by src/lib/server/judge.ts. Hints, notes, targets and the model solution are
+// withheld from the client until the session state allows them.
+import type { JudgeResult } from './core/lang.ts';
+
+export type LangListItem = {
+	id: string;
+	order: number;
+	title: string;
+	limitSec: number;
+	status: 'new' | 'attempted' | 'passed'; // passed = at least one session passed
+	bestSec: number | null; // fastest passing session
+	clean: boolean; // some passing session used none of the problem's `avoid` keywords
+	targets: string[] | null; // null until status is 'passed'
+};
+
+/** `/lang` load. Action ?/start (field: problemId) creates a session and redirects to /lang/[id]. */
+export type LangHomeData = {
+	problems: LangListItem[]; // curriculum order
+	nextId: string | null; // first problem that is not passed
+	passedCount: number;
+};
+
+export type LangFinished = {
+	outcome: 'passed' | 'revealed'; // revealed = gave up and looked at the solution
+	elapsedSec: number;
+	overtime: boolean; // passed after limitSec
+	avoided: string[]; // avoid-keywords used in the passing code
+	solution: string; // model answer (Scala source)
+	notes: string;
+	targets: string[];
+};
+
+/** `/lang/[id]` load: the latest session of that problem; redirects to /lang if there is none. */
+export type LangSessionData = {
+	problem: { id: string; order: number; title: string; limitSec: number; statement: string; starter: string };
+	session: {
+		id: number;
+		startedAt: number;
+		code: string; // code of the last run, or the starter
+		hints: string[]; // hints revealed so far (0–2)
+		lastResult: JudgeResult | null;
+		finished: LangFinished | null;
+	};
+	now: number;
+	nextId: string | null; // next problem in curriculum order
+};
+// `/lang/[id]` form actions: ?/restart (new session for this problem, same page), ?/reveal (give up -> finished.outcome 'revealed')
+// POST /lang/[id]/run   JSON body { code: string } -> LangRunResponse (judges, records the run; first pass finishes the session)
+// POST /lang/[id]/hint  no body -> { hints: string[] } (reveals the next hint)
+export type LangRunResponse = { result: JudgeResult; finished: boolean; error?: string };
