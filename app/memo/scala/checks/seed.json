@@ -1,0 +1,64 @@
+[
+	{
+		"id": "order-rle",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "`\"aaabcc\"`를 `List((a,3), (b,1), (c,2))`로 바꾸는 함수를 조립하라.",
+		"unlock": ["015-run-length-encoding"],
+		"problem": "015-run-length-encoding",
+		"lines": [
+			"def encode(s: String): List[(Char, Int)] =",
+			"  def go(cs: List[Char]): List[(Char, Int)] = cs match",
+			"    case Nil => Nil",
+			"    case c :: _ =>",
+			"      val (run, rest) = cs.span(_ == c)",
+			"      (c, run.length) :: go(rest)",
+			"  go(s.toList)"
+		],
+		"distractors": [
+			{ "line": "      val (run, rest) = cs.partition(_ == c)", "replaces": 4, "why": "`partition`은 떨어져 있는 같은 문자까지 전부 모은다. 연속된 앞부분만 떼려면 `span`이다." }
+		]
+	},
+	{
+		"id": "trace-scanleft-initial",
+		"kind": "trace",
+		"topic": "folds",
+		"prompt": "둘째 줄의 결과는?",
+		"unlock": [],
+		"code": "val xs = List(3, 1, 2)\nxs.scanLeft(0)(_ + _)",
+		"options": [
+			{ "text": "List(3, 4, 6)", "why": "초기값 0도 결과의 첫 원소로 들어간다. `scanLeft`의 결과는 입력보다 하나 길다." },
+			{ "text": "List(0, 3, 4, 6)", "why": "초기값에서 시작해 누적값을 모두 남긴다: 0, 0+3, 3+1, 4+2." },
+			{ "text": "6", "why": "마지막 값만 남기는 것은 `foldLeft`다." },
+			{ "text": "List(0, 3, 1, 2)", "why": "앞에 0을 붙인 것이 아니라 누적합이다." }
+		],
+		"answer": 1,
+		"verify": "val xs = List(3, 1, 2)\nxs.scanLeft(0)(_ + _) // => List(0, 3, 4, 6)"
+	},
+	{
+		"id": "bug-running-total",
+		"kind": "bug",
+		"topic": "folds",
+		"prompt": "누적 합 리스트를 돌려주는 함수다. `runningTotal(List(1, 2, 3))`은 `List(1, 3, 6)`이어야 한다. 틀린 줄은?",
+		"unlock": ["b-08-running-total"],
+		"problem": "b-08-running-total",
+		"lines": ["def runningTotal(xs: List[Int]): List[Int] =", "  xs.scanLeft(0)(_ + _)"],
+		"bugIndex": 1,
+		"fixed": "  xs.scanLeft(0)(_ + _).tail",
+		"why": "`scanLeft`는 초기값을 결과의 첫 원소로 남긴다. `.tail`로 떼어야 입력과 길이가 같아진다."
+	},
+	{
+		"id": "approach-max-subarray",
+		"kind": "approach",
+		"topic": "folds",
+		"prompt": "길이 20만의 정수 리스트에서 연속 구간 합의 최댓값을 구해야 한다. 어떤 접근이 맞나?",
+		"unlock": [],
+		"options": [
+			{ "text": "모든 구간의 합을 구해 비교 · O(n²)", "why": "20만이면 구간이 200억 개라 시간 안에 끝나지 않는다." },
+			{ "text": "상태를 들고 한 번 훑기 · O(n)", "why": "각 위치에서 '여기서 끝나는 최대 합'은 바로 앞 위치의 값만으로 정해진다." },
+			{ "text": "정렬한 뒤 큰 값부터 더하기 · O(n log n)", "why": "정렬하면 연속이라는 조건이 사라진다." },
+			{ "text": "양수만 골라 더하기 · O(n)", "why": "연속 구간이어야 하므로 중간의 음수를 건너뛸 수 없고, 전부 음수인 입력도 틀린다." }
+		],
+		"answer": 1
+	}
+]

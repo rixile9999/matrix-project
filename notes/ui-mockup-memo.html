@@ -1,0 +1,260 @@
+<title>Matrix 암기 세션 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: six phone-width screens in a wrapping row; each is a working sample, not a picture. */
+:root {
+	--bg: #f2f4f8; --surface: #ffffff; --ink: #141a24; --muted: #5b6676; --line: #d8dee8;
+	--accent: #2f4fd8; --on-accent: #ffffff; --ok: #1c7f47; --bad: #c0342d; --warn: #9a6a00;
+	--f-display: 'Space Grotesk', 'IBM Plex Sans KR', system-ui, sans-serif;
+	--f-body: 'IBM Plex Sans KR', system-ui, -apple-system, sans-serif;
+	--f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+	--bg: #0f131a; --surface: #171d27; --ink: #e7ecf3; --muted: #95a1b3; --line: #2a3342;
+	--accent: #8aa2ff; --on-accent: #0f131a; --ok: #4cc38a; --bad: #f0776f; --warn: #e0b040; color-scheme: dark } }
+:root[data-theme="dark"] {
+	--bg: #0f131a; --surface: #171d27; --ink: #e7ecf3; --muted: #95a1b3; --line: #2a3342;
+	--accent: #8aa2ff; --on-accent: #0f131a; --ok: #4cc38a; --bad: #f0776f; --warn: #e0b040; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body);
+	padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.doc { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1 { font: 700 26px/1.2 var(--f-display); margin: 0 0 6px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; max-width: 64ch; }
+.grid { display: flex; flex-wrap: wrap; gap: 28px 24px; }
+.item { display: flex; flex-direction: column; gap: 10px; width: 340px; max-width: 100%; }
+.item h2 { font: 700 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.item > p { font-size: 13px; color: var(--muted); margin: 0; }
+code, pre, .mono { font-family: var(--f-mono); font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; }
+code { font-size: .9em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 1px 5px; border-radius: 4px; }
+
+.phone { background: var(--bg); border: 1px solid var(--line); border-radius: 26px; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 14px; min-height: 520px; }
+.top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.kind { font: 600 11px var(--f-mono); letter-spacing: .04em; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; background: var(--surface); color: var(--ink); }
+.progress { height: 3px; background: var(--line); border-radius: 2px; }
+.progress b { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.q { font: 600 17px/1.45 var(--f-body); margin: 0; text-wrap: pretty; }
+.src { font-size: 12px; color: var(--muted); }
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.sheet .label { font-size: 12px; color: var(--muted); }
+.check { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.spacer { flex: 1; }
+.btn { font: 600 15px var(--f-body); border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: center; width: 100%; }
+.btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn:focus-visible, .line:focus-visible, .opt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.row { display: flex; gap: 8px; }
+.verdict { font-size: 13px; color: var(--muted); }
+.verdict b { color: var(--ink); }
+pre.code { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.big { font: 700 44px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.split div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: var(--muted); }
+.split b { display: block; font: 700 18px var(--f-display); color: var(--ink); }
+.link { display: flex; justify-content: space-between; padding: 12px 2px; border-top: 1px solid var(--line); font-size: 14px; }
+.link span:last-child { color: var(--muted); }
+
+.lines { display: flex; flex-direction: column; gap: 6px; min-height: 36px; }
+.line { font: 12.5px/1.45 var(--f-mono); font-variant-ligatures: none; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; width: 100%; }
+.slot-label { font-size: 12px; color: var(--muted); }
+.answer .line { border-color: var(--accent); }
+.empty { font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 10px; text-align: center; }
+.msg { font-size: 13px; }
+.msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
+
+.opt { font: 13px/1.4 var(--f-mono); font-variant-ligatures: none; text-align: left; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; cursor: pointer; width: 100%; }
+.opt.right { border-color: var(--ok); color: var(--ok); } .opt.wrong { border-color: var(--bad); color: var(--bad); }
+.why { font-size: 13px; color: var(--muted); }
+
+.note h3 { font: 700 14px var(--f-display); margin: 6px 0 4px; }
+.nrow { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.nrow small { display: block; color: var(--muted); font-size: 12.5px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; align-self: center; }
+.d-ok { background: var(--ok); } .d-warn { background: var(--warn); } .d-new { background: transparent; border: 2px solid var(--muted); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+</style>
+
+<div class="doc">
+<header>
+	<h1>모바일 암기 세션 시안</h1>
+	<p class="lead">타이핑 없이 3~5분에 끝나는 여섯 화면입니다. 카드와 문제는 눌러 볼 수 있고, 내용과 숫자는 모두 예시입니다.</p>
+</header>
+
+<div class="grid">
+
+<section class="item">
+	<h2>1. 홈</h2>
+	<p>휴대폰에서는 복습이 맨 위에 옵니다. 연속 일수 대신 주간 목표를 씁니다.</p>
+	<div class="phone">
+		<div class="top"><span>Matrix</span><span>이번 주 3 / 5일</span></div>
+		<div><div class="src">오늘 복습</div><div class="big">14<span style="font-size:18px;color:var(--muted)"> 장 · 약 4분</span></div></div>
+		<div class="split"><div><b>6</b>개념</div><div><b>5</b>풀이 과정</div><div><b>3</b>문법</div></div>
+		<button class="btn" type="button">복습 시작</button>
+		<button class="btn ghost" type="button">문제 점검 3개</button>
+		<div class="spacer"></div>
+		<div>
+			<div class="link"><span>암기 노트</span><span>흔들림 4 ›</span></div>
+			<div class="link"><span>데스크톱에서 다시 풀기</span><span>2문제 ›</span></div>
+		</div>
+	</div>
+</section>
+
+<section class="item">
+	<h2>2. 개념 카드</h2>
+	<p>정의가 아니라 이유를 묻습니다. 답을 본 뒤 맞힌 요소를 체크하면 그게 채점입니다.</p>
+	<div class="phone" id="concept">
+		<div class="top"><span class="kind">개념</span><span>4 / 14</span></div>
+		<div class="progress"><b style="width:28%"></b></div>
+		<p class="q"><code>foldRight</code>는 왜 긴 리스트에서 스택이 넘치고, <code>foldLeft</code>는 넘치지 않나?</p>
+		<div class="src">책 3.10 꼬리 재귀 foldLeft에서</div>
+		<div class="sheet" id="concept-answer" hidden>
+			<span class="label">말한 답에 들어 있던 것을 체크하세요</span>
+			<label class="check" for="c1"><input type="checkbox" id="c1"><span><code>foldRight</code>는 나머지의 결과가 나와야 <code>f</code>를 적용할 수 있어, 재귀 호출이 마지막 동작이 아니다</span></label>
+			<label class="check" for="c2"><input type="checkbox" id="c2"><span><code>foldLeft</code>는 누산값을 인자로 넘기므로 재귀 호출이 마지막 동작이고, 루프로 바뀐다</span></label>
+			<label class="check" for="c3"><input type="checkbox" id="c3"><span>안전한 <code>foldRight</code>는 뒤집은 뒤 <code>foldLeft</code>로 만든다</span></label>
+		</div>
+		<div class="spacer"></div>
+		<div class="verdict" id="concept-verdict" hidden></div>
+		<button class="btn" type="button" id="concept-btn">머릿속으로 답한 뒤 누르기</button>
+	</div>
+</section>
+
+<section class="item">
+	<h2>3. 풀이 과정 카드</h2>
+	<p>코드가 아니라 단계의 목적을 순서대로 떠올립니다. 틀리기 쉬운 한 줄만 따로 묻습니다.</p>
+	<div class="phone" id="steps">
+		<div class="top"><span class="kind">풀이 과정</span><span>9 / 14</span></div>
+		<div class="progress"><b style="width:64%"></b></div>
+		<p class="q">정수 리스트에서 연속 구간 합의 최댓값. 풀이 단계를 순서대로 말해 보세요.</p>
+		<div class="src">유형: 상태를 들고 한 번 훑기</div>
+		<div class="sheet" id="steps-answer" hidden>
+			<span class="label">떠올린 단계를 체크하세요</span>
+			<label class="check" for="s1"><input type="checkbox" id="s1"><span><b>상태 정하기</b>: (여기서 끝나는 최대 합, 지금까지의 최대 합)</span></label>
+			<label class="check" for="s2"><input type="checkbox" id="s2"><span><b>한 원소의 전이</b>: 이어 붙이기와 새로 시작하기 중 큰 쪽</span></label>
+			<label class="check" for="s3"><input type="checkbox" id="s3"><span><b>초기값</b>: 첫 원소로 시작하고, 빈 리스트는 따로 처리</span></label>
+			<label class="check" for="s4"><input type="checkbox" id="s4"><span><b>결과 꺼내기</b>: 상태의 둘째 값</span></label>
+			<pre class="code">xs.tail.foldLeft((xs.head, xs.head)) {
+  case ((cur, best), x) =>
+    val c = math.max(x, cur + x)
+    (c, math.max(best, c))
+}._2</pre>
+		</div>
+		<div class="spacer"></div>
+		<div class="verdict" id="steps-verdict" hidden></div>
+		<button class="btn" type="button" id="steps-btn">단계를 떠올린 뒤 누르기</button>
+	</div>
+</section>
+
+<section class="item">
+	<h2>4. 문제 점검: 순서 배열</h2>
+	<p>줄을 눌러 순서대로 올립니다. 쓰지 않아야 할 함정 줄이 하나 섞여 있습니다.</p>
+	<div class="phone" id="parsons">
+		<div class="top"><span class="kind">순서 배열</span><span>연속 문자 압축</span></div>
+		<p class="q" style="font-size:15px"><code>"aaabcc"</code>를 <code>List((a,3), (b,1), (c,2))</code>로 바꾸는 함수를 조립하세요.</p>
+		<div class="slot-label">내 답</div>
+		<div class="lines answer" id="p-answer"></div>
+		<div class="slot-label">남은 줄</div>
+		<div class="lines" id="p-pool"></div>
+		<div class="spacer"></div>
+		<div class="msg" id="p-msg" role="status"></div>
+		<div class="row"><button class="btn ghost" type="button" id="p-reset">처음부터</button><button class="btn" type="button" id="p-check">확인</button></div>
+	</div>
+</section>
+
+<section class="item">
+	<h2>5. 문제 점검: 값 추적</h2>
+	<p>오답 보기는 흔한 착각에서 만듭니다. 고르면 왜 틀렸는지 알려 줍니다.</p>
+	<div class="phone" id="trace">
+		<div class="top"><span class="kind">값 추적</span><span>45초</span></div>
+		<p class="q" style="font-size:15px">둘째 줄의 결과는?</p>
+		<pre class="code">val xs = List(3, 1, 2)
+xs.scanLeft(0)(_ + _)</pre>
+		<button class="opt" type="button" data-why="초기값 0도 결과의 첫 원소로 들어갑니다. scanLeft의 결과는 입력보다 하나 깁니다.">List(3, 4, 6)</button>
+		<button class="opt" type="button" data-right="1" data-why="초기값에서 시작해 누적값을 모두 남깁니다: 0, 0+3, 3+1, 4+2.">List(0, 3, 4, 6)</button>
+		<button class="opt" type="button" data-why="마지막 값만 남기는 것은 foldLeft입니다.">6</button>
+		<button class="opt" type="button" data-why="앞에 0을 붙인 것이 아니라 누적합입니다.">List(0, 3, 1, 2)</button>
+		<div class="why" id="trace-why" role="status"></div>
+	</div>
+</section>
+
+<section class="item">
+	<h2>6. 암기 노트</h2>
+	<p>카드와 같은 내용을 요약 노트로 훑어봅니다. 점의 색이 기억 상태입니다.</p>
+	<div class="phone note">
+		<div class="top"><span>암기 노트</span><span>책 3장</span></div>
+		<div class="legend"><span><i class="dot d-ok"></i>안정</span><span><i class="dot d-warn"></i>흔들림</span><span><i class="dot d-new"></i>아직 안 배움</span></div>
+		<div>
+			<h3>개념</h3>
+			<div class="nrow"><i class="dot d-ok"></i><div>자료 공유<small><code>tail</code>은 복사하지 않고 기존 꼬리를 그대로 가리킨다</small></div></div>
+			<div class="nrow"><i class="dot d-warn"></i><div>fold의 방향과 스택<small><code>foldRight</code>는 꼬리 재귀가 아니다. 뒤집고 <code>foldLeft</code></small></div></div>
+			<div class="nrow"><i class="dot d-new"></i><div>fold는 생성자 바꿔치기<small><code>Cons</code>를 <code>f</code>로, <code>Nil</code>을 <code>z</code>로</small></div></div>
+			<h3>유형</h3>
+			<div class="nrow"><i class="dot d-warn"></i><div>상태를 들고 한 번 훑기<small>상태 → 전이 → 초기값 → 결과</small></div></div>
+			<div class="nrow"><i class="dot d-ok"></i><div>span으로 덩어리 떼기<small>머리 기준으로 가르고, 나머지에 재귀</small></div></div>
+		</div>
+	</div>
+</section>
+
+</div>
+</div>
+
+<script>
+// Reveal-then-self-grade cards: the checklist count becomes the grade.
+function card(prefix, total) {
+	const btn = document.getElementById(prefix + '-btn'), ans = document.getElementById(prefix + '-answer'), verdict = document.getElementById(prefix + '-verdict');
+	const boxes = ans.querySelectorAll('input');
+	const update = () => {
+		const n = [...boxes].filter(b => b.checked).length;
+		const [word, next] = n === total ? ['기억남', '9일 뒤'] : n === 0 ? ['모름', '오늘 다시'] : ['흔들림', '내일'];
+		verdict.innerHTML = `${total}개 중 ${n}개 · <b>${word}</b> · 다음 복습 ${next} (예시)`;
+	};
+	boxes.forEach(b => b.addEventListener('change', update));
+	btn.addEventListener('click', () => {
+		if (ans.hidden) { ans.hidden = false; verdict.hidden = false; btn.textContent = '다음 카드'; update(); }
+		else { ans.hidden = true; verdict.hidden = true; boxes.forEach(b => b.checked = false); btn.textContent = prefix === 'concept' ? '머릿속으로 답한 뒤 누르기' : '단계를 떠올린 뒤 누르기'; }
+	});
+}
+card('concept', 3); card('steps', 4);
+
+// Tap-to-order Parsons problem with one distractor.
+(function () {
+	const LINES = [
+		[0, 'def rle(s: List[Char]): List[(Char, Int)] = s match'],
+		[1, '  case Nil => Nil'],
+		[2, '  case h :: _ =>'],
+		[3, '    val (same, rest) = s.span(_ == h)'],
+		[4, '    (h, same.length) :: rle(rest)'],
+		[9, '    val (same, rest) = s.partition(_ == h)']
+	];
+	const ORDER = [3, 9, 1, 4, 0, 2];
+	const pool = document.getElementById('p-pool'), answer = document.getElementById('p-answer'), msg = document.getElementById('p-msg');
+	let picked = [];
+	function render() {
+		const mk = (id, where) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'line'; b.textContent = LINES.find(l => l[0] === id)[1];
+			b.addEventListener('click', () => { picked = where === 'pool' ? [...picked, id] : picked.filter(x => x !== id); msg.textContent = ''; msg.className = 'msg'; render(); }); return b; };
+		answer.replaceChildren(...(picked.length ? picked.map(id => mk(id, 'answer')) : [Object.assign(document.createElement('div'), { className: 'empty', textContent: '아래 줄을 순서대로 누르세요' })]));
+		pool.replaceChildren(...ORDER.filter(id => !picked.includes(id)).map(id => mk(id, 'pool')));
+	}
+	document.getElementById('p-reset').addEventListener('click', () => { picked = []; msg.textContent = ''; msg.className = 'msg'; render(); });
+	document.getElementById('p-check').addEventListener('click', () => {
+		const ok = picked.join() === '0,1,2,3,4';
+		msg.className = 'msg ' + (ok ? 'ok' : 'bad');
+		msg.textContent = ok ? '맞습니다. partition은 떨어져 있는 같은 문자까지 모아 버려서 쓰면 안 됩니다.'
+			: picked.includes(9) ? 'partition은 조건에 맞는 원소를 전부 모읍니다. 연속된 앞부분만 떼려면?' : picked.length < 5 ? '아직 줄이 부족합니다.' : '순서가 다릅니다. 빈 리스트 처리가 먼저입니다.';
+	});
+	render();
+})();
+
+// Value-trace multiple choice with a reason per option.
+(function () {
+	const why = document.getElementById('trace-why');
+	document.querySelectorAll('#trace .opt').forEach(o => o.addEventListener('click', () => {
+		document.querySelectorAll('#trace .opt').forEach(x => x.classList.remove('right', 'wrong'));
+		o.classList.add(o.dataset.right ? 'right' : 'wrong');
+		why.textContent = (o.dataset.right ? '맞습니다. ' : '아닙니다. ') + o.dataset.why;
+	}));
+})();
+</script>
