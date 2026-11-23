@@ -1,0 +1,778 @@
+[
+	{
+		"id": "order-longest-run",
+		"kind": "order",
+		"topic": "folds",
+		"prompt": "정수 리스트에서 값이 연속해서 순증가하는 가장 긴 구간의 길이를 구한다. 한 번 훑으며 (직전 값, 현재 길이, 최대 길이)를 들고 가는 풀이를 조립하라.",
+		"unlock": [
+			"002-longest-increasing-run"
+		],
+		"problem": "002-longest-increasing-run",
+		"lines": [
+			"def longestRun(xs: List[Int]): Int =",
+			"  val (_, _, best) = xs.foldLeft((Option.empty[Int], 0, 0)) { case ((prev, cur, best), x) =>",
+			"    val next = if prev.exists(_ < x) then cur + 1 else 1",
+			"    (Some(x), next, best.max(next))",
+			"  }",
+			"  best"
+		],
+		"distractors": [
+			{
+				"line": "    val next = if prev.exists(_ <= x) then cur + 1 else 1",
+				"replaces": 2,
+				"why": "`<=`이면 같은 값이 이어져도 구간이 늘어난다. 순증가는 `<`다."
+			},
+			{
+				"line": "    (Some(x), next, next)",
+				"replaces": 3,
+				"why": "최대 길이를 `best.max(next)`로 갱신하지 않으면 구간이 끊긴 뒤 최댓값을 잃는다."
+			}
+		]
+	},
+	{
+		"id": "order-collapse",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "연달아 같은 값이 나오면 하나로 줄이는 `collapse`를 패턴 매칭으로 조립하라. 예: `List(1,1,2,2,1)`은 `List(1,2,1)`.",
+		"unlock": [
+			"003-collapse-duplicates"
+		],
+		"problem": "003-collapse-duplicates",
+		"lines": [
+			"def collapse(xs: List[Int]): List[Int] = xs match",
+			"  case a :: (rest @ (b :: _)) if a == b => collapse(rest)",
+			"  case a :: rest => a :: collapse(rest)",
+			"  case Nil => Nil"
+		],
+		"distractors": [
+			{
+				"line": "  case a :: (rest @ (b :: _)) if a == b => a :: collapse(rest)",
+				"replaces": 1,
+				"why": "같은 값을 만났을 때 `a`를 결과에 붙이면 중복이 그대로 남는다. 앞의 것을 버리고 `rest`로 계속해야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-top-three",
+		"kind": "order",
+		"topic": "maps",
+		"prompt": "단어 리스트에서 많이 나온 순으로 상위 3개 단어를 구한다. 횟수가 같으면 사전순이다. 세고, 정렬하고, 자르는 순서로 조립하라.",
+		"unlock": [
+			"005-top-three-words"
+		],
+		"problem": "005-top-three-words",
+		"lines": [
+			"def topThree(words: List[String]): List[String] =",
+			"  words",
+			"    .groupMapReduce(identity)(_ => 1)(_ + _)",
+			"    .toList",
+			"    .sortBy((w, c) => (-c, w))",
+			"    .take(3)",
+			"    .map((w, _) => w)"
+		],
+		"distractors": [
+			{
+				"line": "    .sortBy((w, c) => (c, w))",
+				"replaces": 4,
+				"why": "횟수를 그대로 쓰면 적게 나온 단어가 앞선다. 내림차순은 `-c`로 뒤집는다."
+			}
+		]
+	},
+	{
+		"id": "order-triples",
+		"kind": "order",
+		"topic": "syntax",
+		"prompt": "`1..n` 안에서 `a < b < c`이고 `a² + b² = c²`인 세 쌍을 모두 구한다. `for` 식으로 조립하라.",
+		"unlock": [
+			"007-pythagorean-triples"
+		],
+		"problem": "007-pythagorean-triples",
+		"lines": [
+			"def triples(n: Int): List[(Int, Int, Int)] =",
+			"  (for",
+			"    a <- 1 to n",
+			"    b <- a + 1 to n",
+			"    c <- b + 1 to n",
+			"    if a * a + b * b == c * c",
+			"  yield (a, b, c)).toList"
+		],
+		"distractors": [
+			{
+				"line": "    b <- 1 to n",
+				"replaces": 3,
+				"why": "`b`가 `a`보다 작아도 되면 `(4,3,5)`처럼 같은 쌍이 순서만 바뀌어 또 나온다. `a + 1`부터 돌아야 한다."
+			},
+			{
+				"line": "    if a * a + b * b <= c * c",
+				"replaces": 5,
+				"why": "조건은 `==`다. `<=`이면 직각삼각형이 아닌 쌍까지 들어온다."
+			}
+		]
+	},
+	{
+		"id": "order-collatz",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "`n`에서 시작해 짝수면 반으로, 홀수면 `3x+1`로 바꾸어 1이 될 때까지의 단계 수를 센다. 꼬리 재귀 보조 함수로 조립하라.",
+		"unlock": [
+			"008-collatz-steps"
+		],
+		"problem": "008-collatz-steps",
+		"given": "import scala.annotation.tailrec\n",
+		"lines": [
+			"def collatzSteps(n: Long): Int =",
+			"  @tailrec def go(x: Long, steps: Int): Int =",
+			"    if x == 1 then steps",
+			"    else go(if x % 2 == 0 then x / 2 else 3 * x + 1, steps + 1)",
+			"  go(n, 0)"
+		],
+		"distractors": [
+			{
+				"line": "    if x == 1 then steps + 1",
+				"replaces": 2,
+				"why": "1에 도착한 시점의 `steps`가 이미 답이다. 하나 더하면 하나 많게 나온다."
+			},
+			{
+				"line": "  go(n, 1)",
+				"replaces": 4,
+				"why": "세기 전에는 0단계다. 초기값을 1로 시작하면 모든 답이 하나씩 크다."
+			}
+		]
+	},
+	{
+		"id": "order-eval-expr",
+		"kind": "order",
+		"topic": "types",
+		"prompt": "`Num`, `Add`, `Mul`, `Neg`로 이루어진 식 트리의 값을 계산하는 `eval`을 조립하라.",
+		"unlock": [
+			"010-expression-tree"
+		],
+		"problem": "010-expression-tree",
+		"given": "enum Expr:\n  case Num(n: Int)\n  case Add(l: Expr, r: Expr)\n  case Mul(l: Expr, r: Expr)\n  case Neg(e: Expr)\n",
+		"lines": [
+			"def eval(e: Expr): Int = e match",
+			"  case Expr.Num(n) => n",
+			"  case Expr.Add(l, r) => eval(l) + eval(r)",
+			"  case Expr.Mul(l, r) => eval(l) * eval(r)",
+			"  case Expr.Neg(x) => -eval(x)"
+		],
+		"distractors": [
+			{
+				"line": "  case Expr.Mul(l, r) => eval(l) + eval(r)",
+				"replaces": 3,
+				"why": "곱 노드를 합으로 계산하면 `Add`와 구별이 사라진다. 연산자는 노드 종류를 따른다."
+			},
+			{
+				"line": "  case Expr.Neg(x) => eval(x)",
+				"replaces": 4,
+				"why": "부호 반전 노드가 값을 그대로 돌려주면 `Neg`가 아무 일도 하지 않는다."
+			}
+		]
+	},
+	{
+		"id": "order-parse-pair",
+		"kind": "order",
+		"topic": "errors",
+		"prompt": "`\"3, 4\"`를 `Right((3, 4))`로, 숫자가 아니거나 쉼표 모양이 틀리면 `Left`로 돌려주는 `parsePair`를 조립하라(숫자 하나를 읽는 `num`은 주어진다).",
+		"unlock": [
+			"011-parse-pair"
+		],
+		"problem": "011-parse-pair",
+		"given": "def num(p: String): Either[String, Int] =\n  p.trim.toIntOption.toRight(\"숫자 아님: \" + p.trim)\n",
+		"lines": [
+			"def parsePair(s: String): Either[String, (Int, Int)] =",
+			"  s.split(\",\", -1) match",
+			"    case Array(a, b) =>",
+			"      for",
+			"        x <- num(a)",
+			"        y <- num(b)",
+			"      yield (x, y)",
+			"    case _ => Left(\"형식 오류\")"
+		],
+		"distractors": [
+			{
+				"line": "  s.split(\",\") match",
+				"replaces": 1,
+				"why": "`split(\",\")`는 끝의 빈 조각을 버려 `\"1,\"`이 한 조각이 된다. `-1`을 주어야 빈 조각이 남아 '숫자 아님'으로 잡힌다."
+			},
+			{
+				"line": "      yield (y, x)",
+				"replaces": 6,
+				"why": "읽은 순서가 바뀐다. 결과 쌍은 입력의 순서 그대로여야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-first-primes",
+		"kind": "order",
+		"topic": "lazy",
+		"prompt": "처음 `n`개의 소수를 구한다. 무한 `LazyList`에서 소수만 거르고 `n`개를 취하는 풀이를 조립하라.",
+		"unlock": [
+			"014-first-primes"
+		],
+		"problem": "014-first-primes",
+		"lines": [
+			"def firstPrimes(n: Int): List[Int] =",
+			"  LazyList",
+			"    .from(2)",
+			"    .filter(k => (2 to math.sqrt(k).toInt).forall(k % _ != 0))",
+			"    .take(n)",
+			"    .toList"
+		],
+		"distractors": [
+			{
+				"line": "    .from(1)",
+				"replaces": 2,
+				"why": "1은 소수가 아니다. 약수 검사 범위가 비어 `forall`이 참이 되어 1이 끼어든다."
+			},
+			{
+				"line": "    .filter(k => (2 until math.sqrt(k).toInt).forall(k % _ != 0))",
+				"replaces": 3,
+				"why": "`until`은 끝을 빼서 제곱수(4, 9, 25)가 소수로 통과한다. `to`로 √k까지 포함해야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-pet-country",
+		"kind": "order",
+		"topic": "errors",
+		"prompt": "애완동물 이름에서 주인, 주인의 도시, 도시의 나라를 차례로 찾는다. 어느 단계든 없으면 `None`이다. `for`로 조립하라.",
+		"unlock": [
+			"016-pet-country"
+		],
+		"problem": "016-pet-country",
+		"lines": [
+			"def countryOfPet(pet: String, owners: Map[String, String], cities: Map[String, String], countries: Map[String, String]): Option[String] =",
+			"  for",
+			"    owner <- owners.get(pet)",
+			"    city <- cities.get(owner)",
+			"    country <- countries.get(city)",
+			"  yield country"
+		],
+		"distractors": [
+			{
+				"line": "    country <- countries.get(owner)",
+				"replaces": 4,
+				"why": "나라는 도시로 찾는다. 주인으로 찾으면 한 단계를 건너뛰어 `None`이 된다."
+			}
+		]
+	},
+	{
+		"id": "order-lower-bound",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "정렬된 `Vector`에서 `target` 이상인 첫 위치를 이진 탐색으로 구한다(없으면 길이). 구간 `[lo, hi)`를 줄이는 꼬리 재귀로 조립하라.",
+		"unlock": [
+			"018-lower-bound"
+		],
+		"problem": "018-lower-bound",
+		"given": "import scala.annotation.tailrec\n",
+		"lines": [
+			"def lowerBound(v: Vector[Int], target: Int): Int =",
+			"  @tailrec def go(lo: Int, hi: Int): Int =",
+			"    if lo >= hi then lo",
+			"    else",
+			"      val mid = lo + (hi - lo) / 2",
+			"      if v(mid) < target then go(mid + 1, hi) else go(lo, mid)",
+			"  go(0, v.length)"
+		],
+		"distractors": [
+			{
+				"line": "      if v(mid) <= target then go(mid + 1, hi) else go(lo, mid)",
+				"replaces": 5,
+				"why": "`<=`이면 같은 값 뒤로 넘어가 '초과하는 첫 위치'(upper bound)가 된다. 이상인 첫 위치는 `<`다."
+			},
+			{
+				"line": "  go(0, v.length - 1)",
+				"replaces": 6,
+				"why": "구간이 반열린 `[lo, hi)`이므로 `hi`는 길이다. 하나 줄이면 마지막 원소가 후보에서 빠진다."
+			}
+		]
+	},
+	{
+		"id": "order-pairs-sum",
+		"kind": "order",
+		"topic": "syntax",
+		"prompt": "리스트에서 두 원소의 합이 `target`인 쌍을 모두 구한다(앞 위치 < 뒤 위치). 인덱스 두 개를 도는 `for`로 조립하라.",
+		"unlock": [
+			"b-03-pairs-sum-to"
+		],
+		"problem": "b-03-pairs-sum-to",
+		"lines": [
+			"def pairsSumTo(xs: List[Int], target: Int): List[(Int, Int)] =",
+			"  (for",
+			"    i <- xs.indices",
+			"    j <- i + 1 until xs.length",
+			"    if xs(i) + xs(j) == target",
+			"  yield (xs(i), xs(j))).toList"
+		],
+		"distractors": [
+			{
+				"line": "    j <- i until xs.length",
+				"replaces": 3,
+				"why": "`j`가 `i`부터 시작하면 원소가 자기 자신과 짝지어진다. 뒤 위치는 `i + 1`부터다."
+			},
+			{
+				"line": "    if xs(i) + xs(j) <= target",
+				"replaces": 4,
+				"why": "합이 정확히 `target`인 쌍만 남긴다. `<=`는 작은 쌍까지 모두 통과시킨다."
+			}
+		]
+	},
+	{
+		"id": "order-first-two",
+		"kind": "order",
+		"topic": "pattern",
+		"prompt": "리스트가 비었으면 \"없음\", 하나면 \"하나: a\", 둘 이상이면 \"처음 둘: a, b\"를 돌려주는 패턴 매칭을 조립하라.",
+		"unlock": [
+			"b-12-first-two"
+		],
+		"problem": "b-12-first-two",
+		"lines": [
+			"def firstTwo(xs: List[Int]): String = xs match",
+			"  case Nil => \"없음\"",
+			"  case a :: Nil => s\"하나: $a\"",
+			"  case a :: b :: _ => s\"처음 둘: $a, $b\""
+		],
+		"distractors": [
+			{
+				"line": "  case a :: _ => s\"하나: $a\"",
+				"replaces": 2,
+				"why": "`a :: _`는 원소가 몇 개든 맞는다. '정확히 하나'는 꼬리가 `Nil`이어야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-char-kind",
+		"kind": "order",
+		"topic": "pattern",
+		"prompt": "문자 하나를 모음, 자음, 숫자, 기타로 분류한다. 모음을 먼저 가려내고 소문자 범위를 자음으로 치는 패턴 매칭을 조립하라.",
+		"unlock": [
+			"b-13-char-kind"
+		],
+		"problem": "b-13-char-kind",
+		"lines": [
+			"def charKind(c: Char): String = c match",
+			"  case 'a' | 'e' | 'i' | 'o' | 'u' => \"모음\"",
+			"  case x if x >= 'a' && x <= 'z' => \"자음\"",
+			"  case x if x.isDigit => \"숫자\"",
+			"  case _ => \"기타\""
+		],
+		"distractors": [
+			{
+				"line": "  case x if x >= 'a' && x < 'z' => \"자음\"",
+				"replaces": 2,
+				"why": "`< 'z'`이면 경계의 `z`가 기타로 떨어진다. 범위의 끝은 `<=`로 포함해야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-sum-to",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "`1`부터 `n`까지의 합을 꼬리 재귀로 구한다. 누적값을 들고 가는 보조 함수를 조립하라.",
+		"unlock": [
+			"b-20-sum-to"
+		],
+		"problem": "b-20-sum-to",
+		"given": "import scala.annotation.tailrec\n",
+		"lines": [
+			"def sumTo(n: Int): Int =",
+			"  @tailrec def go(i: Int, acc: Int): Int =",
+			"    if i > n then acc else go(i + 1, acc + i)",
+			"  go(1, 0)"
+		],
+		"distractors": [
+			{
+				"line": "    if i >= n then acc else go(i + 1, acc + i)",
+				"replaces": 2,
+				"why": "`i >= n`이면 `n` 자신을 더하기 전에 멈춘다. 마지막 항까지 더하려면 `i > n`이다."
+			},
+			{
+				"line": "  go(1, 1)",
+				"replaces": 3,
+				"why": "누적값의 시작은 항등원 0이다. 1로 시작하면 `i = 1`이 두 번 더해진다."
+			}
+		]
+	},
+	{
+		"id": "order-next-light",
+		"kind": "order",
+		"topic": "types",
+		"prompt": "신호등 `Red`, `Green`, `Yellow`가 `Red -> Green -> Yellow -> Red` 순으로 바뀐다. 다음 색을 돌려주는 `next`를 조립하라.",
+		"unlock": [
+			"b-24-next-light"
+		],
+		"problem": "b-24-next-light",
+		"given": "enum Light:\n  case Red, Green, Yellow\n",
+		"lines": [
+			"def next(l: Light): Light = l match",
+			"  case Light.Green => Light.Yellow",
+			"  case Light.Yellow => Light.Red",
+			"  case Light.Red => Light.Green"
+		],
+		"distractors": [
+			{
+				"line": "  case Light.Yellow => Light.Green",
+				"replaces": 2,
+				"why": "노랑 다음은 빨강이다. 노랑이 초록으로 가면 빨강-초록만 오가는 순환이 되어 노랑이 한 번 끼고 끝난다."
+			}
+		]
+	},
+	{
+		"id": "order-cheapest-first",
+		"kind": "order",
+		"topic": "context",
+		"prompt": "상품을 싼 것부터, 가격이 같으면 이름순으로 정렬한다. 두 `Ordering`을 이어 붙여 조립하라.",
+		"unlock": [
+			"b-30-cheapest-first"
+		],
+		"problem": "b-30-cheapest-first",
+		"given": "case class Item(name: String, price: Int)\n",
+		"lines": [
+			"def cheapestFirst(items: List[Item]): List[Item] =",
+			"  val byPrice: Ordering[Item] = Ordering.by(_.price)",
+			"  val byName: Ordering[Item] = Ordering.by(_.name)",
+			"  items.sorted(using byPrice.orElse(byName))"
+		],
+		"distractors": [
+			{
+				"line": "  items.sorted(using byName.orElse(byPrice))",
+				"replaces": 3,
+				"why": "`orElse`는 앞의 기준이 비길 때만 뒤의 기준을 쓴다. 이름을 앞에 두면 이름이 주 기준이 된다."
+			}
+		]
+	},
+	{
+		"id": "order-drop",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "책의 `List`에서 앞의 `n`개를 버린 나머지를 돌려주는 `drop`을 꼬리 재귀로 조립하라. `n`이 길이보다 커도 `Nil`이다.",
+		"unlock": [
+			"fp-0303-drop"
+		],
+		"problem": "fp-0303-drop",
+		"lines": [
+			"@annotation.tailrec",
+			"def drop[A](l: List[A], n: Int): List[A] =",
+			"  if n <= 0 then l",
+			"  else l match",
+			"    case Nil => Nil",
+			"    case Cons(_, t) => drop(t, n - 1)"
+		],
+		"distractors": [
+			{
+				"line": "  if n < 0 then l",
+				"replaces": 2,
+				"why": "`n == 0`에서 멈추지 않아 하나를 더 버린다. 0개를 버릴 때는 그대로 돌려줘야 한다."
+			},
+			{
+				"line": "    case Cons(_, t) => drop(t, n)",
+				"replaces": 5,
+				"why": "`n`을 줄이지 않으면 끝까지 버려 항상 `Nil`이 된다."
+			}
+		]
+	},
+	{
+		"id": "order-init",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "책의 `List`에서 마지막 원소를 뺀 나머지를 돌려주는 `init`을 조립하라. 꼬리 쪽을 따라가며 새로 만든다.",
+		"unlock": [
+			"fp-0306-init"
+		],
+		"problem": "fp-0306-init",
+		"lines": [
+			"def init[A](l: List[A]): List[A] =",
+			"  l match",
+			"    case Nil => Nil",
+			"    case Cons(_, Nil) => Nil",
+			"    case Cons(h, t) => Cons(h, init(t))"
+		],
+		"distractors": [
+			{
+				"line": "    case Cons(h, t) => init(t)",
+				"replaces": 4,
+				"why": "머리를 다시 붙이지 않으면 아무것도 쌓이지 않아 결과가 항상 `Nil`이다."
+			},
+			{
+				"line": "    case Cons(h, Nil) => Cons(h, Nil)",
+				"replaces": 3,
+				"why": "마지막 원소를 남기면 `init`이 아니라 그대로 복사한 것이다. 원소가 하나뿐일 때 `Nil`이어야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-fold-left",
+		"kind": "order",
+		"topic": "folds",
+		"prompt": "책의 `List`용 `foldLeft`를 꼬리 재귀로 조립하라. 누적값에 원소를 왼쪽부터 하나씩 합친다.",
+		"unlock": [
+			"fp-0310-fold-left"
+		],
+		"problem": "fp-0310-fold-left",
+		"lines": [
+			"@annotation.tailrec",
+			"def foldLeft[A, B](as: List[A], z: B)(f: (B, A) => B): B = as match",
+			"  case Nil => z",
+			"  case Cons(h, t) => foldLeft(t, f(z, h))(f)"
+		],
+		"distractors": [
+			{
+				"line": "  case Cons(h, t) => f(foldLeft(t, z)(f), h)",
+				"replaces": 3,
+				"why": "재귀 호출을 `f` 바깥에 두면 꼬리 위치가 아니다(그리고 `foldRight`식 순서가 된다). 먼저 `f(z, h)`로 누적한 뒤 넘겨야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-filter",
+		"kind": "order",
+		"topic": "functions",
+		"prompt": "책의 `List`에서 조건을 만족하는 원소만 남기는 `filter`를 조립하라. 조건을 못 지나는 머리는 버리고 계속 간다.",
+		"unlock": [
+			"fp-0319-filter"
+		],
+		"problem": "fp-0319-filter",
+		"given": "def removeOdds(l: List[Int]): List[Int] =\n  filter(l)(_ % 2 == 0)\n",
+		"lines": [
+			"def filter[A](as: List[A])(f: A => Boolean): List[A] = as match",
+			"  case Nil => Nil",
+			"  case Cons(h, t) if f(h) => Cons(h, filter(t)(f))",
+			"  case Cons(_, t) => filter(t)(f)"
+		],
+		"distractors": [
+			{
+				"line": "  case Cons(h, t) if f(h) => Cons(h, t)",
+				"replaces": 2,
+				"why": "통과한 머리 뒤의 꼬리를 걸러 보지 않고 그대로 붙이면 나머지에 조건이 적용되지 않는다. 꼬리에도 `filter`를 재귀로 건다."
+			}
+		]
+	},
+	{
+		"id": "order-map2v",
+		"kind": "order",
+		"topic": "errors",
+		"prompt": "두 `Validated`를 합치는 `map2V`를 조립하라. 둘 다 유효하면 `f`로 합치고, 하나라도 실패면 실패이되 둘 다 실패면 오류를 모두 모은다.",
+		"unlock": [
+			"fp-0409-accumulate-errors"
+		],
+		"problem": "fp-0409-accumulate-errors",
+		"given": "def mkPerson(name: String, age: Int): Validated[String, Person] =\n  map2V(mkName(name), mkAge(age))(Person(_, _))\n\ndef traverseV[E, A, B](xs: List[A])(f: A => Validated[E, B]): Validated[E, List[B]] =\n  xs.foldRight(Valid(Nil): Validated[E, List[B]])((a, acc) => map2V(f(a), acc)(_ :: _))\n",
+		"lines": [
+			"def map2V[E, A, B, C](a: Validated[E, A], b: Validated[E, B])(f: (A, B) => C): Validated[E, C] =",
+			"  (a, b) match",
+			"    case (Valid(x), Valid(y)) => Valid(f(x, y))",
+			"    case (Invalid(e1), Invalid(e2)) => Invalid(e1 ++ e2)",
+			"    case (Invalid(e1), _) => Invalid(e1)",
+			"    case (_, Invalid(e2)) => Invalid(e2)"
+		],
+		"distractors": [
+			{
+				"line": "    case (Invalid(e1), Invalid(e2)) => Invalid(e1)",
+				"replaces": 3,
+				"why": "둘 다 실패일 때 첫 오류만 남기면 `Either`와 다를 바 없다. 오류를 모으는 것이 `Validated`를 쓰는 이유다."
+			}
+		]
+	},
+	{
+		"id": "order-unfold",
+		"kind": "order",
+		"topic": "lazy",
+		"prompt": "상태 `z`에서 `f`로 다음 원소와 다음 상태를 만들어 가며 `Stream`을 펼치는 `unfold`를 조립하라. `None`이면 끝이다.",
+		"unlock": [
+			"fp-0510-unfold"
+		],
+		"problem": "fp-0510-unfold",
+		"lines": [
+			"def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] =",
+			"  f(z) match",
+			"    case Some((a, s)) => Stream.cons(a, unfold(s)(f))",
+			"    case None => Stream.empty"
+		],
+		"distractors": [
+			{
+				"line": "    case Some((a, s)) => Stream.cons(a, unfold(z)(f))",
+				"replaces": 2,
+				"why": "새 상태 `s`가 아니라 처음 상태 `z`로 다시 펼치면 첫 원소만 영원히 반복된다."
+			}
+		]
+	},
+	{
+		"id": "order-ints",
+		"kind": "order",
+		"topic": "recursion",
+		"prompt": "난수 생성기 `rng`로 정수 `count`개를 뽑아 `(List[Int], RNG)`를 돌려주는 `ints`를 조립하라. 뽑을 때마다 새 생성기를 이어받는다.",
+		"unlock": [
+			"fp-0604-random-ints"
+		],
+		"problem": "fp-0604-random-ints",
+		"lines": [
+			"def ints(count: Int)(rng: RNG): (List[Int], RNG) =",
+			"  if count <= 0 then (Nil, rng)",
+			"  else",
+			"    val (x, r1) = rng.nextInt",
+			"    val (xs, r2) = ints(count - 1)(r1)",
+			"    (x :: xs, r2)"
+		],
+		"distractors": [
+			{
+				"line": "    val (xs, r2) = ints(count - 1)(rng)",
+				"replaces": 4,
+				"why": "처음 `rng`를 다시 쓰면 같은 값만 `count`번 나온다. 한 번 쓴 뒤 돌려받은 `r1`을 이어 써야 한다."
+			},
+			{
+				"line": "    (x :: xs, r1)",
+				"replaces": 5,
+				"why": "마지막에 돌려줄 생성기는 가장 나중 것(`r2`)이다. `r1`을 주면 뽑은 난수를 되감아 다음 호출이 같은 값을 낸다."
+			}
+		]
+	},
+	{
+		"id": "order-map2-rand",
+		"kind": "order",
+		"topic": "functions",
+		"prompt": "두 `Rand`를 합치는 `map2`를 조립하라. 첫 번째가 돌려준 생성기를 두 번째에 이어 넘기고, 결과 쌍과 마지막 생성기를 돌려준다.",
+		"unlock": [
+			"fp-0607-map2"
+		],
+		"problem": "fp-0607-map2",
+		"given": "def randIntDouble: Rand[(Int, Double)] =\n  map2(int, randDouble)((_, _))\n\ndef randDoubleInt: Rand[(Double, Int)] =\n  map2(randDouble, int)((_, _))\n",
+		"lines": [
+			"def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =",
+			"  rng =>",
+			"    val (a, r1) = ra(rng)",
+			"    val (b, r2) = rb(r1)",
+			"    (f(a, b), r2)"
+		],
+		"distractors": [
+			{
+				"line": "    val (b, r2) = rb(rng)",
+				"replaces": 3,
+				"why": "둘째에 처음 `rng`를 넘기면 두 값이 같은 난수에서 나온다. 첫째가 돌려준 `r1`을 이어야 한다."
+			},
+			{
+				"line": "    (f(a, b), r1)",
+				"replaces": 4,
+				"why": "끝에 돌려줄 상태는 둘째까지 쓴 `r2`다. `r1`이면 둘째의 소비가 기록되지 않는다."
+			}
+		]
+	},
+	{
+		"id": "order-less-than",
+		"kind": "order",
+		"topic": "functions",
+		"prompt": "`0 until n` 범위의 난수를 `flatMap`으로 만든다. `i % n`을 쓰되 치우침이 생기는 구간에 걸리면 다시 뽑는다(`flatMap`은 주어진다).",
+		"unlock": [
+			"fp-0609-flatmap-less-than"
+		],
+		"problem": "fp-0609-flatmap-less-than",
+		"given": "def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] =\n  rng =>\n    val (a, r1) = f(rng)\n    g(a)(r1)\n",
+		"lines": [
+			"def nonNegativeLessThan(n: Int): Rand[Int] =",
+			"  flatMap(nonNegativeInt) { i =>",
+			"    val mod = i % n",
+			"    if i + (n - 1) - mod >= 0 then unit(mod)",
+			"    else nonNegativeLessThan(n)",
+			"  }"
+		],
+		"distractors": [
+			{
+				"line": "    else unit(mod)",
+				"replaces": 4,
+				"why": "치우침이 생기는 끝 구간에서도 그냥 받으면 작은 값이 더 자주 나온다. 그 구간이면 다시 뽑아야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-take-lazy",
+		"kind": "order",
+		"topic": "lazy",
+		"prompt": "`Stream`의 앞 `n`개로 이루어진 `Stream`을 돌려주는 `take`를 조립하라. 마지막 원소 뒤의 꼬리는 평가하면 안 된다.",
+		"unlock": [
+			"fp-0502-take-drop"
+		],
+		"problem": "fp-0502-take-drop",
+		"given": "import Stream.{Cons, Empty}\n\nextension [A](s: Stream[A])\n  def drop(n: Int): Stream[A] = s match\n    case Cons(_, t) if n > 0 => t().drop(n - 1)\n    case _ => s\n",
+		"lines": [
+			"extension [A](s: Stream[A])",
+			"  def take(n: Int): Stream[A] = s match",
+			"    case Cons(h, t) if n > 1 => Stream.cons(h(), t().take(n - 1))",
+			"    case Cons(h, _) if n == 1 => Stream.cons(h(), Stream.empty)",
+			"    case _ => Stream.empty"
+		],
+		"distractors": [
+			{
+				"line": "    case Cons(h, t) if n > 0 => Stream.cons(h(), t().take(n - 1))",
+				"replaces": 2,
+				"why": "`n == 1`에서도 `t()`를 불러 꼬리를 평가한다. 마지막 원소는 꼬리를 건드리지 않고 `empty`로 닫아야 한다."
+			}
+		]
+	},
+	{
+		"id": "order-best-by-item",
+		"kind": "order",
+		"topic": "maps",
+		"prompt": "주문 목록에서 품목마다 그 품목을 가장 많이 산 고객을 구한다. 기준은 고객별 수량의 합이고, 합이 같으면 이름이 앞선 고객이다. 이 단계의 함수를 조립하라.",
+		"unlock": [
+			"c-02-order-report"
+		],
+		"problem": "c-02-order-report",
+		"given": "case class Order(customer: String, item: String, qty: Int, unitPrice: Int)\n\ndef totals(orders: List[Order]): Map[String, Int] =\n  orders.groupMapReduce(_.customer)(o => o.qty * o.unitPrice)(_ + _)\n\ndef topCustomers(orders: List[Order], n: Int): List[(String, Int)] =\n  totals(orders).toList\n    .sortBy((customer, total) => (-total, customer))\n    .take(n)\n\ndef report(orders: List[Order], n: Int): List[String] =\n  val all = totals(orders)\n  val ranking = topCustomers(orders, n).zipWithIndex.map { case ((customer, total), i) =>\n    f\"${i + 1}%d. $customer%-6s $total%8d원\"\n  }\n  val best = bestByItem(orders).toList.sorted.map((item, customer) => s\"$item: $customer\")\n  List(s\"주문 ${orders.size}건, 고객 ${all.size}명, 합계 ${all.values.sum}원\", \"[상위 고객]\") ++\n    ranking ++\n    List(\"[품목별 최다 구매]\") ++\n    best\n",
+		"lines": [
+			"def bestByItem(orders: List[Order]): Map[String, String] =",
+			"  orders",
+			"    .groupBy(_.item)",
+			"    .view",
+			"    .mapValues { itemOrders =>",
+			"      val qtyByCustomer = itemOrders.groupMapReduce(_.customer)(_.qty)(_ + _)",
+			"      qtyByCustomer.minBy((customer, qty) => (-qty, customer))._1",
+			"    }",
+			"    .toMap"
+		],
+		"distractors": [
+			{
+				"line": "      qtyByCustomer.maxBy((customer, qty) => (qty, customer))._1",
+				"replaces": 6,
+				"why": "`maxBy`에 `(qty, customer)`를 쓰면 합이 같을 때 이름이 뒤인 고객이 뽑힌다. 이름은 오름차순이므로 `minBy`와 `(-qty, customer)`다."
+			},
+			{
+				"line": "      val qtyByCustomer = itemOrders.groupMapReduce(_.customer)(_.qty)(_ max _)",
+				"replaces": 5,
+				"why": "고객별로 합이 아니라 한 주문의 최대 수량을 보게 된다. 기준은 산 수량의 합(`_ + _`)이다."
+			}
+		]
+	},
+	{
+		"id": "order-kv-step",
+		"kind": "order",
+		"topic": "pattern",
+		"prompt": "키-값 저장소에서 명령 하나를 실행해 `(새 상태, 출력)`을 돌려주는 `step`을 조립하라. `Del`은 있었으면 \"1\", 없었으면 \"0\"을 출력한다.",
+		"unlock": [
+			"c-03-kv-interpreter"
+		],
+		"problem": "c-03-kv-interpreter",
+		"given": "enum Command:\n  case Put(key: String, value: Int)\n  case Get(key: String)\n  case Del(key: String)\n  case Incr(key: String)\n\ntype Store = Map[String, Int]\n\ndef parseCommand(line: String): Either[String, Command] =\n  line.trim.split(\"\\\\s+\").toList match\n    case Nil | \"\" :: Nil => Left(\"빈 줄\")\n    case word :: args =>\n      (word.toUpperCase, args) match\n        case (\"SET\", List(k, v)) => v.toIntOption.map(Command.Put(k, _)).toRight(s\"SET: 숫자가 아님: $v\")\n        case (\"GET\", List(k))    => Right(Command.Get(k))\n        case (\"DEL\", List(k))    => Right(Command.Del(k))\n        case (\"INCR\", List(k))   => Right(Command.Incr(k))\n        case (name @ (\"SET\" | \"GET\" | \"DEL\" | \"INCR\"), _) => Left(s\"$name: 인자 개수 오류\")\n        case _ => Left(s\"알 수 없는 명령: $word\")\n\ndef runAll(lines: List[String]): (Store, List[String]) =\n  val (store, outputs) = lines.foldLeft((Map.empty[String, Int], List.empty[String])) {\n    case ((st, out), line) =>\n      parseCommand(line) match\n        case Left(msg) => (st, s\"ERR $msg\" :: out)\n        case Right(cmd) =>\n          val (st2, o) = step(st, cmd)\n          (st2, o :: out)\n  }\n  (store, outputs.reverse)\n\ndef transcript(lines: List[String]): List[String] =\n  val (store, outputs) = runAll(lines)\n  val numbered = outputs.zipWithIndex.map((o, i) => s\"${i + 1}: $o\")\n  val finalState = store.toList.sorted.map((k, v) => s\"$k=$v\")\n  numbered ++ (\"--\" :: finalState)\n",
+		"lines": [
+			"def step(store: Store, cmd: Command): (Store, String) = cmd match",
+			"  case Command.Put(k, v) => (store.updated(k, v), \"OK\")",
+			"  case Command.Get(k)    => (store, store.get(k).fold(\"(nil)\")(_.toString))",
+			"  case Command.Del(k)    => (store - k, if store.contains(k) then \"1\" else \"0\")",
+			"  case Command.Incr(k) =>",
+			"    val next = store.getOrElse(k, 0) + 1",
+			"    (store.updated(k, next), next.toString)"
+		],
+		"distractors": [
+			{
+				"line": "  case Command.Del(k) => (store, if store.contains(k) then \"1\" else \"0\")",
+				"replaces": 3,
+				"why": "출력만 맞고 상태에서 키를 지우지 않는다. 새 상태는 `store - k`다."
+			},
+			{
+				"line": "    val next = store(k) + 1",
+				"replaces": 4,
+				"why": "`store(k)`는 키가 없으면 예외를 던진다. 없는 키는 0에서 시작하므로 `getOrElse(k, 0)`이다."
+			}
+		]
+	}
+]

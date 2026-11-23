@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS lang_lookups (
 	id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL, entry_id TEXT NOT NULL, at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS lang_lookups_session ON lang_lookups(session_id);
+CREATE TABLE IF NOT EXISTS memo_reviews (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT NOT NULL CHECK (item_type IN ('card', 'check')), item_id TEXT NOT NULL,
+	at INTEGER NOT NULL, rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4), elapsed_ms INTEGER NOT NULL, detail TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS memo_reviews_item ON memo_reviews(item_type, item_id);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 

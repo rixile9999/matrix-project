@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as s from '#lib/server/service.ts';
+import { dueTotal } from '#lib/server/memo.ts';
 import type { HomeData } from '#lib/types.ts';
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -11,6 +12,7 @@ export const load = async (): Promise<HomeData> => {
 	const cfRating = s.getSetting('cf_rating');
 	const last = s.getSetting('last_sync_at');
 	return {
+		memoDue: dueTotal(),
 		handle,
 		problemCount: s.problemCount(),
 		lastSyncAt: last === null ? null : Number(last),

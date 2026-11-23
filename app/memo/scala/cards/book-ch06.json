@@ -1,0 +1,269 @@
+[
+	{
+		"id": "fpis6-nextint-referential-transparency",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "상태 있는 nextInt의 참조 투명성",
+		"summary": "`nextInt`가 시드를 바꾸면 같은 식이 다른 값을 낸다. 다음 상태를 반환값으로 돌려주면 순수해진다.",
+		"prompt": "시드를 내부에서 바꾸는 `nextInt(): Int`는 왜 참조 투명하지 않나? `rng.nextInt: (Int, RNG)`는 이를 어떻게 고치나?",
+		"points": [
+			"같은 식 `nextInt()`가 호출마다 다른 값을 내므로, 식을 그 값으로 바꿔 써도 같은 프로그램이라고 할 수 없다",
+			"시드 변경이 반환 타입에 드러나지 않는 숨은 부수효과라서, 호출 순서에 결과가 달라진다",
+			"순수 버전은 `(값, 다음 RNG)`를 돌려주어 상태 변화를 반환값으로 옮긴다. 같은 `rng`로는 항상 같은 값이 나온다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0601-non-negative-int"
+		]
+	},
+	{
+		"id": "fpis6-reuse-old-rng",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "옛 RNG 재사용 버그",
+		"summary": "돌려받은 RNG를 버리고 옛 RNG를 다시 쓰면 같은 난수가 반복되는데 컴파일은 된다.",
+		"prompt": "`val (a, _) = rng.nextInt` 다음 줄에 `val (b, _) = rng.nextInt`를 썼다. `a`와 `b`는? 왜 컴파일러가 못 잡고, 어떻게 고치나?",
+		"points": [
+			"`rng`는 불변이라 같은 입력에서 같은 출력이 나오므로 `a == b`이다",
+			"돌려받은 `RNG`를 `_`로 버려도 타입이 맞아서 컴파일은 되고, 난수만 조용히 반복된다",
+			"고치려면 `val (a, r1) = rng.nextInt; val (b, _) = r1.nextInt`처럼 매번 직전의 새 `RNG`를 넘긴다"
+		],
+		"answerCode": "val (a, _) = rng.nextInt\nval (b, _) = rng.nextInt",
+		"verify": "case class Lcg(seed: Long):\n  def nextInt: (Int, Lcg) =\n    val n = seed * 6364136223846793005L + 1442695040888963407L\n    ((n >>> 33).toInt, Lcg(n))\nval rng = Lcg(42)\nval (a, _) = rng.nextInt\nval (b, _) = rng.nextInt\na == b // => true",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0601-non-negative-int"
+		]
+	},
+	{
+		"id": "fpis6-abs-minvalue",
+		"kind": "concept",
+		"topic": "recursion",
+		"title": "abs(Int.MinValue)와 -(i + 1)",
+		"summary": "`abs`는 `Int.MinValue`에서 음수를 돌려준다. `-(i + 1)`은 오버플로 없이 모든 음수를 옮긴다.",
+		"prompt": "`nonNegativeInt`를 `math.abs(i)`로 만들면 어느 입력에서 깨지나? `-(i + 1)`은 왜 안전한가?",
+		"points": [
+			"`Int.MinValue`의 절댓값 2^31은 `Int`에 들어가지 않아, `abs`가 오버플로로 음수를 그대로 돌려준다",
+			"`-(i + 1)`은 `-1`을 0으로, `Int.MinValue`를 `Int.MaxValue`로 보내므로 오버플로 없이 0 이상이 된다",
+			"음수 `i`와 `-(i + 1)`이 일대일이라 0부터 `Int.MaxValue`까지 각 값에 입력이 두 개씩 대응해 치우치지 않는다"
+		],
+		"answerCode": "math.abs(Int.MinValue)\n-(Int.MinValue + 1)",
+		"verify": "math.abs(Int.MinValue) // => -2147483648\n-(Int.MinValue + 1) // => 2147483647",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0601-non-negative-int"
+		]
+	},
+	{
+		"id": "fpis6-modulo-bias-retry",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "나머지 연산의 치우침과 재시도",
+		"summary": "`i % n`은 작은 나머지가 더 잦다. 마지막 불완전한 구간에 걸린 `i`를 버리고 다시 뽑는다.",
+		"prompt": "`nonNegativeInt`의 `i`에 `i % n`만 하면 왜 `[0, n)`이 고르지 않나? `nonNegativeLessThan`은 왜 어떤 `i`를 버리고 다시 뽑나?",
+		"points": [
+			"`i`의 범위 크기가 `n`의 배수가 아니면, 앞쪽 나머지들이 한 번씩 더 나와 작은 값이 조금 더 자주 나온다",
+			"`i + (n - 1) - mod`가 오버플로로 음수이면 `i`가 마지막 불완전한 구간에 있다는 뜻이다",
+			"그런 `i`는 버리고 새 `RNG`로 다시 뽑아야 남은 구간이 `n`의 배수 크기가 되어 균등해진다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0609-flatmap-less-than"
+		]
+	},
+	{
+		"id": "fpis6-state-abstraction",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "Rand와 State가 추상화하는 것",
+		"summary": "`Rand`와 `State`는 '상태를 받아 값과 다음 상태를 돌려주는 함수'이고, 난수와 무관한 패턴이다.",
+		"prompt": "`Rand[A] = RNG => (A, RNG)`를 `State[S, A]`로 일반화하면 `map`/`flatMap` 구현에서 무엇이 바뀌고, 이것이 무엇을 말해 주나?",
+		"points": [
+			"구현은 한 글자도 바뀌지 않는다. `RNG`가 `S`로 바뀔 뿐이고 하는 일은 상태를 순서대로 넘기는 배관이다",
+			"`State[S, A]`는 상태 전이 함수 `S => (A, S)`를 값으로 만든 것이라, 상태 변경도 합성 가능한 값이 된다",
+			"`unit`, `map`, `map2`, `flatMap`, `sequence`는 난수가 아니라 '상태 넘기기' 패턴 자체의 표준 도구이다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0611-generalize-state"
+		]
+	},
+	{
+		"id": "fpis6-wrong-final-rng",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "마지막 RNG를 잘못 돌려줄 때",
+		"summary": "손으로 이은 코드에서 최종 RNG를 한 칸 앞의 것으로 돌려주면 다음 난수가 반복된다.",
+		"prompt": "`double3`가 `((d1, d2, d3), r2)`처럼 `r3` 대신 `r2`를 돌려준다. 호출자가 그 `RNG`로 이어서 `double`을 부르면 무슨 일이 생기나?",
+		"points": [
+			"이어서 뽑은 값이 `d3`와 같다. `r2`에서 시작하면 방금 `d3`를 만든 그 상태이기 때문이다",
+			"타입은 모두 `RNG`라 컴파일되고, 난수가 서로 상관된 채 조용히 틀린다",
+			"반환 `RNG`는 마지막으로 쓴 상태여야 한다. `map2`와 `sequence`가 이 이름 밀기를 대신 하므로 같은 실수가 없어진다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0603-int-double-pairs"
+		]
+	},
+	{
+		"id": "fpis6-map2-vs-flatmap-less-than",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "map2로는 안 되고 flatMap은 되는 이유",
+		"summary": "`map2`의 `f`는 값만 받아 값을 돌려줄 뿐 다음 `Rand`를 고르지 못한다. `flatMap`은 고른다.",
+		"prompt": "`nonNegativeLessThan`을 `map`/`map2`로 못 쓰고 `flatMap`으로는 쓸 수 있는 이유는? 그 차이는 무엇인가?",
+		"points": [
+			"재시도 여부는 뽑은 값 `i`를 본 뒤에야 알 수 있어, 다음에 실행할 `Rand`가 앞의 값에 의존한다",
+			"`map`/`map2`의 `f`는 일반 값을 돌려주므로 값을 바꿀 뿐 다른 `Rand`를 실행하라고 말할 수 없다",
+			"`flatMap`의 `g`는 `Rand`를 돌려주므로 `unit(mod)`와 재귀 호출 중 하나를 고르고, 이어진 `RNG`로 실행된다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0609-flatmap-less-than"
+		]
+	},
+	{
+		"id": "fpis6-retry-is-lazy",
+		"kind": "concept",
+		"topic": "recursion",
+		"title": "재시도 분기가 무한 재귀가 아닌 이유",
+		"summary": "`nonNegativeLessThan(n)` 호출은 함수 값을 만들 뿐이고, 실행될 때 이어진 RNG로 한 번 더 뽑는다.",
+		"prompt": "재시도 분기의 `nonNegativeLessThan(n)` 호출은 왜 즉시 무한 재귀가 되지 않나? 재시도는 어느 `RNG`에서 시작하나?",
+		"points": [
+			"호출은 `RNG => (Int, RNG)` 함수 값을 만들 뿐이고, `RNG`를 받아 실행될 때 비로소 한 번 더 뽑는다",
+			"`flatMap`이 `g(a)(r1)`으로 실행하므로, 재시도는 버린 값을 만든 `RNG`가 아니라 그 다음 상태에서 시작한다",
+			"버려지는 확률이 작아 보통 한두 번 안에 끝나지만, 상태 전달이 틀리면 같은 값을 계속 버리게 된다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0609-flatmap-less-than"
+		]
+	},
+	{
+		"id": "fpis6-map-map2-from-flatmap",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "flatMap과 unit으로 map·map2 만들기",
+		"summary": "`map`은 flatMap + unit, `map2`는 flatMap 안에 map을 둔 것이다. 그래서 flatMap이 더 근본적이다.",
+		"prompt": "`flatMap`과 `unit`만으로 `map`과 `map2`는 어떻게 쓰나? 거꾸로 `map2`만으로 `flatMap`을 못 만드는 이유는?",
+		"points": [
+			"`map`: `flatMap(s)(a => unit(f(a)))`. `unit`이 상태를 건드리지 않고 값만 감싸 준다",
+			"`map2`: `flatMap(ra)(a => map(rb)(b => f(a, b)))`. 바깥 `flatMap`이 먼저 실행하므로 `ra`가 먼저이다",
+			"`map2`의 `f`는 값만 돌려줄 뿐 동작을 돌려주지 못해서, 앞의 값에 따라 다음 동작을 고르는 `flatMap`은 만들 수 없다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0610-map-map2-via-flatmap"
+		]
+	},
+	{
+		"id": "fpis6-sequence-order",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "sequence와 상태의 흐름",
+		"summary": "`sequence`는 동작의 리스트를 리스트를 내는 동작 하나로 바꾼다. 앞의 동작이 먼저 실행된다.",
+		"prompt": "`sequence(List(r1, r2, r3))`은 무엇을 돌려주나? `foldRight`로 만드는데 왜 `r1`이 먼저 실행되고 결과도 맨 앞인가?",
+		"points": [
+			"`List[Rand[A]]`를 `Rand[List[A]]` 하나로 뒤집는다. 이 동작을 한 번 실행하면 셋이 모두 실행된다",
+			"`foldRight`의 단계는 `map2(f, acc)(_ :: _)`이고 `map2`는 첫 인자 `f`를 먼저 실행하므로 앞 원소가 먼저이다",
+			"`RNG`는 `r1`의 결과에서 `r2`로, 다시 `r3`로 흐르고, 마지막 `RNG`가 최종 상태이다. 빈 리스트는 `unit(Nil)`이라 상태를 안 건드린다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0608-sequence-rand"
+		]
+	},
+	{
+		"id": "fpis6-get-set-modify",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "get, set, modify의 역할",
+		"summary": "`get`은 상태를 값으로 읽고 `set`은 상태를 바꾼다. 둘이면 어떤 상태 변경도 만들 수 있다.",
+		"prompt": "`get`, `set`, `modify`는 각각 무엇을 하나? `modify`가 `get`과 `set`만으로 만들어지는 이유는?",
+		"points": [
+			"`get`은 상태를 바꾸지 않고 현재 상태를 결과값으로 꺼내, 이후 단계가 상태를 읽을 수 있게 한다",
+			"`set(s)`은 상태를 `s`로 바꾸고 결과값은 `()`이다. 얻을 값이 없고 상태 변경만 남는다",
+			"`State`는 상태를 흘려 보내기만 하므로 읽기와 쓰기 둘이 원시 동작이고, `modify`는 읽은 뒤 `f`를 적용해 쓰는 조합이다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0612-get-set-modify"
+		]
+	},
+	{
+		"id": "fpis6-state-for-imperative",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "State의 for 식이 명령형처럼 읽히는 이유",
+		"summary": "각 줄은 flatMap으로 풀리는 문장이고, 전체는 초기 상태를 받기 전까지 실행되지 않는 값이다.",
+		"prompt": "`State`에 대한 for 식은 왜 명령형 코드처럼 읽히나? 그런데도 가변 상태가 없다고 말할 수 있는 근거는?",
+		"points": [
+			"`x <- action`은 `flatMap`으로 풀려, 줄 순서대로 동작을 실행하고 결과를 `x`에 묶는 문장처럼 읽힌다",
+			"`_ <- set(...)`은 결과를 버리고 상태 변경만 일으키는 문장이다",
+			"for 전체는 `S => (A, S)` 함수 값 하나이고 `run(초기값)`을 부르기 전에는 아무것도 실행되지 않는다",
+			"상태는 `flatMap` 안에서 인자와 반환값으로만 전달되고, 어디에도 변수가 갱신되지 않는다"
+		],
+		"answerCode": "val two =\n  for\n    a <- tick\n    b <- tick\n  yield (a, b)\ntwo.run(5)",
+		"verify": "case class State[S, +A](run: S => (A, S)):\n  def flatMap[B](f: A => State[S, B]): State[S, B] =\n    State(s =>\n      val (a, s2) = run(s)\n      f(a).run(s2))\n  def map[B](f: A => B): State[S, B] =\n    flatMap(a => State(s => (f(a), s)))\nval tick = State[Int, Int](n => (n, n + 1))\nval two =\n  for\n    a <- tick\n    b <- tick\n  yield (a, b)\ntwo.run(5) // => ((5,6),7)",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0612-get-set-modify"
+		]
+	},
+	{
+		"id": "fpis6-candy-machine-model",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "사탕 기계를 상태 전이로 모델링하기",
+		"summary": "규칙은 순수 함수, `modify`로 동작에 올리고, `sequence`로 이어 붙이고, `get`으로 결과를 꺼낸다.",
+		"prompt": "사탕 기계 시뮬레이션을 `State[Machine, Int]`로 만드는 구조를 순서대로 설명하라. 규칙의 우선순위는 어디에 있나?",
+		"points": [
+			"규칙은 `update(input)(machine): Machine`이라는 평범한 순수 함수이다. 사탕이 0이면 무조건 무시하는 케이스를 맨 앞에 둔다",
+			"`modify(update(i))`가 각 입력을 상태 동작으로 올리고, `sequence`가 입력 순서대로 이어 붙여 상태를 흘린다",
+			"마지막에 `get`으로 최종 `Machine`을 꺼내 `coins`를 값으로 돌려준다. 가변 변수 없이 명령형 시뮬레이션처럼 읽힌다"
+		],
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0613-candy-machine"
+		]
+	}
+]

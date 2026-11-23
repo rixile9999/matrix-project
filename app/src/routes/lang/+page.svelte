@@ -3,9 +3,9 @@
 	import { onMount } from 'svelte';
 	import { mmss } from '#lib/rank.ts';
 	import { LEVELS } from '#lib/core/lang.ts';
-	import type { LangHomeData, LangKind } from '#lib/types.ts';
+	import type { LangHomeData, LangKind, MemoRedo } from '#lib/types.ts';
 
-	let { data, form }: { data: LangHomeData; form: { error?: string } | null } = $props();
+	let { data, form }: { data: LangHomeData & { redo: MemoRedo[] }; form: { error?: string } | null } = $props();
 
 	const total = $derived(data.levels.reduce((n, l) => n + l.total, 0));
 
@@ -42,6 +42,14 @@
 		<a class="btn ghost" href="/lang/cheatsheet">치트시트</a>
 	</div>
 	{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
+	{#if data.redo.length > 0}
+		<div>
+			<h3>다시 풀기 <a class="note" href="/memo">암기</a></h3>
+			<div class="m-redo compact">
+				{#each data.redo as r (r.problemId)}<a href="/lang/{r.problemId}">{r.title}<small>{r.cardTitle} 카드를 두 번 연속 놓쳤습니다</small></a>{/each}
+			</div>
+		</div>
+	{/if}
 
 	{#if total === 0 && data.topics.length === 0 && data.books.length === 0}
 		<p class="empty">문제가 없습니다.</p>

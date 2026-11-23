@@ -1,0 +1,419 @@
+[
+	{
+		"id": "span-partition-takewhile",
+		"kind": "concept",
+		"topic": "collections",
+		"title": "span, partition, takeWhile의 차이",
+		"summary": "`span`은 첫 실패에서 끊고, `partition`은 전체를 가른다. `takeWhile`은 앞부분만 남긴다.",
+		"prompt": "`List(1, 2, -1, 3)`에 `_ > 0`을 줄 때 `span`, `partition`, `takeWhile`의 결과는 각각 무엇인가?",
+		"points": [
+			"`span`은 첫 실패 지점에서 끊어 `(List(1, 2), List(-1, 3))`이다. `takeWhile`과 `dropWhile`을 한 번의 순회로 얻는다",
+			"`partition`은 모든 원소를 검사해 참인 것과 거짓인 것으로 가르므로 `(List(1, 2, 3), List(-1))`이다",
+			"`takeWhile`은 앞부분 `List(1, 2)`만 남기고 뒤는 버린다. 전체 조건 필터는 `filter`이다"
+		],
+		"answerCode": "xs.span(_ > 0)\nxs.partition(_ > 0)\nxs.takeWhile(_ > 0)",
+		"verify": "val xs = List(1, 2, -1, 3)\nxs.span(_ > 0) // => (List(1, 2),List(-1, 3))\nxs.partition(_ > 0) // => (List(1, 2, 3),List(-1))\nxs.takeWhile(_ > 0) // => List(1, 2)",
+		"unlock": [
+			"015-run-length-encoding",
+			"b-04-keep-positives"
+		]
+	},
+	{
+		"id": "split-trailing-empties",
+		"kind": "concept",
+		"topic": "strings",
+		"title": "split이 끝의 빈 조각을 버린다",
+		"summary": "기본 `split`은 끝의 빈 조각을 버리고 중간 빈 조각은 남긴다. `-1`을 주면 모두 남는다.",
+		"prompt": "`\"a,b,,\".split(\",\").length`와 `split(\",\", -1).length`는 각각? 빈 문자열 `\"\".split(\",\")`의 길이는?",
+		"points": [
+			"기본 `split`은 끝의 빈 조각을 지워서 `\"a,b,,\"`가 2개이다. 중간의 빈 필드(`\"a,,b\"`)는 남는다",
+			"`limit`에 음수를 주면 끝의 빈 조각도 남아 4개가 된다. 필드 수를 세는 코드는 `-1`이 필수이다",
+			"빈 문자열을 나누면 빈 조각 하나가 나와 길이가 1이다. 0개가 아니다"
+		],
+		"answerCode": "\"a,b,,\".split(\",\").length\n\"a,b,,\".split(\",\", -1).length\n\"\".split(\",\").length",
+		"verify": "\"a,b,,\".split(\",\").length // => 2\n\"a,b,,\".split(\",\", -1).length // => 4\n\"\".split(\",\").length // => 1",
+		"unlock": [
+			"011-parse-pair",
+			"b-14-field-count"
+		]
+	},
+	{
+		"id": "groupby-vs-groupmapreduce",
+		"kind": "concept",
+		"topic": "maps",
+		"title": "groupBy와 groupMapReduce",
+		"summary": "`groupMapReduce`는 묶으며 바로 합쳐 중간 리스트를 만들지 않는다. 묶음 전체가 필요할 때만 `groupBy`이다.",
+		"prompt": "단어 빈도를 `groupBy(identity).view.mapValues(_.size).toMap`으로 셀 수도 있다. `groupMapReduce`는 무엇을 아끼나? 그래도 `groupBy`를 쓰는 경우는?",
+		"points": [
+			"`groupBy`는 키마다 원소 리스트를 전부 만든 뒤 크기를 센다. `groupMapReduce`는 값으로 바꾸고 합치기까지 한 패스에 한다",
+			"그래서 키별 중간 리스트가 생기지 않는다. `groupMapReduce(identity)(_ => 1)(_ + _)`가 빈도 세기의 관용구이다",
+			"아나그램처럼 묶음 원소 자체가 결과일 때는 합칠 것이 없으므로 `groupBy`가 맞다"
+		],
+		"unlock": [
+			"005-top-three-words",
+			"b-09-word-count",
+			"013-group-anagrams",
+			"c-02-order-report"
+		]
+	},
+	{
+		"id": "sortby-tuple-keys-reverse",
+		"kind": "concept",
+		"topic": "collections",
+		"title": "튜플 키 정렬과 한 키만 뒤집기",
+		"summary": "숫자 키는 튜플 안에서 부호를 바꾸고, 그 밖의 키는 `Ordering`을 조합한다. `reverse`는 동률까지 뒤집는다.",
+		"prompt": "개수 내림차순, 같으면 이름 오름차순으로 `sortBy`하려면 키를 어떻게 쓰나? 키가 문자열이거나 `Int.MinValue`가 올 수 있으면?",
+		"points": [
+			"숫자 키는 `sortBy((w, c) => (-c, w))`처럼 튜플 안에서 부호만 바꾼다. 튜플은 앞 원소부터 비교한다",
+			"뒤집을 키가 숫자가 아니거나 `Int.MinValue`가 올 수 있으면 `Ordering.Tuple2(Ordering.Int.reverse, Ordering.String)`이나 `Ordering.by(...).orElse(...)`를 쓴다",
+			"`sortBy(_.len).reverse`는 안정 정렬의 동률 순서까지 뒤집어 버려서, 한 키만 뒤집는 용도로는 틀린다"
+		],
+		"unlock": [
+			"005-top-three-words",
+			"009-sort-people",
+			"b-05-longest-first",
+			"b-30-cheapest-first",
+			"c-02-order-report"
+		]
+	},
+	{
+		"id": "option-for-vs-nested-match",
+		"kind": "concept",
+		"topic": "errors",
+		"title": "Option for 식과 중첩 match",
+		"summary": "`for`는 `flatMap`/`map`으로 풀려 첫 `None`에서 멈춘다. 중첩 `match`는 단계마다 `None => None`을 반복한다.",
+		"prompt": "`owners.get(pet)`, `cities.get(owner)`, `countries.get(city)`를 이으려 한다. 중첩 `match` 대신 `for`를 쓰면 무엇이 달라지나? 같은 점은?",
+		"points": [
+			"`for`는 `flatMap`과 `map`으로 풀리므로 `owners.get(pet).flatMap(cities.get).flatMap(countries.get)`와 같은 뜻이다",
+			"어느 단계든 `None`이면 전체가 `None`이다. 중첩 `match`는 단계마다 `case None => None`을 반복하고 오른쪽으로 들어간다",
+			"단계가 깊어질수록 `for`가 읽기 쉽다. 이때 `Map(k)`는 키가 없으면 예외이고 `get(k)`만 `Option`이다"
+		],
+		"unlock": [
+			"016-pet-country",
+			"b-17-sum-both"
+		]
+	},
+	{
+		"id": "toright-toleft-direction",
+		"kind": "concept",
+		"topic": "errors",
+		"title": "toRight와 toLeft의 방향",
+		"summary": "`toRight(x)`는 `None`을 `Left(x)`로 바꾼다. 성공 값은 `Right`에 남고 두 메서드는 서로 거울이다.",
+		"prompt": "`Option.empty[Int]`에 `toRight(\"e\")`와 `toLeft(\"e\")`를 부르면? `Some(1).toRight(\"e\")`는? 방향을 틀리면 컴파일러가 알려 주나?",
+		"points": [
+			"`None.toRight(\"e\")`는 `Left(e)`이다. `Right`가 성공 쪽이라, 값이 있으면 `Right(값)`, 없으면 `Left(오류)`이다",
+			"`None.toLeft(\"e\")`는 `Right(e)`로 정반대이다. 오류 메시지가 성공 쪽에 들어간다",
+			"값 타입과 오류 타입이 같으면 둘 다 컴파일되어, 방향 실수는 테스트로만 드러난다"
+		],
+		"answerCode": "none.toRight(\"e\")\nnone.toLeft(\"e\")\nSome(1).toRight(\"e\")",
+		"verify": "val none = Option.empty[Int]\nnone.toRight(\"e\") // => Left(e)\nnone.toLeft(\"e\") // => Right(e)\nSome(1).toRight(\"e\") // => Right(1)",
+		"unlock": [
+			"b-18-find-user",
+			"011-parse-pair"
+		]
+	},
+	{
+		"id": "either-right-biased",
+		"kind": "concept",
+		"topic": "errors",
+		"title": "Either의 오른쪽 편향",
+		"summary": "`map`/`flatMap`/`for`는 `Right`에서만 이어지고 첫 `Left`가 그대로 결과가 된다. 오류는 쌓이지 않는다.",
+		"prompt": "`Either[String, Int]` 두 값 `x`, `y`를 `for x <- ex; y <- ey yield x + y`로 합친다. 둘 다 `Left`이면 결과는? `ex`만 `Left`이면?",
+		"points": [
+			"`Either`는 `Right`가 성공값인 오른쪽 편향이라, `map`과 `flatMap`은 `Right`에만 적용된다",
+			"첫 `Left`에서 멈추고 그대로 결과가 되므로, 둘 다 `Left`여도 `ex`의 오류만 남고 `ey`는 실행조차 안 된다",
+			"오류를 모두 모으고 싶으면 `Either`의 `for`로는 안 되고 별도의 누적 방식이 필요하다"
+		],
+		"unlock": [
+			"011-parse-pair",
+			"c-01-calculator"
+		]
+	},
+	{
+		"id": "tailrec-rejects",
+		"kind": "concept",
+		"topic": "recursion",
+		"title": "@tailrec이 거부하는 경우",
+		"summary": "재귀 호출 뒤에 할 일이 남으면 꼬리 위치가 아니다. 누산기 인자로 바꾸면 통과한다.",
+		"prompt": "`@tailrec`은 `1 + count(t)`를 거부하고 `go(x / 2, steps + 1)`은 받는다. 기준은 무엇이고, 그 밖에 거부되는 경우는?",
+		"points": [
+			"호출 결과가 그대로 반환되어야 꼬리 위치이다. `1 + count(t)`는 호출 뒤에 덧셈이 남아 거부된다",
+			"고치려면 남은 일을 인자로 옮겨 누산기(`steps`, `acc`)로 들고 간다. `if`나 `match`의 각 분기 끝은 꼬리일 수 있다",
+			"람다나 `try` 안의 호출, 재정의될 수 있는 멤버 메서드는 거부된다. 중첩 `def`, `private`, `final`은 괜찮다"
+		],
+		"unlock": [
+			"008-collatz-steps",
+			"018-lower-bound",
+			"b-19-count-until-negative",
+			"b-20-sum-to"
+		]
+	},
+	{
+		"id": "scanleft-vs-foldleft-tuple",
+		"kind": "concept",
+		"topic": "folds",
+		"title": "scanLeft와 튜플 누산기 foldLeft",
+		"summary": "`scanLeft`는 모든 중간값을 모으고 길이가 하나 길다. `foldLeft`는 마지막 값만 남기고, 상태가 여럿이면 튜플을 쓴다.",
+		"prompt": "`List(1, 2, 3).scanLeft(0)(_ + _)`의 결과와 길이는? 중간값이 아니라 마지막 결과만 필요하고 상태가 둘이면 무엇을 쓰나?",
+		"points": [
+			"`scanLeft`는 초기값을 맨 앞에 포함해 `List(0, 1, 3, 6)`, 길이 n+1이다. `indexWhere` 위치나 `.tail`이 한 칸 어긋나기 쉽다",
+			"각 단계의 누적값을 모두 볼 때 `scanLeft`, 끝의 결과 하나만 필요하면 `foldLeft`이다",
+			"함께 움직이는 값이 여럿(`best`, `current`)이면 `foldLeft`의 누산기를 튜플로 하고, 끝에서 필요한 값만 꺼낸다"
+		],
+		"answerCode": "xs.scanLeft(0)(_ + _)\nxs.foldLeft(0)(_ + _)",
+		"verify": "val xs = List(1, 2, 3)\nxs.scanLeft(0)(_ + _) // => List(0, 1, 3, 6)\nxs.foldLeft(0)(_ + _) // => 6",
+		"unlock": [
+			"012-first-overdraft",
+			"b-08-running-total",
+			"002-longest-increasing-run",
+			"c-05-log-analyser"
+		]
+	},
+	{
+		"id": "lazylist-vs-iterator",
+		"kind": "concept",
+		"topic": "lazy",
+		"title": "LazyList와 Iterator의 재순회",
+		"summary": "`LazyList`는 계산한 칸을 기억하고, `Iterator`는 한 번 소비하면 끝이다.",
+		"prompt": "`LazyList.from(1).map(f)`의 앞 3개를 두 번 순회하면 `f`는 몇 번 불리나? `Iterator`는 두 번째 순회에서 어떻게 되나?",
+		"points": [
+			"`LazyList`는 계산한 원소를 기억(메모이제이션)해서 두 번째 순회는 다시 계산하지 않고, `f`는 3번만 불린다",
+			"`Iterator`는 한 번 훑으면 소비되어 두 번째 순회는 비어 있고, 아무것도 기억하지 않는다",
+			"대가로, `LazyList`의 앞 참조를 쥐고 있으면 계산된 원소가 모두 메모리에 남는다. 둘 다 `take` 뒤에 `toList`를 불러야 끝난다"
+		],
+		"answerCode": "val ll = LazyList.from(1).map(x => { calls += 1; x })\nll.take(3).toList\nll.take(3).toList",
+		"verify": "var calls = 0\nval ll = LazyList.from(1).map(x => { calls += 1; x })\nll.take(3).toList\nll.take(3).toList\ncalls // => 3",
+		"unlock": [
+			"014-first-primes",
+			"b-21-powers-below",
+			"b-22-first-square-over"
+		]
+	},
+	{
+		"id": "enum-exhaustive-no-wildcard",
+		"kind": "concept",
+		"topic": "types",
+		"title": "enum match에서 case _를 두지 않는 이유",
+		"summary": "와일드카드는 새 케이스를 조용히 삼킨다. 빼 두면 컴파일러가 고칠 곳을 알려 준다.",
+		"prompt": "`enum Light`를 `match`할 때 마지막에 `case _ =>`를 두면 새 색 `Blue`를 추가했을 때 어떻게 되나? 빼 두면?",
+		"points": [
+			"`case _`가 있으면 `Blue`가 말없이 기본 분기로 흘러가고, 컴파일러는 아무 경고도 하지 않는다",
+			"빼 두면 `enum`은 케이스가 닫힌 집합이라 컴파일러가 철저성 경고로 고쳐야 할 모든 `match`를 알려 준다",
+			"경고는 오류가 아니라서, 무시하면 해당 값에서 실행 시 `MatchError`가 난다"
+		],
+		"unlock": [
+			"010-expression-tree",
+			"b-24-next-light",
+			"c-01-calculator"
+		]
+	},
+	{
+		"id": "extension-member-wins",
+		"kind": "concept",
+		"topic": "context",
+		"title": "extension과 implicit class",
+		"summary": "확장 메서드는 진짜 멤버가 없을 때만 선택된다. 같은 수신자를 공유하는 메서드를 한 블록에 둔다.",
+		"prompt": "`extension (s: String)`으로 `length`를 새로 정의하면 `\"abc\".length`는 어느 쪽이 불리나? Scala 2의 `implicit class`와 비교해 무엇이 달라졌나?",
+		"points": [
+			"진짜 멤버가 항상 이긴다. 확장 메서드는 멤버 탐색이 실패했을 때만 시도되어, 기존 메서드를 덮어쓸 수 없다",
+			"`extension`은 수신자를 첫 파라미터로 받는 일반 메서드들이라 `implicit class`처럼 래퍼 클래스 이름을 만들지 않는다",
+			"한 `extension` 블록에 수신자를 공유하는 메서드를 여러 개 두고 서로 `s.other`로 부를 수 있다"
+		],
+		"unlock": [
+			"019-palindrome-extension",
+			"b-29-truncate-ext"
+		]
+	},
+	{
+		"id": "given-ambiguity",
+		"kind": "concept",
+		"topic": "context",
+		"title": "given 후보가 둘일 때",
+		"summary": "같은 타입의 `given`이 둘 이상이면 모호성 오류이다. `using`으로 직접 지정하거나 하나만 스코프에 둔다.",
+		"prompt": "`Monoid[Int]`의 `given`이 두 개(합, 곱) 스코프에 있을 때 `combineAll(List(1, 2))`는? 어떻게 해결하고, 컴파일러가 고른 것을 어떻게 확인하나?",
+		"points": [
+			"후보가 둘이면 모호성 컴파일 오류이다. 선언 순서나 이름으로 조용히 고르지 않는다",
+			"이름 붙인 `given`이면 `combineAll(xs)(using intProduct)`처럼 명시하거나, 한쪽만 스코프에 두도록 import를 고른다",
+			"`import M.*`는 `given`을 가져오지 않는다. `import M.given`을 따로 써야 하고, 선택된 값은 `summon[Monoid[Int]]`로 확인한다"
+		],
+		"unlock": [
+			"020-monoid-given",
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "context-bound",
+		"kind": "concept",
+		"topic": "context",
+		"title": "컨텍스트 바운드",
+		"summary": "`[A: Encoder]`는 이름 없는 `(using Encoder[A])`의 줄임이다. 이름이 필요하면 `using`을 직접 쓴다.",
+		"prompt": "`def jsonObject[A: Encoder](...)`는 무엇의 줄임인가? 본문에서 그 인스턴스는 어떻게 쓰고, 이름이 필요하면 어떻게 하나?",
+		"points": [
+			"`[A: Encoder]`는 `(using Encoder[A])`의 줄임이며 인스턴스에는 이름이 없다",
+			"본문에서는 `value.toJson` 같은 확장 메서드나 `summon[Encoder[A]]`가 컴파일러가 넣어 준 인스턴스를 쓴다",
+			"`e.encode(a)`처럼 직접 불러야 하면 `(using e: Encoder[A])`로 이름을 붙인다"
+		],
+		"unlock": [
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "given-composition",
+		"kind": "concept",
+		"topic": "context",
+		"title": "using을 받는 given의 조립",
+		"summary": "`using`을 받는 `given`은 규칙이다. 컴파일러가 규칙을 컴파일 시점에 이어 붙여 인스턴스를 만든다.",
+		"prompt": "`given [A](using Encoder[A]): Encoder[List[A]]`와 `Option`용 규칙, `Int`용 `given`이 있다. `List[Option[Int]]`의 인코더는 누가 어떻게 만드나?",
+		"points": [
+			"컴파일러가 컴파일 시점에 타입을 따라 규칙을 이어 붙인다: `List` 규칙, `Option` 규칙, `Int`용 `given` 순이다",
+			"호출하는 쪽은 인스턴스를 만들거나 넘기지 않는다. 실행 중에 찾는 것이 아니다",
+			"중간 어디든 인스턴스가 없으면 컴파일 오류가 나므로, 빠진 타입을 오류 메시지가 가리킨다"
+		],
+		"unlock": [
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "underscore-placeholder-rules",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "_ 자리표시자의 규칙",
+		"summary": "`_` 하나가 매개변수 하나이고 순서대로 매겨진다. 같은 값을 두 번 쓰려면 이름을 붙인다.",
+		"prompt": "`xs.map(_ * _)`는 왜 컴파일되지 않나? `x => x * x`를 `_`로 줄일 수 있나? `reduce(_ * _)`는 왜 되나?",
+		"points": [
+			"`_`는 등장할 때마다 새 매개변수이다. `_ * _`는 `(a, b) => a * b`라서 인자 하나를 받는 `map`에는 맞지 않다",
+			"같은 인자를 두 번 쓰는 `x => x * x`는 `_`로 줄일 수 없고 이름을 붙여야 한다",
+			"`reduce`는 인자 둘을 받는 함수를 기대하므로 `_ * _`가 맞다"
+		],
+		"answerCode": "xs.map(x => x * x)\nxs.reduce(_ * _)",
+		"verify": "val xs = List(1, 2, 3)\nxs.map(x => x * x) // => List(1, 4, 9)\nxs.reduce(_ * _) // => 6",
+		"unlock": [
+			"001-sum-of-squares"
+		]
+	},
+	{
+		"id": "partialfunction-collect",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "PartialFunction과 collect",
+		"summary": "`collect`는 정의된 곳에만 적용하고 나머지는 버린다. `case _`를 넣으면 그 의미가 사라진다.",
+		"prompt": "`PartialFunction[Int, String]` `romanSmall`(1, 2, 3만 정의)에 `List(1, 5, 2)`를 `collect`로 넘길 때와 `map`으로 넘길 때는? `case _`를 추가하면?",
+		"points": [
+			"`collect`는 `isDefinedAt`이 참인 원소에만 적용하고 나머지는 버려, `filter`와 `map`을 한 번에 한다. 결과는 `List(I, II)`이다",
+			"`map`에 넘기면 정의되지 않은 5에서 `MatchError`가 난다. `lift`로 `Option`을 받을 수도 있다",
+			"`case _ =>`를 넣으면 모든 값에 정의되어 `collect`가 아무것도 거르지 못한다"
+		],
+		"answerCode": "List(1, 5, 2).collect(romanSmall)\nromanSmall.lift(5)",
+		"verify": "val romanSmall: PartialFunction[Int, String] = {\n  case 1 => \"I\"\n  case 2 => \"II\"\n  case 3 => \"III\"\n}\nList(1, 5, 2).collect(romanSmall) // => List(I, II)\nromanSmall.lift(5) // => None",
+		"unlock": [
+			"b-28-roman-small",
+			"001-sum-of-squares"
+		]
+	},
+	{
+		"id": "union-vs-either",
+		"kind": "concept",
+		"topic": "types",
+		"title": "union 타입과 Either",
+		"summary": "union은 값 자체가 해당 타입이고 타입 패턴으로 가른다. `Either`는 감싸서 성공과 실패의 뜻을 싣는다.",
+		"prompt": "`Int | String`과 `Either[Int, String]`은 값의 모양과 분기 방법이 어떻게 다른가? `Int | Int`와 `Either[Int, Int]`는?",
+		"points": [
+			"union 값은 감싸지 않은 `Int` 또는 `String` 자체이고, `case n: Int`로 실제 타입을 검사해 가른다",
+			"`Either`는 `Left`/`Right`로 감싸 의미를 싣고, `map`/`flatMap`으로 오른쪽만 이어 갈 수 있다",
+			"`Int | Int`는 그냥 `Int`라 어느 쪽인지 구별할 수 없지만, `Either[Int, Int]`는 구별된다",
+			"여러 입력 타입을 받는 곳에는 union, 실패를 돌려주는 결과에는 `Either`가 맞다"
+		],
+		"unlock": [
+			"b-25-weight-union",
+			"011-parse-pair"
+		]
+	},
+	{
+		"id": "var-while-to-fold",
+		"kind": "concept",
+		"topic": "folds",
+		"title": "var와 while을 fold로 바꿀 때",
+		"summary": "루프에서 갱신되는 `var`가 누산기의 성분이 되고, 루프 본문은 새 누산기를 계산하는 순수 함수가 된다.",
+		"prompt": "`var best`, `var cur`를 `while` 안에서 갱신하는 코드를 `foldLeft`로 바꿀 때 무엇이 누산기가 되고 초기값과 결과는 어떻게 정하나? `return`으로 빠지던 부분은?",
+		"points": [
+			"반복마다 갱신되고 다음 반복이 읽는 `var`들이 누산기의 성분이다. 둘 이상이면 튜플 `(best, cur)`로 묶는다",
+			"`var`의 초기값이 `foldLeft`의 초기값이다. 루프 본문은 옛 누산기와 원소로 새 누산기를 돌려주는 식이다",
+			"루프가 끝난 뒤에만 읽던 값은 결과 튜플에서 꺼낸다 (`val (_, best) = ...`)",
+			"`return` 조기 종료는 `match`와 가드나 `Option` 누산기, 꼬리 재귀로 바꾼다"
+		],
+		"unlock": [
+			"c-05-log-analyser",
+			"002-longest-increasing-run",
+			"017-balanced-brackets"
+		]
+	},
+	{
+		"id": "fold-thread-accumulator",
+		"kind": "concept",
+		"topic": "folds",
+		"title": "fold 안에서 옛 값을 쓰는 버그",
+		"summary": "`foldLeft` 람다가 바깥의 옛 집합을 쓰면 앞 단계에서 쌓은 결과를 잊는다. 결과를 누산기로 넘겨야 한다.",
+		"prompt": "영역 퍼뜨리기에서 이웃마다 `go(n, seen)`을 불렀더니 방문 칸이 중복되고 조용히 틀렸다. `foldLeft((acc, n) => go(n, acc))`는 무엇이 다른가?",
+		"points": [
+			"`seen`은 호출 시점의 옛 집합이라, 앞 이웃이 방문한 칸을 뒤 이웃이 모른다. 같은 칸을 여러 번 방문한다",
+			"`foldLeft`의 누산기 `acc`는 앞 이웃이 돌려준 방문 집합을 다음 이웃에게 넘긴다",
+			"상태를 결과로 돌려받아 다음에 넘기는 것은 난수 `RNG`를 이어 쓰는 것과 같은 규칙이다. 컴파일은 되고 값만 틀려서 작은 입력을 손으로 따라가야 보인다"
+		],
+		"unlock": [
+			"c-06-island-regions"
+		]
+	},
+	{
+		"id": "match-case-order",
+		"kind": "concept",
+		"topic": "pattern",
+		"title": "match 케이스의 순서와 | 패턴",
+		"summary": "케이스는 위에서부터 평가된다. 가드 케이스를 일반 케이스 앞에 두면 가로채고, `|` 패턴은 변수를 묶지 못한다.",
+		"prompt": "`charKind`에서 `case x if x >= 'a' && x <= 'z'`를 모음 케이스 `case 'a' | 'e' | ...`보다 먼저 두면 `'e'`는? `'a' | 'e'`에서 변수를 묶을 수 있나?",
+		"points": [
+			"가드 케이스가 먼저면 `'e'`도 `'a'..'z'`에 걸려 모음이 아니라 자음으로 분류된다. 컴파일러는 가드를 분석하지 않아 경고도 없다",
+			"더 구체적인 케이스를 위에 둔다. 일반 케이스나 `case _`를 위에 두면 뒤가 도달 불가이다",
+			"`'a' | 'e'` 같은 대안 패턴은 변수를 바인딩할 수 없다. 값이 필요하면 가드로 쓴다"
+		],
+		"unlock": [
+			"b-13-char-kind",
+			"b-12-first-two",
+			"003-collapse-duplicates"
+		]
+	},
+	{
+		"id": "tuple-lambda-untupling",
+		"kind": "concept",
+		"topic": "functions",
+		"title": "Scala 3의 튜플 인자 풀기",
+		"summary": "Scala 3는 최상위 튜플을 `(a, b) =>`로 바로 풀어 준다. 중첩 튜플은 여전히 `case` 패턴이 필요하다.",
+		"prompt": "`xs.zip(ys).map((a, b) => a + b)`가 Scala 3에서 되는 이유는? `foldLeft((0, 0))`의 누산기 튜플과 원소는 왜 `case ((best, cur), x) =>`로 받나?",
+		"points": [
+			"Scala 3는 튜플 하나를 받을 자리에 인자 n개짜리 람다를 쓰면 자동으로 풀어 준다. Scala 2는 `case (a, b) =>`가 필요했다",
+			"`foldLeft`의 함수는 `(누산기, 원소)` 두 인자이고 누산기가 그 안의 튜플이라, 그 안쪽 튜플은 패턴으로 풀어야 한다",
+			"`_._1` 같은 접근보다 풀어 쓴 이름이 읽기 쉽다"
+		],
+		"unlock": [
+			"006-arithmetic-progression",
+			"002-longest-increasing-run",
+			"005-top-three-words"
+		]
+	},
+	{
+		"id": "zip-drop1-vs-tail-sliding",
+		"kind": "concept",
+		"topic": "collections",
+		"title": "이웃 쌍: zip, tail, sliding",
+		"summary": "`zip(drop(1))`은 빈 리스트와 원소 하나에서도 안전하다. `tail`은 던지고 `sliding(2)`는 창이 하나 나온다.",
+		"prompt": "이웃한 쌍을 만들 때 `xs.zip(xs.drop(1))`은 `Nil`이나 `List(7)`에서 안전한데 `xs.tail`과 `sliding(2)`는 각각 어떻게 되나?",
+		"points": [
+			"`tail`은 빈 리스트에서 예외를 던지고, `drop(1)`은 `Nil`을 돌려주므로 `zip`이 빈 쌍을 만든다",
+			"`zip`은 짧은 쪽에 맞춰 자르므로 원소 하나에서도 쌍이 0개이고, 그 위의 `forall`은 `true`이다",
+			"`List(7).sliding(2)`는 길이 1짜리 창 하나를 내서 `w(1)`이 터진다"
+		],
+		"unlock": [
+			"006-arithmetic-progression",
+			"b-06-is-sorted"
+		]
+	}
+]

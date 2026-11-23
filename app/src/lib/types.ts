@@ -39,6 +39,7 @@ export type Offer = {
 
 /** `/` load. If an attempt is active, load redirects to /attempt/[id] instead. */
 export type HomeData = {
+	memoDue: number; // cards in today's memorisation plan (due + new), for the "오늘 복습 N장" link
 	handle: string | null;
 	problemCount: number;
 	lastSyncAt: number | null;
@@ -162,3 +163,90 @@ export type LangLookupResponse = { recorded: boolean };
 
 /** `/lang/cheatsheet` load. `passedBy[entryId]`: problems already passed that list the entry in `refs` (others would leak hints). */
 export type LangCheatData = { entries: CheatEntry[]; passedBy: Record<string, { id: string; title: string }[]> };
+
+
+// ---------------------------------------------------------------------------
+// Memorisation (암기): cards recalled and self-graded, checks answered by tapping. Content: memo/<lang>/,
+// scheduling: src/lib/core/memo-sched.ts (replayed from the append-only memo_reviews table, nothing derived is stored).
+// Everything that reveals an answer (points, answerCode, pattern title, correct option/order, whys) is sent only by the
+// reveal / answer endpoints below, never in page data.
+import type { NoteStatus } from './core/memo-sched.ts';
+
+export type MemoKind = 'concept' | 'recognize' | 'steps' | 'line' | 'syntax'; // syntax = synthetic card from a looked-up cheat sheet entry (id `syntax-<entryId>`)
+
+/** A card as shown with its question. No answer content. */
+export type MemoCardView = {
+	id: string;
+	kind: MemoKind;
+	kindLabel: string;
+	prompt: string; // inline `code` allowed
+	promptCode: string | null;
+	source: string | null; // "책 3장 …에서" / "유형: …" / null (never the pattern title for recognize cards)
+	limitSec: number;
+};
+
+/** The "오늘 복습" plan: due reviews plus at most 4 new cards, split by kind (process = recognize + steps + line). */
+export type MemoHomeData = {
+	total: number;
+	split: { concept: number; process: number; syntax: number };
+	sessionSize: number; // what "복습 시작" takes: at most 12
+	minutes: number;
+	checks: number; // checks the next check session would hold (0–3)
+	shaky: number; // 흔들림 cards, for the notes link
+	redo: MemoRedo[];
+	weekDays: number; // distinct days this week with a review
+	weekGoal: number;
+	openItems: number; // unlocked cards + checks (0 = nothing available at all)
+};
+
+/** A problem whose 풀이 과정 card was rated 1 on its two latest reviews. Link: /lang/<problemId>. */
+export type MemoRedo = { problemId: string; title: string; cardTitle: string };
+
+/** `/memo/review` load. */
+export type MemoReviewData = { cards: MemoCardView[] };
+// POST /memo/review/reveal  { id } -> MemoRevealResponse   (404 for unknown or locked cards)
+// POST /memo/review/answer  { id, ticked: number[] /* indexes into points */, elapsedMs } -> MemoAnswerResponse (records the review)
+export type MemoRevealResponse = {
+	points: string[];
+	answerCode: string | null;
+	patternTitle: string | null; // recognize / steps only
+	entry: CheatEntry | null; // syntax cards: the cheat sheet entry
+	next: string[]; // next review in words, indexed by how many points get ticked (0..points.length)
+};
+export type MemoAnswerResponse = { rating: 1 | 2 | 3; word: string; next: string };
+
+export type MemoCheckKind = 'order' | 'trace' | 'bug' | 'approach';
+/** A check as shown. order: `lines` = the pool (shuffled, distractors mixed in); bug: `lines` = the code lines; trace/approach: `options` (shuffled). */
+export type MemoCheckView = {
+	id: string;
+	kind: MemoCheckKind;
+	kindLabel: string;
+	prompt: string;
+	limitSec: number;
+	code: string | null; // trace
+	given: string | null; // order / bug: fixed code above the lines
+	lines: string[];
+	options: string[];
+};
+/** `/memo/check` load. */
+export type MemoCheckData = { checks: MemoCheckView[] };
+// POST /memo/check/answer { id, choice, elapsedMs } -> MemoCheckResponse
+//   choice: order = displayed pool indexes in the chosen order; trace/approach = displayed option index; bug = line index.
+//   Only the first submission of a check within an hour is recorded (rating 3 right / 1 wrong; `recorded` says so). Retries are judged but never recorded.
+// POST /memo/check/solution { id } -> MemoSolutionResponse (order only; 403 until an answer has been recorded)
+export type MemoCheckResponse = {
+	correct: boolean;
+	recorded: boolean;
+	message: string | null; // order: why it failed (distractor why, failing case, or compiler line)
+	why: string | null; // bug: why; trace/approach: why of the tapped option
+	correctIndex: number | null; // trace/approach: displayed index of the right option
+	whys: string[]; // trace/approach: why of every displayed option
+	bugIndex: number | null;
+	fixed: string | null;
+};
+export type MemoSolutionResponse = { order: number[] };
+
+/** `/memo/notes` load. */
+export type MemoNoteRow = { id: string; title: string; summary: string | null /* null while locked */; status: NoteStatus; locked: boolean };
+export type MemoNoteGroup = { key: string; heading: string; sub: string | null; steps: string[]; rows: MemoNoteRow[] };
+export type MemoNotesData = { groups: MemoNoteGroup[]; shaky: number };

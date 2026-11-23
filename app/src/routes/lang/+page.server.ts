@@ -1,8 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as l from '#lib/server/lang.ts';
-import type { LangHomeData } from '#lib/types.ts';
+import { redoProblems } from '#lib/server/memo.ts';
+import type { LangHomeData, MemoRedo } from '#lib/types.ts';
 
-export const load = async (): Promise<LangHomeData> => l.listView();
+/** `redo`: problems whose 풀이 과정 card failed twice in a row (see /memo). */
+export const load = async (): Promise<LangHomeData & { redo: MemoRedo[] }> => ({ ...l.listView(), redo: redoProblems() });
 
 export const actions = {
 	start: async ({ request }) => {

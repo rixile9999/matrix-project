@@ -1,0 +1,730 @@
+[
+	{
+		"id": "trace-scanright-order",
+		"kind": "trace",
+		"topic": "folds",
+		"prompt": "둘째 줄의 결과는?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 3)\nxs.scanRight(0)(_ + _)",
+		"options": [
+			{
+				"text": "List(0, 3, 5, 6)",
+				"why": "오른쪽에서 쌓는다고 결과 순서까지 뒤집힌다고 착각했다. 결과는 입력 자리 그대로 놓인다."
+			},
+			{
+				"text": "List(6, 5, 3)",
+				"why": "scanRight도 초기값을 결과에 남긴다. 결과는 입력보다 하나 길다."
+			},
+			{
+				"text": "List(0, 1, 3, 6)",
+				"why": "그것은 scanLeft의 결과다. 방향이 다르면 값도 자리도 다르다."
+			},
+			{
+				"text": "List(6, 5, 3, 0)",
+				"why": "각 자리는 그 자리부터 끝까지의 합이다: 1+2+3, 2+3, 3, 그리고 초기값 0이 마지막에 남는다."
+			}
+		],
+		"answer": 3,
+		"verify": "val xs = List(1, 2, 3)\nxs.scanRight(0)(_ + _) // => List(6, 5, 3, 0)"
+	},
+	{
+		"id": "trace-foldright-minus",
+		"kind": "trace",
+		"topic": "folds",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(8, 3, 1)\nxs.foldRight(0)(_ - _)",
+		"options": [
+			{
+				"text": "-12",
+				"why": "그것은 foldLeft다: ((0-8)-3)-1. foldRight는 연산자를 오른쪽으로 결합한다."
+			},
+			{
+				"text": "4",
+				"why": "8 - 3 - 1처럼 왼쪽으로 결합했다. 뺄셈은 결합법칙이 없어서 방향이 값을 바꾼다."
+			},
+			{
+				"text": "6",
+				"why": "foldRight는 오른쪽부터 묶는다: 8 - (3 - (1 - 0)) = 8 - 2."
+			},
+			{
+				"text": "10",
+				"why": "부호를 잘못 읽었다. 8 - (3 - 1)은 8 - 3 + 1이지 8 + 3 - 1이 아니다."
+			}
+		],
+		"answer": 2,
+		"verify": "val xs = List(8, 3, 1)\nxs.foldRight(0)(_ - _) // => 6"
+	},
+	{
+		"id": "trace-fold-cons-direction",
+		"kind": "trace",
+		"topic": "folds",
+		"prompt": "(a, b)의 값은?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 3)\nval a = xs.foldLeft(List.empty[Int])((acc, x) => x :: acc)\nval b = xs.foldRight(List.empty[Int])((x, acc) => x :: acc)\n(a, b)",
+		"options": [
+			{
+				"text": "(List(1, 2, 3),List(3, 2, 1))",
+				"why": "방향 이름과 결과를 반대로 외웠다. 왼쪽에서 앞에 붙이면 뒤집힌다."
+			},
+			{
+				"text": "(List(3, 2, 1),List(1, 2, 3))",
+				"why": "foldLeft는 앞에서부터 하나씩 맨 앞에 붙이니 뒤집히고, foldRight는 뒤에서부터 붙이니 원래 순서가 된다."
+			},
+			{
+				"text": "(List(1, 2, 3),List(1, 2, 3))",
+				"why": "foldLeft로 `::`를 쓰면 순서가 보존된다고 착각했다. 먼저 본 원소가 가장 안쪽(끝)으로 밀린다."
+			},
+			{
+				"text": "(List(3, 2, 1),List(3, 2, 1))",
+				"why": "foldRight에 `x :: acc`를 쓰면 뒤집힌다고 착각했다. 이것은 리스트를 그대로 재구성하는 정석이다."
+			}
+		],
+		"answer": 1,
+		"verify": "val xs = List(1, 2, 3)\nval a = xs.foldLeft(List.empty[Int])((acc, x) => x :: acc)\nval b = xs.foldRight(List.empty[Int])((x, acc) => x :: acc)\n(a, b) // => (List(3, 2, 1),List(1, 2, 3))"
+	},
+	{
+		"id": "trace-span-vs-partition",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 5, 1, 2)\nxs.span(_ < 3)",
+		"options": [
+			{
+				"text": "(List(1, 2),List(5, 1, 2))",
+				"why": "span은 조건이 처음 깨지는 곳에서 한 번만 가른다. 뒤쪽 나머지는 조건과 무관하게 전부 둘째 쪽이다."
+			},
+			{
+				"text": "(List(1, 2, 1, 2),List(5))",
+				"why": "그것은 partition이다. partition은 위치와 상관없이 조건으로 전체를 나눈다."
+			},
+			{
+				"text": "(List(1, 2),List(5))",
+				"why": "앞부분만 떼는 것은 맞지만 나머지를 다시 걸러 버렸다. span의 둘째 쪽은 걸러지지 않는다."
+			},
+			{
+				"text": "(List(1, 2, 1, 2),List(5, 1, 2))",
+				"why": "첫째는 filter, 둘째는 dropWhile을 섞었다. span은 하나의 경계로 가른다."
+			}
+		],
+		"answer": 0,
+		"verify": "val xs = List(1, 2, 5, 1, 2)\nxs.span(_ < 3) // => (List(1, 2),List(5, 1, 2))"
+	},
+	{
+		"id": "trace-split-trailing-empty",
+		"kind": "trace",
+		"topic": "strings",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val s = \",a,b,,\"\n(s.split(\",\").length, s.split(\",\", -1).length)",
+		"options": [
+			{
+				"text": "(2,4)",
+				"why": "앞쪽 빈 문자열도 버린다고 착각했다. 버려지는 것은 뒤쪽 빈 문자열뿐이다."
+			},
+			{
+				"text": "(3,3)",
+				"why": "limit -1은 뒤쪽 빈 문자열을 보존한다. 아무것도 바꾸지 않는 것이 아니다."
+			},
+			{
+				"text": "(5,5)",
+				"why": "기본 split이 빈 조각을 전부 남긴다고 착각했다. 뒤쪽 것은 기본으로 사라진다."
+			},
+			{
+				"text": "(3,5)",
+				"why": "기본 split은 뒤쪽 빈 문자열만 버리고 앞쪽은 남긴다(\"\", a, b). limit -1이면 모두 남아 5개다."
+			}
+		],
+		"answer": 3,
+		"verify": "val s = \",a,b,,\"\n(s.split(\",\").length, s.split(\",\", -1).length) // => (3,5)"
+	},
+	{
+		"id": "trace-grouped-sliding-count",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 3, 4, 5)\n(xs.grouped(2).size, xs.sliding(2).size)",
+		"options": [
+			{
+				"text": "(2,4)",
+				"why": "grouped는 크기가 모자란 마지막 묶음도 돌려준다. 버리지 않는다."
+			},
+			{
+				"text": "(3,4)",
+				"why": "grouped(2)는 마지막에 짧은 묶음(5)이 남아 3개, sliding(2)는 n-1개의 창이라 4개다."
+			},
+			{
+				"text": "(3,5)",
+				"why": "sliding(k)의 창은 n-k+1개다. 끝에서 짧아지는 창은 만들지 않는다."
+			},
+			{
+				"text": "(3,3)",
+				"why": "sliding을 grouped처럼 겹치지 않는 묶음으로 착각했다. 창은 한 칸씩 밀린다."
+			}
+		],
+		"answer": 1,
+		"verify": "val xs = List(1, 2, 3, 4, 5)\n(xs.grouped(2).size, xs.sliding(2).size) // => (3,4)"
+	},
+	{
+		"id": "trace-zipall-defaults",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 3)\nxs.zipAll(List(\"a\"), 0, \"-\")",
+		"options": [
+			{
+				"text": "List((1,a))",
+				"why": "그것은 zip의 결과다. zipAll은 짧은 쪽을 기본값으로 채워 긴 쪽을 모두 남긴다."
+			},
+			{
+				"text": "List((1,a), (0,-), (0,-))",
+				"why": "기본값 인자를 뒤바꿨다. 첫 기본값은 이쪽 리스트가 짧을 때 쓰인다."
+			},
+			{
+				"text": "List((1,a), (2,-), (3,-))",
+				"why": "모자란 쪽을 채우는 기본값은 인자 순서대로 이쪽(0), 저쪽(\"-\")이다. 여기선 저쪽이 짧으니 \"-\"로 채운다."
+			},
+			{
+				"text": "List((1,a), (2,a), (3,a))",
+				"why": "짧은 쪽의 마지막 값이 반복되는 것이 아니다. 지정한 기본값으로 채운다."
+			}
+		],
+		"answer": 2,
+		"verify": "val xs = List(1, 2, 3)\nxs.zipAll(List(\"a\"), 0, \"-\") // => List((1,a), (2,-), (3,-))"
+	},
+	{
+		"id": "trace-groupby-lookup",
+		"kind": "trace",
+		"topic": "maps",
+		"prompt": "m('b')의 값은?",
+		"unlock": [],
+		"code": "val words = List(\"apple\", \"avocado\", \"banana\", \"blueberry\", \"cherry\")\nval m = words.groupBy(_.head).view.mapValues(_.map(_.length).sum).toMap\nm('b')",
+		"options": [
+			{
+				"text": "15",
+				"why": "groupBy는 키마다 원소 전체의 리스트를 모은다. 'b' 묶음은 banana(6)와 blueberry(9)라 합이 15다."
+			},
+			{
+				"text": "2",
+				"why": "원소 수를 센 값이다. mapValues에서 길이를 합했으므로 개수가 아니라 길이의 합이다."
+			},
+			{
+				"text": "6",
+				"why": "키당 첫 원소만 남는다고 착각했다. groupBy는 같은 키의 원소를 모두 모은다."
+			},
+			{
+				"text": "9",
+				"why": "키당 마지막 원소만 남는다고 착각했다. toMap의 덮어쓰기와 groupBy를 혼동했다."
+			}
+		],
+		"answer": 0,
+		"verify": "val words = List(\"apple\", \"avocado\", \"banana\", \"blueberry\", \"cherry\")\nval m = words.groupBy(_.head).view.mapValues(_.map(_.length).sum).toMap\nm('b') // => 15"
+	},
+	{
+		"id": "trace-sortby-stable-desc",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val ps = List((\"c\", 2), (\"a\", 1), (\"b\", 2))\nps.sortBy((name, n) => -n)",
+		"options": [
+			{
+				"text": "List((b,2), (c,2), (a,1))",
+				"why": "키가 같으면 이름순으로 정렬된다고 착각했다. 안정 정렬은 원래 순서를 지킬 뿐 다른 기준을 쓰지 않는다."
+			},
+			{
+				"text": "List((c,2), (b,2), (a,1))",
+				"why": "sortBy는 안정 정렬이라 키가 같은 (c,2), (b,2)는 원래 순서(c 다음 b)를 유지한다."
+			},
+			{
+				"text": "List((a,1), (c,2), (b,2))",
+				"why": "키의 부호를 무시해 오름차순으로 정렬했다. -n은 큰 값이 앞에 오게 한다."
+			},
+			{
+				"text": "List((a,1), (b,2), (c,2))",
+				"why": "내림차순 결과를 통째로 뒤집은 것이다. 같은 키의 원래 순서가 뒤집히지는 않는다."
+			}
+		],
+		"answer": 1,
+		"verify": "val ps = List((\"c\", 2), (\"a\", 1), (\"b\", 2))\nps.sortBy((name, n) => -n) // => List((c,2), (b,2), (a,1))"
+	},
+	{
+		"id": "trace-distinct-order",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(3, 1, 3, 2, 1)\nxs.distinct",
+		"options": [
+			{
+				"text": "List(1, 2, 3)",
+				"why": "Set처럼 정렬되어 나온다고 착각했다. distinct는 정렬하지 않는다."
+			},
+			{
+				"text": "List(2, 3, 1)",
+				"why": "마지막 등장을 남긴다고 착각했다. 남는 것은 첫 등장이다."
+			},
+			{
+				"text": "List(3, 1, 2)",
+				"why": "distinct는 각 값의 첫 등장만 남기고 순서를 유지한다."
+			},
+			{
+				"text": "List(2)",
+				"why": "중복된 값을 전부 지우고 유일한 값만 남긴다고 착각했다. 중복은 하나로 합쳐질 뿐이다."
+			}
+		],
+		"answer": 2,
+		"verify": "val xs = List(3, 1, 3, 2, 1)\nxs.distinct // => List(3, 1, 2)"
+	},
+	{
+		"id": "trace-option-chain",
+		"kind": "trace",
+		"topic": "errors",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val a = Some(3)\na.filter(_ > 5).orElse(Some(7)).map(_ * 2)",
+		"options": [
+			{
+				"text": "Some(14)",
+				"why": "filter가 None을 만들지만 orElse가 Some(7)로 되살리고, map이 14로 만든다."
+			},
+			{
+				"text": "Some(6)",
+				"why": "filter를 무시했다. 3은 5보다 크지 않아 None이 된다."
+			},
+			{
+				"text": "None",
+				"why": "None이 이후 연산을 모두 죽인다고 착각했다. orElse는 None일 때 대안으로 바꾼다."
+			},
+			{
+				"text": "Some(7)",
+				"why": "orElse 뒤의 map을 빠뜨렸다. 대안으로 바뀐 Some(7)에도 map이 적용된다."
+			}
+		],
+		"answer": 0,
+		"verify": "val a = Some(3)\na.filter(_ > 5).orElse(Some(7)).map(_ * 2) // => Some(14)"
+	},
+	{
+		"id": "trace-flatten-options",
+		"kind": "trace",
+		"topic": "errors",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(Some(1), None, Some(3))\nxs.flatten",
+		"options": [
+			{
+				"text": "List(1, 0, 3)",
+				"why": "None이 기본값 0으로 바뀐다고 착각했다. None은 빈 컨테이너로 취급되어 사라진다."
+			},
+			{
+				"text": "List(Some(1), Some(3))",
+				"why": "None만 걸러지고 Some이 남는다고 착각했다. flatten은 한 겹을 벗긴다."
+			},
+			{
+				"text": "List(1, 3)",
+				"why": "List[Option]을 flatten하면 Some은 안의 값이 되고 None은 사라진다."
+			},
+			{
+				"text": "List(1, null, 3)",
+				"why": "None이 null로 남는다고 착각했다. Option은 null 대신 쓰는 것이라 자리를 만들지 않는다."
+			}
+		],
+		"answer": 2,
+		"verify": "val xs = List(Some(1), None, Some(3))\nxs.flatten // => List(1, 3)"
+	},
+	{
+		"id": "trace-for-option-none",
+		"kind": "trace",
+		"topic": "errors",
+		"prompt": "(r, n)의 값은?",
+		"unlock": [],
+		"code": "var n = 0\nval r = for a <- Option(1); b <- Option.empty[Int]; c <- { n += 1; Option(3) } yield a + b + c\n(r, n)",
+		"options": [
+			{
+				"text": "(None,1)",
+				"why": "결과가 None인 것은 맞지만 뒤쪽 생성기도 일단 평가된다고 착각했다. flatMap 안쪽 함수는 호출되지 않는다."
+			},
+			{
+				"text": "(None,0)",
+				"why": "b가 None이면 for는 거기서 끝난다. c 쪽 식은 평가되지 않아 n은 그대로 0이다."
+			},
+			{
+				"text": "(Some(4),1)",
+				"why": "None을 0처럼 더한다고 착각했다. None이 하나라도 있으면 전체가 None이다."
+			},
+			{
+				"text": "(Some(1),0)",
+				"why": "None 이후를 건너뛰되 a만으로 결과를 만든다고 착각했다. yield 식은 모든 값이 있어야 실행된다."
+			}
+		],
+		"answer": 1,
+		"verify": "var n = 0\nval r = for a <- Option(1); b <- Option.empty[Int]; c <- { n += 1; Option(3) } yield a + b + c\n(r, n) // => (None,0)"
+	},
+	{
+		"id": "trace-for-list-guard",
+		"kind": "trace",
+		"topic": "collections",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": [],
+		"code": "val r = for x <- List(1, 2, 3) if x % 2 == 1; y <- List(10, 20) yield x + y\nr",
+		"options": [
+			{
+				"text": "List(11, 13, 21, 23)",
+				"why": "y를 바깥으로 착각했다. 먼저 쓴 생성기가 바깥 루프다."
+			},
+			{
+				"text": "List(11, 21, 12, 22, 13, 23)",
+				"why": "if가 y 쪽에만 걸린다고 착각해 짝수 x도 남겼다. 가드는 바로 앞 생성기의 값을 거른다."
+			},
+			{
+				"text": "List(12, 22)",
+				"why": "가드의 조건을 뒤집어 짝수를 남겼다. `x % 2 == 1`은 홀수만 통과시킨다."
+			},
+			{
+				"text": "List(11, 21, 13, 23)",
+				"why": "바깥 x가 홀수일 때만 안쪽 y를 돈다: x=1이면 11, 21, x=3이면 13, 23. 바깥 생성기가 먼저 정해진다."
+			}
+		],
+		"answer": 3,
+		"verify": "val r = for x <- List(1, 2, 3) if x % 2 == 1; y <- List(10, 20) yield x + y\nr // => List(11, 21, 13, 23)"
+	},
+	{
+		"id": "trace-either-map-left",
+		"kind": "trace",
+		"topic": "errors",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val e: Either[String, Int] = Left(\"boom\")\ne.map(_ + 1)",
+		"options": [
+			{
+				"text": "Left(boom1)",
+				"why": "map이 Left의 값에 적용된다고 착각했다. 문자열에 1을 붙이는 일은 일어나지 않는다."
+			},
+			{
+				"text": "Right(1)",
+				"why": "Left를 0 같은 기본값으로 본다고 착각했다. Left는 값을 만들지 않고 그대로 남는다."
+			},
+			{
+				"text": "Left(boom)",
+				"why": "Either는 오른쪽 편향이다. map은 Right 안의 값에만 적용되고 Left는 그대로 통과한다."
+			},
+			{
+				"text": "Right(boom)",
+				"why": "map이 Left를 Right로 바꾼다고 착각했다. 쪽이 바뀌는 것은 swap뿐이다."
+			}
+		],
+		"answer": 2,
+		"verify": "val e: Either[String, Int] = Left(\"boom\")\ne.map(_ + 1) // => Left(boom)"
+	},
+	{
+		"id": "trace-tuple-pattern-first",
+		"kind": "trace",
+		"topic": "pattern",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": [],
+		"code": "def where(p: (Int, Int)) = p match\n  case (0, y) => s\"y-axis $y\"\n  case (x, 0) => s\"x-axis $x\"\n  case (x, y) => s\"point $x,$y\"\nwhere((0, 0))",
+		"options": [
+			{
+				"text": "y-axis 0",
+				"why": "(0, 0)은 첫째와 둘째 case 모두에 맞지만 위에서부터 처음 맞는 case 하나만 실행된다."
+			},
+			{
+				"text": "x-axis 0",
+				"why": "더 구체적인 case가 이긴다고 착각했다. 패턴 매칭은 위에서부터 처음 맞는 것을 쓴다."
+			},
+			{
+				"text": "point 0,0",
+				"why": "일반 case가 먼저 쓰인다고 착각했다. 마지막 case는 앞이 모두 실패했을 때만 도달한다."
+			},
+			{
+				"text": "y-axis 0 x-axis 0",
+				"why": "맞는 case를 모두 실행한다고 착각했다. 매칭은 하나의 case에서 끝난다."
+			}
+		],
+		"answer": 0,
+		"verify": "def where(p: (Int, Int)) = p match\n  case (0, y) => s\"y-axis $y\"\n  case (x, 0) => s\"x-axis $x\"\n  case (x, y) => s\"point $x,$y\"\nwhere((0, 0)) // => y-axis 0"
+	},
+	{
+		"id": "trace-at-binding",
+		"kind": "trace",
+		"topic": "pattern",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": [],
+		"code": "val r = List(1, 2, 3) match\n  case all @ (h :: t) => (h, all.length, t.length)\n  case _ => (0, 0, 0)\nr",
+		"options": [
+			{
+				"text": "(1,2,2)",
+				"why": "all이 꼬리를 묶는다고 착각했다. `@`는 오른쪽 패턴 전체 값에 이름을 붙인다."
+			},
+			{
+				"text": "(1,3,3)",
+				"why": "꼬리에 머리가 포함된다고 착각했다. `h :: t`에서 t는 머리를 뺀 나머지다."
+			},
+			{
+				"text": "(1,3,2)",
+				"why": "`all @ 패턴`은 패턴 전체에 맞은 값을 all로 묶는다. all은 원래 리스트(3개)고 t는 꼬리(2개)다."
+			},
+			{
+				"text": "(1,1,2)",
+				"why": "all이 머리 하나만 묶는다고 착각했다. 괄호 안 패턴 전체가 대상이다."
+			}
+		],
+		"answer": 2,
+		"verify": "val r = List(1, 2, 3) match\n  case all @ (h :: t) => (h, all.length, t.length)\n  case _ => (0, 0, 0)\nr // => (1,3,2)"
+	},
+	{
+		"id": "trace-lazylist-take-count",
+		"kind": "trace",
+		"topic": "lazy",
+		"prompt": "(firstTwo, counter)의 값은?",
+		"unlock": [],
+		"code": "var counter = 0\nval ll = LazyList.from(1).map { x => counter += 1; x * 2 }\nval firstTwo = ll.take(2).toList\n(firstTwo, counter)",
+		"options": [
+			{
+				"text": "(List(2, 4),0)",
+				"why": "LazyList라서 아무것도 안 돈다고 착각했다. toList가 강제로 평가시킨다."
+			},
+			{
+				"text": "(List(2, 4),2)",
+				"why": "toList가 필요한 두 원소만 계산시킨다. 세 번째 원소는 건드리지 않아 map 함수는 정확히 두 번 돈다."
+			},
+			{
+				"text": "(List(2, 4),3)",
+				"why": "끝을 확인하려고 한 개를 더 미리 본다고 착각했다. take(2)는 둘만 만든다."
+			},
+			{
+				"text": "(List(2, 4),1)",
+				"why": "머리 하나만 평가된다고 착각했다. take(2)가 필요로 하는 두 원소를 모두 평가한다."
+			}
+		],
+		"answer": 1,
+		"verify": "var counter = 0\nval ll = LazyList.from(1).map { x => counter += 1; x * 2 }\nval firstTwo = ll.take(2).toList\n(firstTwo, counter) // => (List(2, 4),2)"
+	},
+	{
+		"id": "trace-byname-many",
+		"kind": "trace",
+		"topic": "functions",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": [],
+		"code": "var calls = 0\ndef next(): Int = { calls += 1; calls }\ndef thrice(x: => Int) = List(x, x, x).sum\n(thrice(next()), calls)",
+		"options": [
+			{
+				"text": "(3,1)",
+				"why": "by-name을 한 번만 평가하는 lazy val처럼 생각했다. 매번 다시 평가된다."
+			},
+			{
+				"text": "(3,3)",
+				"why": "호출은 세 번으로 맞췄지만 매번 1이 나온다고 착각했다. calls가 오르므로 값은 1, 2, 3이다."
+			},
+			{
+				"text": "(0,0)",
+				"why": "쓰이지 않는 줄 알고 평가가 안 된다고 착각했다. x를 세 번 쓰므로 세 번 평가된다."
+			},
+			{
+				"text": "(6,3)",
+				"why": "by-name 인자는 쓸 때마다 다시 평가된다. next()가 3번 돌아 1+2+3=6, 호출 횟수는 3이다."
+			}
+		],
+		"answer": 3,
+		"verify": "var calls = 0\ndef next(): Int = { calls += 1; calls }\ndef thrice(x: => Int) = List(x, x, x).sum\n(thrice(next()), calls) // => (6,3)"
+	},
+	{
+		"id": "trace-placeholder-fold",
+		"kind": "trace",
+		"topic": "functions",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val xs = List(1, 2, 3)\nxs.foldLeft(1)(_ + _ * 2)",
+		"options": [
+			{
+				"text": "13",
+				"why": "`_ + _ * 2`는 (acc, x) => acc + x * 2다. `*`가 먼저라 1 + 2 + 4 + 6 = 13."
+			},
+			{
+				"text": "30",
+				"why": "(acc + x) * 2로 묶었다. 밑줄이 우선순위를 바꾸지 않고 `*`가 `+`보다 먼저다."
+			},
+			{
+				"text": "7",
+				"why": "`* 2`를 무시했다. 두 번째 밑줄에만 2가 곱해진다."
+			},
+			{
+				"text": "14",
+				"why": "초기값까지 합친 뒤 마지막에 2를 곱한 것이다. 곱은 매 원소에 적용된다."
+			}
+		],
+		"answer": 0,
+		"verify": "val xs = List(1, 2, 3)\nxs.foldLeft(1)(_ + _ * 2) // => 13"
+	},
+	{
+		"id": "trace-int-div-mod-neg",
+		"kind": "trace",
+		"topic": "syntax",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "(-7 / 2, -7 % 2)",
+		"options": [
+			{
+				"text": "(-4,1)",
+				"why": "Python처럼 내림 나눗셈을 가정했다. JVM은 0 방향으로 자른다."
+			},
+			{
+				"text": "(-4,-1)",
+				"why": "몫만 내림으로 착각했다. 몫이 -3이면 나머지는 -7 - (-6) = -1이다."
+			},
+			{
+				"text": "(-3,1)",
+				"why": "나머지가 항상 양수라고 착각했다. 부호는 나뉘는 수를 따른다."
+			},
+			{
+				"text": "(-3,-1)",
+				"why": "Scala의 정수 나눗셈은 0 쪽으로 버리고, 나머지의 부호는 나뉘는 수를 따른다."
+			}
+		],
+		"answer": 3,
+		"verify": "(-7 / 2, -7 % 2) // => (-3,-1)"
+	},
+	{
+		"id": "trace-int-minvalue-abs",
+		"kind": "trace",
+		"topic": "syntax",
+		"prompt": "값은?",
+		"unlock": [],
+		"code": "Int.MinValue.abs",
+		"options": [
+			{
+				"text": "2147483648",
+				"why": "abs는 항상 양수라고 착각했다. 2147483648은 Int 범위를 넘는다."
+			},
+			{
+				"text": "-2147483648",
+				"why": "Int는 -2147483648의 양수 짝이 없다. abs도 넘쳐서 자기 자신으로 돌아온다."
+			},
+			{
+				"text": "2147483647",
+				"why": "한 칸 모자란 최댓값으로 나온다고 착각했다. 실제로는 부호만 넘쳐 같은 값이 된다."
+			},
+			{
+				"text": "0",
+				"why": "넘치면 0이 된다고 착각했다. 비트가 그대로여서 같은 수가 나온다."
+			}
+		],
+		"answer": 1,
+		"verify": "Int.MinValue.abs // => -2147483648"
+	},
+	{
+		"id": "trace-string-repeat-mkstring",
+		"kind": "trace",
+		"topic": "strings",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val s = \"ab\" * 2\ns.mkString(\"[\", \"-\", \"]\")",
+		"options": [
+			{
+				"text": "[a-b-a-b]",
+				"why": "`\"ab\" * 2`는 \"abab\"이고, 문자열에 mkString을 쓰면 글자 하나하나가 원소다."
+			},
+			{
+				"text": "[ab-ab]",
+				"why": "`*`로 만든 단위를 원소로 본다고 착각했다. mkString은 문자 단위로 구분자를 넣는다."
+			},
+			{
+				"text": "[a-a-b-b]",
+				"why": "`*`가 글자마다 반복한다고 착각했다. 문자열 전체가 반복된다."
+			},
+			{
+				"text": "[abab]",
+				"why": "문자열에는 구분자가 들어가지 않는다고 착각했다. String도 Char의 시퀀스다."
+			}
+		],
+		"answer": 0,
+		"verify": "val s = \"ab\" * 2\ns.mkString(\"[\", \"-\", \"]\") // => [a-b-a-b]"
+	},
+	{
+		"id": "trace-range-until-by",
+		"kind": "trace",
+		"topic": "syntax",
+		"prompt": "둘째 줄의 값은?",
+		"unlock": [],
+		"code": "val r = 0 until 9 by 3\nr.toList",
+		"options": [
+			{
+				"text": "List(0, 3, 6, 9)",
+				"why": "끝에 딱 맞으면 포함된다고 착각했다. until은 항상 끝값을 제외한다."
+			},
+			{
+				"text": "List(0, 3, 6, 8)",
+				"why": "마지막 값이 끝으로 잘려서 들어간다고 착각했다. 걸음 단위로만 나아간다."
+			},
+			{
+				"text": "List(0, 3, 6)",
+				"why": "until은 끝값을 제외한다. 걸음이 끝에 딱 맞아도 9는 들어가지 않는다."
+			},
+			{
+				"text": "List(3, 6, 9)",
+				"why": "시작값 0을 뺐다. 범위는 시작값부터 포함한다."
+			}
+		],
+		"answer": 2,
+		"verify": "val r = 0 until 9 by 3\nr.toList // => List(0, 3, 6)"
+	},
+	{
+		"id": "trace-lazy-val-count",
+		"kind": "trace",
+		"topic": "lazy",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": [],
+		"code": "var n = 0\nval a = { n += 1; 1 }\ndef b = { n += 10; 1 }\nlazy val c = { n += 100; 1 }\nval s = b + b + c + c\nn",
+		"options": [
+			{
+				"text": "111",
+				"why": "def도 한 번만 돈다고 착각했다. def는 부를 때마다 다시 평가된다."
+			},
+			{
+				"text": "121",
+				"why": "val은 정의할 때 1회(+1), def는 부를 때마다(+20), lazy val은 처음 쓸 때 1회(+100)다."
+			},
+			{
+				"text": "221",
+				"why": "lazy val도 쓸 때마다 다시 돈다고 착각했다. lazy val은 한 번만 평가되고 값이 남는다."
+			},
+			{
+				"text": "1",
+				"why": "lazy와 def는 아직 안 돌았다고 착각했다. s를 계산하면서 둘 다 호출된다."
+			}
+		],
+		"answer": 1,
+		"verify": "var n = 0\nval a = { n += 1; 1 }\ndef b = { n += 10; 1 }\nlazy val c = { n += 100; 1 }\nval s = b + b + c + c\nn // => 121"
+	},
+	{
+		"id": "trace-closure-shadow",
+		"kind": "trace",
+		"topic": "functions",
+		"prompt": "g(1)의 값은?",
+		"unlock": [],
+		"code": "val k = 1\nval f = (x: Int) => x + k\nval g = { val k = 100; f }\ng(1)",
+		"options": [
+			{
+				"text": "2",
+				"why": "함수는 만들어진 자리의 k(1)를 본다. 나중에 같은 이름이 가려도 f의 k는 바뀌지 않는다."
+			},
+			{
+				"text": "101",
+				"why": "호출되는 자리의 k를 쓴다고 착각했다. 스칼라는 정의된 자리의 범위를 쓴다."
+			},
+			{
+				"text": "100",
+				"why": "새 k가 x 자리를 대신한다고 착각했다. f의 본문은 x + k 그대로다."
+			},
+			{
+				"text": "102",
+				"why": "두 k를 모두 더한다고 착각했다. f는 자기 k 하나만 본다."
+			}
+		],
+		"answer": 0,
+		"verify": "val k = 1\nval f = (x: Int) => x + k\nval g = { val k = 100; f }\ng(1) // => 2"
+	}
+]

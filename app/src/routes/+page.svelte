@@ -39,6 +39,7 @@
 </script>
 
 <div class="body">
+	{#if data.memoDue > 0}<a class="memo-top" href="/memo"><span>오늘 복습 {data.memoDue}장</span><span aria-hidden="true">→</span></a>{/if}
 	{#if !data.handle}
 		<form class="setup" method="POST" action="?/setHandle" use:enhance={pending((v) => (settingUp = v))}>
 			<h2>시작하기</h2>
@@ -132,5 +133,6 @@
 			<span class="handle">@{data.handle}</span>
 		</form>
 	{/if}
+	<a class="lang-entry memo-entry" href="/memo"><span>암기{data.memoDue > 0 ? ` · 오늘 ${data.memoDue}장` : ''}</span><span class="note">카드로 복습하고 점검하기</span><span aria-hidden="true">→</span></a>
 	<a class="lang-entry" href="/lang"><span>언어 5분 · Scala</span><span class="note">짧은 문제로 문법 익히기</span><span aria-hidden="true">→</span></a>
 </div>

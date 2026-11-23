@@ -21,6 +21,7 @@
 				<a href="/" class:on={path === '/'}>훈련</a>
 				<a href="/history" class:on={path.startsWith('/history')}>기록</a>
 				<a href="/lang" class:on={path === '/lang' || path.startsWith('/lang/')}>언어</a>
+				<a href="/memo" class:on={path.startsWith('/memo')}>암기</a>
 			</nav>
 		</div>
 	{/if}

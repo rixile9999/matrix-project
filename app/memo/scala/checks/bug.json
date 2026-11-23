@@ -1,0 +1,189 @@
+[
+	{
+		"id": "bug-sum-squares",
+		"kind": "bug",
+		"topic": "collections",
+		"prompt": "짝수만 골라 제곱해 더하는 함수다. `sumOfEvenSquares(List(1, 2, 3, 4))`는 20이어야 한다. 틀린 줄은?",
+		"unlock": [
+			"001-sum-of-squares"
+		],
+		"problem": "001-sum-of-squares",
+		"lines": [
+			"def sumOfEvenSquares(xs: List[Int]): Int =",
+			"  val evens = xs.filter(_ % 2 == 0)",
+			"  val squares = evens.map(x => x + x)",
+			"  squares.sum"
+		],
+		"bugIndex": 2,
+		"fixed": "  val squares = evens.map(x => x * x)",
+		"why": "`x + x`는 두 배이고 제곱은 `x * x`다. 2에서만 두 값이 같아서(2+2 = 2*2) 작은 예로는 눈에 안 띈다."
+	},
+	{
+		"id": "bug-avg-positives",
+		"kind": "bug",
+		"topic": "errors",
+		"prompt": "양수의 평균을 `Option[Double]`로 돌려준다. `averageOfPositives(List(1, 2, -5))`는 `Some(1.5)`여야 한다. 틀린 줄은?",
+		"unlock": [
+			"004-average-of-positives"
+		],
+		"problem": "004-average-of-positives",
+		"lines": [
+			"def averageOfPositives(xs: List[Int]): Option[Double] =",
+			"  val ps = xs.filter(_ > 0)",
+			"  if ps.isEmpty then None",
+			"  else Some(ps.sum / ps.size)"
+		],
+		"bugIndex": 3,
+		"fixed": "  else Some(ps.sum.toDouble / ps.size)",
+		"why": "`Int / Int`는 정수 나눗셈이라 소수점을 버린 뒤에야 `Double`로 넓어진다. 나누기 전에 `toDouble`을 해야 한다."
+	},
+	{
+		"id": "bug-arith",
+		"kind": "bug",
+		"topic": "collections",
+		"prompt": "이웃한 차가 모두 같은 리스트인지 판정한다. 원소가 0개나 1개인 리스트도 등차수열이다. 틀린 줄은?",
+		"unlock": [
+			"006-arithmetic-progression"
+		],
+		"problem": "006-arithmetic-progression",
+		"lines": [
+			"def isArithmetic(xs: List[Int]): Boolean =",
+			"  val diffs = xs.zip(xs.drop(1)).map((a, b) => b - a)",
+			"  diffs.distinct.size == 1"
+		],
+		"bugIndex": 2,
+		"fixed": "  diffs.distinct.size <= 1",
+		"why": "원소가 하나 이하면 차가 하나도 없어 `distinct.size`가 0이다. `== 1`은 그 경우를 거짓으로 만든다. 경계 입력은 `<= 1`로 받는다."
+	},
+	{
+		"id": "bug-sort-people",
+		"kind": "bug",
+		"topic": "types",
+		"prompt": "나이가 많은 사람이 먼저, 나이가 같으면 이름 오름차순으로 정렬한다. 틀린 줄은?",
+		"unlock": [
+			"009-sort-people"
+		],
+		"problem": "009-sort-people",
+		"given": "case class Person(name: String, age: Int)\n",
+		"lines": [
+			"def sortPeople(people: List[Person]): List[Person] =",
+			"  val order = Ordering.Tuple2(Ordering.Int.reverse, Ordering.String.reverse)",
+			"  people.sortBy(p => (p.age, p.name))(using order)"
+		],
+		"bugIndex": 1,
+		"fixed": "  val order = Ordering.Tuple2(Ordering.Int.reverse, Ordering.String)",
+		"why": "나이만 내림차순이어야 하는데 이름 순서까지 뒤집었다. 튜플 순서는 성분마다 따로 정한다."
+	},
+	{
+		"id": "bug-overdraft",
+		"kind": "bug",
+		"topic": "folds",
+		"prompt": "잔액이 처음으로 0보다 작아지는 거래 번호(1부터)를 구한다. 끝까지 안 작아지면 -1이다. 잔액이 정확히 0인 것은 마이너스가 아니다. 틀린 줄은?",
+		"unlock": [
+			"012-first-overdraft"
+		],
+		"problem": "012-first-overdraft",
+		"lines": [
+			"def firstOverdraft(txs: List[Int]): Int =",
+			"  val balances = txs.scanLeft(0)(_ + _)",
+			"  balances.indexWhere(_ <= 0)"
+		],
+		"bugIndex": 2,
+		"fixed": "  balances.indexWhere(_ < 0)",
+		"why": "`scanLeft`의 첫 원소는 초기 잔액 0이다. `<= 0`이면 거래가 시작되기도 전에 걸려 항상 0이 나온다. 마이너스는 `< 0`이다."
+	},
+	{
+		"id": "bug-anagrams",
+		"kind": "bug",
+		"topic": "maps",
+		"prompt": "애너그램끼리 묶는다. 묶음은 정렬한 글자열의 사전순으로 나열한다. `List(\"tea\", \"tan\", \"eat\")`는 `List(List(\"tea\", \"eat\"), List(\"tan\"))`이다. 틀린 줄은?",
+		"unlock": [
+			"013-group-anagrams"
+		],
+		"problem": "013-group-anagrams",
+		"lines": [
+			"def groupAnagrams(words: List[String]): List[List[String]] =",
+			"  val groups = words.groupBy(_.sorted)",
+			"  groups.toList.sortBy((_, group) => group.head).map((_, group) => group)"
+		],
+		"bugIndex": 2,
+		"fixed": "  groups.toList.sortBy((key, _) => key).map((_, group) => group)",
+		"why": "묶음의 순서는 키(정렬한 글자열)가 정한다. 묶음의 첫 단어로 정렬하면 `tea`가 `tan`보다 뒤라 순서가 달라진다."
+	},
+	{
+		"id": "bug-palindrome",
+		"kind": "bug",
+		"topic": "context",
+		"prompt": "`String`에 `isPalindrome`을 붙인다. 글자와 숫자만 보고 대소문자는 무시한다. `\"A man, a plan, a canal: Panama\"`는 참이다. 틀린 줄은?",
+		"unlock": [
+			"019-palindrome-extension"
+		],
+		"problem": "019-palindrome-extension",
+		"given": "def countPalindromes(phrases: List[String]): Int =\n  phrases.count(_.isPalindrome)\n",
+		"lines": [
+			"extension (s: String)",
+			"  def isPalindrome: Boolean =",
+			"    val cs = s.filter(_.isLetterOrDigit)",
+			"    cs == cs.reverse"
+		],
+		"bugIndex": 2,
+		"fixed": "    val cs = s.filter(_.isLetterOrDigit).toLowerCase",
+		"why": "소문자로 맞추지 않으면 `A`와 `a`가 다른 글자라 대소문자가 섞인 회문이 거짓이 된다."
+	},
+	{
+		"id": "bug-monoid-string",
+		"kind": "bug",
+		"topic": "context",
+		"prompt": "`Monoid[String]`의 `combine`은 앞 문자열 뒤에 뒤 문자열을 붙인다. `combineAll(List(\"a\", \"b\", \"c\"))`는 `\"abc\"`여야 한다. 틀린 줄은?",
+		"unlock": [
+			"020-monoid-given"
+		],
+		"problem": "020-monoid-given",
+		"given": "trait Monoid[A]:\n  def empty: A\n  def combine(x: A, y: A): A\n\ngiven intAddition: Monoid[Int] with\n  def empty: Int = 0\n  def combine(x: Int, y: Int): Int = x + y\n\ndef combineAll[A](xs: List[A])(using m: Monoid[A]): A =\n  xs.foldLeft(m.empty)(m.combine)\n",
+		"lines": [
+			"given stringConcat: Monoid[String] with",
+			"  def empty: String = \"\"",
+			"  def combine(x: String, y: String): String = y + x"
+		],
+		"bugIndex": 2,
+		"fixed": "  def combine(x: String, y: String): String = x + y",
+		"why": "문자열 이어 붙이기는 교환법칙이 성립하지 않는다. `y + x`는 `foldLeft`로 접으면 순서가 뒤집혀 `\"cba\"`가 나온다."
+	},
+	{
+		"id": "bug-word-count",
+		"kind": "bug",
+		"topic": "maps",
+		"prompt": "단어가 몇 번 나왔는지 `Map`으로 센다. `wordCount(List(\"a\", \"b\", \"a\"))`는 `Map(a -> 2, b -> 1)`이다. 틀린 줄은?",
+		"unlock": [
+			"b-09-word-count"
+		],
+		"problem": "b-09-word-count",
+		"lines": [
+			"def wordCount(words: List[String]): Map[String, Int] =",
+			"  words.foldLeft(Map.empty[String, Int]) { (m, w) =>",
+			"    m.updated(w, 1)",
+			"  }"
+		],
+		"bugIndex": 2,
+		"fixed": "    m.updated(w, m.getOrElse(w, 0) + 1)",
+		"why": "`updated(w, 1)`은 이전 횟수를 덮어써서 모든 단어가 1이 된다. 기존 값을 읽어 하나 더해야 한다."
+	},
+	{
+		"id": "bug-count-nonneg",
+		"kind": "bug",
+		"topic": "recursion",
+		"prompt": "처음으로 음수가 나오기 전까지 원소가 몇 개인지 센다. 0은 음수가 아니다. `countUntilNegative(List(3, 0, 2, -1, 5))`는 3이다. 틀린 줄은?",
+		"unlock": [
+			"b-19-count-until-negative"
+		],
+		"problem": "b-19-count-until-negative",
+		"lines": [
+			"def countUntilNegative(xs: List[Int]): Int = xs match",
+			"  case x :: t if x > 0 => 1 + countUntilNegative(t)",
+			"  case _ => 0"
+		],
+		"bugIndex": 1,
+		"fixed": "  case x :: t if x >= 0 => 1 + countUntilNegative(t)",
+		"why": "`x > 0`이면 0에서 멈춘다. 음수가 아닌 것을 세려면 `x >= 0`이다."
+	}
+]

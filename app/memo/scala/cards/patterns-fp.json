@@ -1,0 +1,800 @@
+[
+	{
+		"id": "adt-structural-recursion-recognize",
+		"kind": "recognize",
+		"topic": "types",
+		"title": "ADT 구조 재귀: 알아보기",
+		"summary": "재귀적으로 정의된 데이터(트리, 수식, 리스트)를 하나의 값으로 바꾸는 함수를 만들 때",
+		"prompt": "정수 수식을 나타내는 트리(숫자, 덧셈, 곱셈, 부호 반전; 연산 안에 또 수식이 들어간다)가 주어진다. 이 수식의 값을 구하는 함수를 쓰라.",
+		"points": [
+			"구조 재귀: 생성자마다 case를 하나씩 두고 자식에는 같은 함수를 재귀 호출한다",
+			"단서: 데이터 정의 자체가 자기 타입을 품는 재귀 구조이고 답이 그 구조를 따라 정해진다",
+			"반복문으로 풀려 하면 직접 스택을 관리해야 해서 재귀 구조와 코드 모양이 어긋난다"
+		],
+		"pattern": "adt-structural-recursion",
+		"unlock": [
+			"010-expression-tree"
+		]
+	},
+	{
+		"id": "adt-structural-recursion-steps",
+		"kind": "steps",
+		"topic": "types",
+		"title": "ADT 구조 재귀: 풀이 과정",
+		"summary": "생성자마다 case 하나, 자식은 같은 함수로 재귀한다.",
+		"prompt": "수식 트리 `Num`, `Add`, `Mul`, `Neg`의 값을 구하는 `eval`을 쓰는 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"케이스 나열: `Num`, `Add`, `Mul`, `Neg` 네 생성자를 모두 match에 적는다",
+			"기저 케이스: `Num(n)`은 자식이 없으니 `n`을 그대로 돌려준다",
+			"재귀 케이스: `Add`와 `Mul`은 `eval(l)`, `eval(r)`의 결과를 `+`, `*`로 합치고 `Neg`는 부호만 바꾼다",
+			"철저성 확인: `case _`를 두지 않아 새 케이스가 생기면 경고가 뜨게 한다"
+		],
+		"answerCode": "def eval(e: Expr): Int = e match\n  case Expr.Num(n)    => n\n  case Expr.Add(l, r) => eval(l) + eval(r)\n  case Expr.Mul(l, r) => eval(l) * eval(r)\n  case Expr.Neg(x)    => -eval(x)",
+		"verify": "enum Expr:\n  case Num(n: Int)\n  case Add(l: Expr, r: Expr)\n  case Mul(l: Expr, r: Expr)\n  case Neg(e: Expr)\n\ndef eval(e: Expr): Int = e match\n  case Expr.Num(n)    => n\n  case Expr.Add(l, r) => eval(l) + eval(r)\n  case Expr.Mul(l, r) => eval(l) * eval(r)\n  case Expr.Neg(x)    => -eval(x)\n\neval(Expr.Add(Expr.Num(2), Expr.Mul(Expr.Num(3), Expr.Neg(Expr.Num(4))))) // => -10",
+		"pattern": "adt-structural-recursion",
+		"unlock": [
+			"010-expression-tree"
+		]
+	},
+	{
+		"id": "adt-structural-recursion-line",
+		"kind": "line",
+		"topic": "types",
+		"title": "Neg 케이스의 재귀 호출",
+		"summary": "자식은 값이 아니라 수식이다. 재귀로 값을 얻은 다음에 연산한다.",
+		"prompt": "빈칸은 `Neg(x)` 케이스의 결과식이다. `x`는 `Expr`이다. 무엇이 들어가나?",
+		"promptCode": "def eval(e: Expr): Int = e match\n  case Expr.Num(n)    => n\n  case Expr.Add(l, r) => eval(l) + eval(r)\n  case Expr.Mul(l, r) => eval(l) * eval(r)\n  case Expr.Neg(x)    => ____",
+		"points": [
+			"`-eval(x)`: `x`는 수식이므로 먼저 재귀로 값을 구한 뒤 부호를 바꾼다. `-x`는 타입이 맞지 않는다"
+		],
+		"answerCode": "case Expr.Neg(x)    => -eval(x)",
+		"verify": "enum Expr:\n  case Num(n: Int)\n  case Add(l: Expr, r: Expr)\n  case Mul(l: Expr, r: Expr)\n  case Neg(e: Expr)\n\ndef eval(e: Expr): Int = e match\n  case Expr.Num(n)    => n\n  case Expr.Add(l, r) => eval(l) + eval(r)\n  case Expr.Mul(l, r) => eval(l) * eval(r)\n  case Expr.Neg(x)    => -eval(x)\n\neval(Expr.Add(Expr.Num(2), Expr.Mul(Expr.Num(3), Expr.Neg(Expr.Num(4))))) // => -10",
+		"pattern": "adt-structural-recursion",
+		"unlock": [
+			"010-expression-tree"
+		]
+	},
+	{
+		"id": "fold-replace-constructors-recognize",
+		"kind": "recognize",
+		"topic": "functions",
+		"title": "생성자를 함수로 바꾸는 fold: 알아보기",
+		"summary": "같은 데이터 타입을 도는 여러 함수가 '기저 값'과 '자식 결과 합치기'만 다르고 뼈대가 같을 때",
+		"prompt": "이진 트리의 노드 수, 최댓값, 깊이를 구하는 함수들을 따로 짰더니 코드 모양이 거의 같다. 이 반복을 없애고 각 함수를 한두 줄로 줄이려면 어떻게 하나?",
+		"points": [
+			"트리 fold: 잎용 함수와 가지용 함수를 받는 하나의 뼈대를 만들고 각 함수를 그 호출로 쓴다",
+			"단서: 여러 함수가 '잎일 때의 값'과 '두 결과를 합치는 법'만 다르고 재귀 구조는 같다",
+			"함수마다 따로 재귀를 쓰면 케이스를 빠뜨리거나 구조가 어긋날 위험이 함수 수만큼 늘어난다"
+		],
+		"pattern": "fold-replace-constructors",
+		"book": {
+			"id": "fpis",
+			"chapter": 3
+		},
+		"unlock": [
+			"fp-0329-tree-fold"
+		]
+	},
+	{
+		"id": "fold-replace-constructors-steps",
+		"kind": "steps",
+		"topic": "functions",
+		"title": "생성자를 함수로 바꾸는 fold: 풀이 과정",
+		"summary": "fold는 생성자를 함수로 갈아 끼우는 뼈대이고, 파생 함수는 그 두 함수만 정한다.",
+		"prompt": "트리의 `depth`를 `fold`로 정의한다. `fold`를 어떤 순서로 만들고 `depth`를 어떻게 얻는지 단계로 말해 보라.",
+		"points": [
+			"대응 함수 정하기: `Leaf`는 값을 결과로 바꾸는 `f`, `Branch`는 두 결과를 합치는 `g`",
+			"fold 뼈대: `Branch`에서 `fold(l)(f)(g)`와 `fold(r)(f)(g)`를 먼저 구해 `g`에 넘긴다",
+			"파생 함수: 깊이는 `Leaf`가 0이고 `Branch`는 두 결과의 큰 쪽에 1을 더한다",
+			"이 뼈대로 `size`, `maximum`, `map`도 `f`와 `g`만 바꿔 쓴다"
+		],
+		"answerCode": "def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match\n  case Leaf(v)      => f(v)\n  case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))\n\ndef depthViaFold[A](t: Tree[A]): Int =\n  fold(t)(_ => 0)((a, b) => 1 + a.max(b))",
+		"verify": "enum Tree[+A]:\n  case Leaf(value: A)\n  case Branch(left: Tree[A], right: Tree[A])\n\nimport Tree.*\n\ndef fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match\n  case Leaf(v)      => f(v)\n  case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))\n\ndef depthViaFold[A](t: Tree[A]): Int =\n  fold(t)(_ => 0)((a, b) => 1 + a.max(b))\n\ndepthViaFold(Branch(Leaf(1), Branch(Leaf(2), Leaf(3)))) // => 2",
+		"pattern": "fold-replace-constructors",
+		"book": {
+			"id": "fpis",
+			"chapter": 3
+		},
+		"unlock": [
+			"fp-0329-tree-fold"
+		]
+	},
+	{
+		"id": "fold-replace-constructors-line",
+		"kind": "line",
+		"topic": "functions",
+		"title": "depth의 합치기 함수",
+		"summary": "깊이의 합치기 함수는 큰 쪽에 1을 더하는 것이다.",
+		"prompt": "잎 하나의 깊이는 0이다. 빈칸은 두 하위 트리의 깊이 `a`, `b`를 합치는 식이다.",
+		"promptCode": "def depthViaFold[A](t: Tree[A]): Int =\n  fold(t)(_ => 0)((a, b) => ____)",
+		"points": [
+			"`1 + a.max(b)`: 더 깊은 쪽에 한 칸(뿌리에서 내려가는 간선)을 더한다. `a + b`는 깊이가 아니라 크기가 된다"
+		],
+		"answerCode": "fold(t)(_ => 0)((a, b) => 1 + a.max(b))",
+		"verify": "enum Tree[+A]:\n  case Leaf(value: A)\n  case Branch(left: Tree[A], right: Tree[A])\n\nimport Tree.*\n\ndef fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match\n  case Leaf(v)      => f(v)\n  case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))\n\ndef depthViaFold[A](t: Tree[A]): Int =\n  fold(t)(_ => 0)((a, b) => 1 + a.max(b))\n\ndepthViaFold(Branch(Leaf(1), Branch(Leaf(2), Leaf(3)))) // => 2",
+		"pattern": "fold-replace-constructors",
+		"book": {
+			"id": "fpis",
+			"chapter": 3
+		},
+		"unlock": [
+			"fp-0329-tree-fold"
+		]
+	},
+	{
+		"id": "fold-state-outputs-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "(상태, 출력) 누산기 foldLeft: 알아보기",
+		"summary": "입력을 차례로 처리하며 상태가 바뀌고 처리마다 출력이 하나씩 생겨, 최종 상태와 출력 목록이 모두 필요할 때",
+		"prompt": "명령 문자열 목록을 앞에서부터 실행한다. 각 명령은 저장소(Map)를 바꾸고 결과 문자열을 하나 낸다. 모두 실행한 뒤의 저장소와 결과 목록(명령 순서대로)이 필요하다.",
+		"points": [
+			"(상태, 출력 목록)을 누산기로 쓰는 foldLeft: 한 명령씩 상태를 갱신하고 출력을 쌓는다",
+			"단서: 앞 명령의 결과가 뒤 명령의 입력이 되는 순차 처리이고 출력도 모두 필요하다",
+			"`var`와 `ListBuffer`로 풀면 동작은 같지만 상태 변경이 숨어 테스트와 합성이 어려워진다"
+		],
+		"pattern": "fold-state-outputs",
+		"unlock": [
+			"c-03-kv-interpreter"
+		]
+	},
+	{
+		"id": "fold-state-outputs-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "(상태, 출력) 누산기 foldLeft: 풀이 과정",
+		"summary": "(상태, 출력)을 누산기로 들고 foldLeft, 출력은 앞에 쌓고 끝에 뒤집는다.",
+		"prompt": "명령 목록을 차례로 실행해 (최종 저장소, 출력 목록)을 돌려주는 `run`의 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"처리 함수: `step(store, cmd)`가 (새 저장소, 출력 문자열)을 돌려준다",
+			"누산기: (빈 Map, 빈 출력 목록)에서 시작한다",
+			"foldLeft: 저장소는 새 것으로 바꾸고 출력은 `o :: outs`로 앞에 쌓는다",
+			"마무리: 앞에 쌓았으므로 출력은 `reverse`로 뒤집어 돌려준다"
+		],
+		"answerCode": "def run(cmds: List[Cmd]): (Map[String, Int], List[String]) =\n  val (st, out) = cmds.foldLeft((Map.empty[String, Int], List.empty[String])) {\n    case ((s, outs), c) =>\n      val (s2, o) = step(s, c)\n      (s2, o :: outs)\n  }\n  (st, out.reverse)",
+		"verify": "enum Cmd:\n  case Put(k: String, v: Int)\n  case Incr(k: String)\n\ndef step(st: Map[String, Int], c: Cmd): (Map[String, Int], String) = c match\n  case Cmd.Put(k, v) => (st.updated(k, v), \"OK\")\n  case Cmd.Incr(k) =>\n    val n = st.getOrElse(k, 0) + 1\n    (st.updated(k, n), n.toString)\n\ndef run(cmds: List[Cmd]): (Map[String, Int], List[String]) =\n  val (st, out) = cmds.foldLeft((Map.empty[String, Int], List.empty[String])) {\n    case ((s, outs), c) =>\n      val (s2, o) = step(s, c)\n      (s2, o :: outs)\n  }\n  (st, out.reverse)\n\nrun(List(Cmd.Put(\"a\", 1), Cmd.Incr(\"a\"), Cmd.Incr(\"b\"))) // => (Map(a -> 2, b -> 1),List(OK, 2, 1))",
+		"pattern": "fold-state-outputs",
+		"unlock": [
+			"c-03-kv-interpreter"
+		]
+	},
+	{
+		"id": "fold-state-outputs-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "출력 목록 뒤집기",
+		"summary": "앞에 쌓은 출력은 마지막에 뒤집는다.",
+		"prompt": "출력은 `o :: outs`로 앞에 쌓았다. 최종 결과를 명령 순서대로 돌려주려면 마지막 줄의 빈칸에 무엇이 들어가나?",
+		"promptCode": "  val (st, out) = cmds.foldLeft((Map.empty[String, Int], List.empty[String])) {\n    case ((s, outs), c) =>\n      val (s2, o) = step(s, c)\n      (s2, o :: outs)\n  }\n  (st, out.____)",
+		"points": [
+			"`reverse`: 앞에 쌓은 목록은 최근 출력이 맨 앞이므로, 한 번 뒤집어야 명령 순서가 된다"
+		],
+		"answerCode": "(st, out.reverse)",
+		"verify": "enum Cmd:\n  case Put(k: String, v: Int)\n  case Incr(k: String)\n\ndef step(st: Map[String, Int], c: Cmd): (Map[String, Int], String) = c match\n  case Cmd.Put(k, v) => (st.updated(k, v), \"OK\")\n  case Cmd.Incr(k) =>\n    val n = st.getOrElse(k, 0) + 1\n    (st.updated(k, n), n.toString)\n\ndef run(cmds: List[Cmd]): (Map[String, Int], List[String]) =\n  val (st, out) = cmds.foldLeft((Map.empty[String, Int], List.empty[String])) {\n    case ((s, outs), c) =>\n      val (s2, o) = step(s, c)\n      (s2, o :: outs)\n  }\n  (st, out.reverse)\n\nrun(List(Cmd.Put(\"a\", 1), Cmd.Incr(\"a\"), Cmd.Incr(\"b\"))) // => (Map(a -> 2, b -> 1),List(OK, 2, 1))",
+		"pattern": "fold-state-outputs",
+		"unlock": [
+			"c-03-kv-interpreter"
+		]
+	},
+	{
+		"id": "accumulator-tail-recursion-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "누산 인자로 꼬리 재귀 만들기: 알아보기",
+		"summary": "재귀 호출 뒤에 연산이 남아 스택이 깊어지는데, 호출 횟수가 매우 많을 수 있어 루프처럼 돌아야 할 때",
+		"prompt": "양의 정수에서 시작해 짝수면 절반, 홀수면 3배 더하기 1을 1이 될 때까지 되풀이한다. 필요한 횟수를 구하라. 과정이 수십만 단계가 될 수도 있다.",
+		"points": [
+			"누산 인자를 가진 꼬리 재귀: 횟수를 인자로 들고 다니며 호출이 마지막 동작이 되게 한다",
+			"단서: 단계 수가 매우 커질 수 있는 반복이라 스택을 쓰는 재귀로는 위험하다",
+			"`1 + go(next)`처럼 호출 뒤에 더하면 꼬리 위치가 아니라 스택이 단계 수만큼 깊어진다"
+		],
+		"pattern": "accumulator-tail-recursion",
+		"unlock": [
+			"008-collatz-steps"
+		]
+	},
+	{
+		"id": "accumulator-tail-recursion-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "누산 인자로 꼬리 재귀 만들기: 풀이 과정",
+		"summary": "뒤에 할 일을 누산 인자로 앞당기면 호출이 마지막 동작이 된다.",
+		"prompt": "콜라츠 단계 수를 스택 걱정 없이 구하는 `collatzSteps`의 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"누산값: 지금까지 센 단계 수 `steps`를 인자로 들고 간다",
+			"내부 함수: `go(x, steps)`를 두고 바깥에서 `go(n, 0)`으로 시작한다",
+			"종료 조건: `x == 1`이면 `steps`를 그대로 돌려준다",
+			"마지막 동작: 다음 `x`와 `steps + 1`로 `go`를 호출하고 `@tailrec`로 확인한다"
+		],
+		"answerCode": "def collatzSteps(n: Long): Int =\n  @tailrec def go(x: Long, steps: Int): Int =\n    if x == 1 then steps\n    else go(if x % 2 == 0 then x / 2 else 3 * x + 1, steps + 1)\n  go(n, 0)",
+		"verify": "import scala.annotation.tailrec\n\ndef collatzSteps(n: Long): Int =\n  @tailrec def go(x: Long, steps: Int): Int =\n    if x == 1 then steps\n    else go(if x % 2 == 0 then x / 2 else 3 * x + 1, steps + 1)\n  go(n, 0)\n\ncollatzSteps(6) // => 8",
+		"pattern": "accumulator-tail-recursion",
+		"unlock": [
+			"008-collatz-steps"
+		]
+	},
+	{
+		"id": "accumulator-tail-recursion-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "꼬리 위치의 재귀 호출",
+		"summary": "더하기는 호출 밖이 아니라 인자 안에서 한다.",
+		"prompt": "`steps`는 지금까지 센 횟수다. 꼬리 재귀가 되도록 `else` 쪽 빈칸을 채워라(다음 `x`는 `next`라고 하자).",
+		"promptCode": "@tailrec def go(x: Long, steps: Int): Int =\n  if x == 1 then steps\n  else ____",
+		"points": [
+			"`go(next, steps + 1)`: 갱신한 누산값을 인자로 넘기며 호출이 마지막 동작이 된다. `1 + go(next, steps)`는 꼬리가 아니다"
+		],
+		"answerCode": "else go(if x % 2 == 0 then x / 2 else 3 * x + 1, steps + 1)",
+		"verify": "import scala.annotation.tailrec\n\ndef collatzSteps(n: Long): Int =\n  @tailrec def go(x: Long, steps: Int): Int =\n    if x == 1 then steps\n    else go(if x % 2 == 0 then x / 2 else 3 * x + 1, steps + 1)\n  go(n, 0)\n\ncollatzSteps(6) // => 8",
+		"pattern": "accumulator-tail-recursion",
+		"unlock": [
+			"008-collatz-steps"
+		]
+	},
+	{
+		"id": "unfold-from-seed-recognize",
+		"kind": "recognize",
+		"topic": "lazy",
+		"title": "씨앗에서 만드는 unfold: 알아보기",
+		"summary": "끝이 없거나 규칙으로만 정해지는 수열을, 현재 상태에서 값 하나와 다음 상태를 뽑는 규칙으로 만들 때",
+		"prompt": "0, 1, 1, 2, 3, 5, 8, …처럼 앞의 두 항의 합으로 이어지는 수열을 끝없이 이어지는 지연 시퀀스로 돌려주는 함수를 쓰라. 항마다 계산 비용은 일정해야 한다.",
+		"points": [
+			"unfold: 씨앗(직전 두 값)에서 (값, 다음 씨앗)을 뽑는 규칙 하나로 시퀀스를 만든다",
+			"단서: 데이터가 아니라 규칙으로 정해지고, 다음 항이 현재 상태에서 결정되는 생성 문제다",
+			"앞 항들을 매번 다시 계산하는 재귀는 항마다 비용이 늘어 일정 비용 조건을 어긴다"
+		],
+		"pattern": "unfold-from-seed",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0510-unfold"
+		]
+	},
+	{
+		"id": "unfold-from-seed-steps",
+		"kind": "steps",
+		"topic": "lazy",
+		"title": "씨앗에서 만드는 unfold: 풀이 과정",
+		"summary": "상태 하나에서 (값, 다음 상태)를 뽑는 규칙이 곧 시퀀스다.",
+		"prompt": "`unfold`를 쓰는 풀이 단계를 `fibs`(0, 1, 1, 2, …)를 예로 순서대로 말해 보라.",
+		"points": [
+			"씨앗: 직전 두 값 `(a, b)`, 처음은 `(0, 1)`",
+			"한 걸음: `(a, b)`에서 값 `a`를 내보내고 다음 상태 `(b, a + b)`를 만든다",
+			"`unfold`: `Some`이면 `a #:: unfold(s)(f)`로 꼬리를 지연해 잇고 `None`이면 끝낸다",
+			"소비: 무한이므로 `take`로 필요한 만큼만 꺼낸다"
+		],
+		"answerCode": "def unfold[A, S](z: S)(f: S => Option[(A, S)]): LazyList[A] =\n  f(z) match\n    case Some((a, s)) => a #:: unfold(s)(f)\n    case None         => LazyList.empty\n\ndef fibs: LazyList[Int] =\n  unfold((0, 1))((a, b) => Some((a, (b, a + b))))",
+		"verify": "def unfold[A, S](z: S)(f: S => Option[(A, S)]): LazyList[A] =\n  f(z) match\n    case Some((a, s)) => a #:: unfold(s)(f)\n    case None         => LazyList.empty\n\ndef fibs: LazyList[Int] =\n  unfold((0, 1))((a, b) => Some((a, (b, a + b))))\n\nfibs.take(8).toList // => List(0, 1, 1, 2, 3, 5, 8, 13)",
+		"pattern": "unfold-from-seed",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0510-unfold"
+		]
+	},
+	{
+		"id": "unfold-from-seed-line",
+		"kind": "line",
+		"topic": "lazy",
+		"title": "fibs의 다음 상태",
+		"summary": "다음 상태는 두 값을 한 칸 민 것이다.",
+		"prompt": "상태는 `(a, b)`이고 `a`를 내보낸다. 빈칸은 다음 상태이다.",
+		"promptCode": "def fibs: LazyList[Int] =\n  unfold((0, 1))((a, b) => Some((a, ____)))",
+		"points": [
+			"`(b, a + b)`: 한 칸 밀어서 `b`가 새 `a`가 되고 합이 새 `b`가 된다. `(a, a + b)`는 `a`가 그대로여서 수열이 틀어진다"
+		],
+		"answerCode": "unfold((0, 1))((a, b) => Some((a, (b, a + b))))",
+		"verify": "def unfold[A, S](z: S)(f: S => Option[(A, S)]): LazyList[A] =\n  f(z) match\n    case Some((a, s)) => a #:: unfold(s)(f)\n    case None         => LazyList.empty\n\ndef fibs: LazyList[Int] =\n  unfold((0, 1))((a, b) => Some((a, (b, a + b))))\n\nfibs.take(8).toList // => List(0, 1, 1, 2, 3, 5, 8, 13)",
+		"pattern": "unfold-from-seed",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0510-unfold"
+		]
+	},
+	{
+		"id": "for-first-failure-recognize",
+		"kind": "recognize",
+		"topic": "errors",
+		"title": "for로 잇고 첫 실패에서 멈추기: 알아보기",
+		"summary": "실패할 수 있는 단계를 이어 붙이고, 하나라도 실패하면 이유와 함께 거기서 곧바로 끝내야 할 때",
+		"prompt": "`Either[E, A]`와 `Either[E, B]` 두 값과 `(A, B) => C`가 있다. 둘 다 성공이면 합친 결과를, 하나라도 실패면 실패를 돌려주고, 둘 다 실패이면 앞쪽 실패만 돌려준다.",
+		"points": [
+			"for 표현식(flatMap/map)으로 Either를 잇는다. 첫 Left에서 나머지를 건너뛴다",
+			"단서: 둘 다 필요한 순차 의존이고 '앞쪽 실패만'이 첫 실패에서 멈추는 동작과 맞는다",
+			"`match`를 중첩하면 케이스가 곱으로 늘고, `get`처럼 꺼내면 실패 이유를 잃는다"
+		],
+		"pattern": "for-first-failure",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0407-either-basics"
+		]
+	},
+	{
+		"id": "for-first-failure-steps",
+		"kind": "steps",
+		"topic": "errors",
+		"title": "for로 잇고 첫 실패에서 멈추기: 풀이 과정",
+		"summary": "for의 각 `<-`가 실패 지점이고 첫 Left가 그대로 결과가 된다.",
+		"prompt": "`Either`를 이어 붙이는 `map2`를 `for`로 쓰는 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"단계 준비: 입력 둘이 이미 `Either[E, A]`와 `Either[E, B]`이다",
+			"값 꺼내기: `x <- a`, `y <- b`로 성공 값을 차례로 꺼낸다. `a`가 Left이면 거기서 끝난다",
+			"yield: `f(x, y)`로 합치면 `Right`로 감싸져 나오고 실패는 앞쪽 Left가 나온다"
+		],
+		"answerCode": "def map2[E, A, B, C](a: Either[E, A], b: Either[E, B])(f: (A, B) => C): Either[E, C] =\n  for\n    x <- a\n    y <- b\n  yield f(x, y)",
+		"verify": "def map2[E, A, B, C](a: Either[E, A], b: Either[E, B])(f: (A, B) => C): Either[E, C] =\n  for\n    x <- a\n    y <- b\n  yield f(x, y)\n\nval ok: Either[String, Int] = Right(2)\nval bad1: Either[String, Int] = Left(\"first\")\nval bad2: Either[String, Int] = Left(\"second\")\nmap2(bad1, bad2)(_ + _) // => Left(first)\nmap2(ok, ok)(_ + _) // => Right(4)",
+		"pattern": "for-first-failure",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0407-either-basics"
+		]
+	},
+	{
+		"id": "for-first-failure-line",
+		"kind": "line",
+		"topic": "errors",
+		"title": "두 번째 generator",
+		"summary": "`<-`는 꺼내면서 실패를 전파하고, `=`는 그냥 이름만 붙인다.",
+		"prompt": "둘째 값도 `Either`에서 꺼내야 한다. 빈칸에는 무엇이 들어가나?",
+		"promptCode": "for\n  x <- a\n  y ____ b\nyield f(x, y)",
+		"points": [
+			"`<-`: 성공이면 값을 꺼내고 Left이면 거기서 끝낸다. `=`를 쓰면 `y`가 `Either` 자체가 되어 Left를 걸러 내지 못한다"
+		],
+		"answerCode": "y <- b",
+		"verify": "def map2[E, A, B, C](a: Either[E, A], b: Either[E, B])(f: (A, B) => C): Either[E, C] =\n  for\n    x <- a\n    y <- b\n  yield f(x, y)\n\nval ok: Either[String, Int] = Right(2)\nval bad1: Either[String, Int] = Left(\"first\")\nval bad2: Either[String, Int] = Left(\"second\")\nmap2(bad1, bad2)(_ + _) // => Left(first)\nmap2(ok, ok)(_ + _) // => Right(4)",
+		"pattern": "for-first-failure",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0407-either-basics"
+		]
+	},
+	{
+		"id": "traverse-sequence-recognize",
+		"kind": "recognize",
+		"topic": "errors",
+		"title": "traverse로 목록을 하나의 Option으로: 알아보기",
+		"summary": "목록의 각 원소에 실패할 수 있는 함수를 적용해, 전부 성공일 때만 결과 목록을 얻고 싶을 때",
+		"prompt": "문자열 목록을 각각 정수로 바꾼다(실패 가능). 모두 성공이면 정수 목록을, 하나라도 숫자가 아니면 '없음'을 돌려주는 함수를 쓰라. 목록은 한 번만 훑는다.",
+		"points": [
+			"traverse: 원소마다 Option을 돌려주는 함수를 적용해 하나의 `Option[List]`로 합친다",
+			"단서: 원소별로 실패할 수 있고 '전부 성공 아니면 실패'라는 결과를 하나만 원한다",
+			"`map(f)` 뒤에 `sequence`를 붙이면 두 번 훑어 비효율적이다. `traverse`는 한 번에 끝낸다"
+		],
+		"pattern": "traverse-sequence",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0406-option-traverse"
+		]
+	},
+	{
+		"id": "traverse-sequence-steps",
+		"kind": "steps",
+		"topic": "errors",
+		"title": "traverse로 목록을 하나의 Option으로: 풀이 과정",
+		"summary": "traverse는 빈 성공에서 시작해 map2로 원소 결과를 붙여 가는 foldRight이다.",
+		"prompt": "`List[A]`에 `A => Option[B]`를 적용해 `Option[List[B]]`를 만드는 `traverse`의 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"원소 단계: `f: A => Option[B]`가 실패 가능성을 맡는다",
+			"빈 목록: `Some(Nil)`에서 시작한다",
+			"합치기: 오른쪽에서부터 `map2(f(a), acc)(_ :: _)`로 앞에 붙이고 하나라도 `None`이면 `None`",
+			"`sequence`: `traverse(xs)(identity)`로 얻는다"
+		],
+		"answerCode": "def traverse[A, B](xs: List[A])(f: A => Option[B]): Option[List[B]] =\n  xs.foldRight(Some(Nil): Option[List[B]])((a, acc) => map2(f(a), acc)(_ :: _))\n\ndef sequence[A](xs: List[Option[A]]): Option[List[A]] =\n  traverse(xs)(identity)",
+		"verify": "def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =\n  for\n    x <- a\n    y <- b\n  yield f(x, y)\n\ndef traverse[A, B](xs: List[A])(f: A => Option[B]): Option[List[B]] =\n  xs.foldRight(Some(Nil): Option[List[B]])((a, acc) => map2(f(a), acc)(_ :: _))\n\ndef sequence[A](xs: List[Option[A]]): Option[List[A]] =\n  traverse(xs)(identity)\n\ntraverse(List(\"1\", \"2\", \"3\"))(_.toIntOption) // => Some(List(1, 2, 3))\ntraverse(List(\"1\", \"x\", \"3\"))(_.toIntOption) // => None\nsequence(List(Some(1), Some(2))) // => Some(List(1, 2))",
+		"pattern": "traverse-sequence",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0406-option-traverse"
+		]
+	},
+	{
+		"id": "traverse-sequence-line",
+		"kind": "line",
+		"topic": "errors",
+		"title": "traverse의 초기값",
+		"summary": "빈 목록의 traverse는 None이 아니라 Some(Nil)이다.",
+		"prompt": "빈 목록 `traverse(Nil)(f)`의 결과가 되는 초기값이 빈칸이다. 무엇인가?",
+		"promptCode": "def traverse[A, B](xs: List[A])(f: A => Option[B]): Option[List[B]] =\n  xs.foldRight(____: Option[List[B]])((a, acc) => map2(f(a), acc)(_ :: _))",
+		"points": [
+			"`Some(Nil)`: 원소가 없으면 실패할 일도 없으니 빈 목록을 담은 성공이다. `None`으로 시작하면 항상 `None`이 된다"
+		],
+		"answerCode": "xs.foldRight(Some(Nil): Option[List[B]])((a, acc) => map2(f(a), acc)(_ :: _))",
+		"verify": "def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =\n  for\n    x <- a\n    y <- b\n  yield f(x, y)\n\ndef traverse[A, B](xs: List[A])(f: A => Option[B]): Option[List[B]] =\n  xs.foldRight(Some(Nil): Option[List[B]])((a, acc) => map2(f(a), acc)(_ :: _))\n\ndef sequence[A](xs: List[Option[A]]): Option[List[A]] =\n  traverse(xs)(identity)\n\ntraverse(List(\"1\", \"2\", \"3\"))(_.toIntOption) // => Some(List(1, 2, 3))\ntraverse(List(\"1\", \"x\", \"3\"))(_.toIntOption) // => None\nsequence(List(Some(1), Some(2))) // => Some(List(1, 2))",
+		"pattern": "traverse-sequence",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0406-option-traverse"
+		]
+	},
+	{
+		"id": "accumulate-errors-map2-recognize",
+		"kind": "recognize",
+		"topic": "errors",
+		"title": "map2로 오류 모으기: 알아보기",
+		"summary": "서로 독립적인 여러 검사를 하고, 실패가 여럿이면 처음 하나가 아니라 전부 사용자에게 알려야 할 때",
+		"prompt": "이름이 비었는지와 나이가 0 미만인지를 각각 검사해 Person을 만든다. 둘 다 틀리면 사용자가 한 번에 두 오류를 모두 알아야 한다. `Either`로 두 검사를 이으면 첫 오류만 나온다.",
+		"points": [
+			"Validated와 map2: 검사 결과를 Valid/Invalid로 두고 두 Invalid의 오류 목록을 이어 붙인다",
+			"단서: 검사가 서로 독립이고 '오류를 전부' 알려야 한다",
+			"`Either`의 for/flatMap은 앞이 실패하면 뒤를 실행하지 않아 구조적으로 오류를 하나만 낸다"
+		],
+		"pattern": "accumulate-errors-map2",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0409-accumulate-errors"
+		]
+	},
+	{
+		"id": "accumulate-errors-map2-steps",
+		"kind": "steps",
+		"topic": "errors",
+		"title": "map2로 오류 모으기: 풀이 과정",
+		"summary": "map2에서 두 실패를 이어 붙이면 오류가 모인다. 이 때문에 flatMap은 쓸 수 없다.",
+		"prompt": "이름과 나이 검사 결과를 합쳐 `Person`을 만들며 오류를 모으는 `map2V`의 풀이 단계를 말해 보라.",
+		"points": [
+			"오류를 담는 타입: `Valid(값)`과 `Invalid(오류 목록)`",
+			"독립 검사: `mkName`과 `mkAge`는 서로의 결과를 모른다",
+			"네 경우: 둘 다 `Valid`면 `f`로 합치고, 한쪽만 `Invalid`면 그 오류를 돌려준다",
+			"둘 다 `Invalid`: `e1 ++ e2`로 앞쪽 오류 뒤에 뒤쪽 오류를 잇는다"
+		],
+		"answerCode": "def map2V[E, A, B, C](a: Validated[E, A], b: Validated[E, B])(f: (A, B) => C): Validated[E, C] =\n  (a, b) match\n    case (Valid(x), Valid(y))       => Valid(f(x, y))\n    case (Invalid(e1), Invalid(e2)) => Invalid(e1 ++ e2)\n    case (Invalid(e1), _)           => Invalid(e1)\n    case (_, Invalid(e2))           => Invalid(e2)",
+		"verify": "enum Validated[+E, +A]:\n  case Valid(value: A)\n  case Invalid(errors: List[E])\n\nimport Validated.*\n\ncase class Person(name: String, age: Int)\n\ndef mkName(n: String): Validated[String, String] =\n  if n.isEmpty then Invalid(List(\"Name is empty.\")) else Valid(n)\n\ndef mkAge(a: Int): Validated[String, Int] =\n  if a < 0 then Invalid(List(\"Age is out of range.\")) else Valid(a)\n\ndef map2V[E, A, B, C](a: Validated[E, A], b: Validated[E, B])(f: (A, B) => C): Validated[E, C] =\n  (a, b) match\n    case (Valid(x), Valid(y))       => Valid(f(x, y))\n    case (Invalid(e1), Invalid(e2)) => Invalid(e1 ++ e2)\n    case (Invalid(e1), _)           => Invalid(e1)\n    case (_, Invalid(e2))           => Invalid(e2)\n\nmap2V(mkName(\"\"), mkAge(-1))(Person(_, _)) // => Invalid(List(Name is empty., Age is out of range.))\nmap2V(mkName(\"Ann\"), mkAge(3))(Person(_, _)) // => Valid(Person(Ann,3))",
+		"pattern": "accumulate-errors-map2",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0409-accumulate-errors"
+		]
+	},
+	{
+		"id": "accumulate-errors-map2-line",
+		"kind": "line",
+		"topic": "errors",
+		"title": "두 Invalid 합치기",
+		"summary": "둘 다 실패일 때만 오류 목록을 이어 붙인다.",
+		"prompt": "이름과 나이가 둘 다 틀린 경우의 케이스이다. 빈칸에는 무엇이 들어가나?",
+		"promptCode": "case (Valid(x), Valid(y))       => Valid(f(x, y))\ncase (Invalid(e1), Invalid(e2)) => Invalid(____)\ncase (Invalid(e1), _)           => Invalid(e1)\ncase (_, Invalid(e2))           => Invalid(e2)",
+		"points": [
+			"`e1 ++ e2`: 두 오류 목록을 앞쪽 뒤에 뒤쪽 순서로 이어 붙인다. `e1`만 돌려주면 두 번째 오류가 사라진다"
+		],
+		"answerCode": "case (Invalid(e1), Invalid(e2)) => Invalid(e1 ++ e2)",
+		"verify": "enum Validated[+E, +A]:\n  case Valid(value: A)\n  case Invalid(errors: List[E])\n\nimport Validated.*\n\ncase class Person(name: String, age: Int)\n\ndef mkName(n: String): Validated[String, String] =\n  if n.isEmpty then Invalid(List(\"Name is empty.\")) else Valid(n)\n\ndef mkAge(a: Int): Validated[String, Int] =\n  if a < 0 then Invalid(List(\"Age is out of range.\")) else Valid(a)\n\ndef map2V[E, A, B, C](a: Validated[E, A], b: Validated[E, B])(f: (A, B) => C): Validated[E, C] =\n  (a, b) match\n    case (Valid(x), Valid(y))       => Valid(f(x, y))\n    case (Invalid(e1), Invalid(e2)) => Invalid(e1 ++ e2)\n    case (Invalid(e1), _)           => Invalid(e1)\n    case (_, Invalid(e2))           => Invalid(e2)\n\nmap2V(mkName(\"\"), mkAge(-1))(Person(_, _)) // => Invalid(List(Name is empty., Age is out of range.))\nmap2V(mkName(\"Ann\"), mkAge(3))(Person(_, _)) // => Valid(Person(Ann,3))",
+		"pattern": "accumulate-errors-map2",
+		"book": {
+			"id": "fpis",
+			"chapter": 4
+		},
+		"unlock": [
+			"fp-0409-accumulate-errors"
+		]
+	},
+	{
+		"id": "staged-pipeline-recognize",
+		"kind": "recognize",
+		"topic": "errors",
+		"title": "토큰화, 파싱, 계산의 단계 파이프라인: 알아보기",
+		"summary": "입력 문자열을 해석해 값을 내야 하고, 단계마다 입력이 잘못될 수 있어 어느 단계의 오류인지 구분해야 할 때",
+		"prompt": "`\"1+2+3\"` 같은 문자열을 계산한다. 이상한 문자, 숫자가 아닌 항, 빈 식 같은 잘못된 입력은 예외 없이 이유를 담은 실패로 돌려주어야 한다.",
+		"points": [
+			"단계 파이프라인: 토큰화, 파싱, 계산을 Either 함수로 나누고 for로 이어 한 함수로 만든다",
+			"단서: 문자열을 해석(구문 오류 가능)한 뒤 계산(계산 오류 가능)하는 단계적 구조이다",
+			"한 함수에 모두 넣으면 오류 위치를 가리기 어렵고 단계별 테스트도 할 수 없다"
+		],
+		"pattern": "staged-pipeline",
+		"unlock": [
+			"c-01-calculator"
+		]
+	},
+	{
+		"id": "staged-pipeline-steps",
+		"kind": "steps",
+		"topic": "errors",
+		"title": "토큰화, 파싱, 계산의 단계 파이프라인: 풀이 과정",
+		"summary": "단계마다 Either로 입출력을 맞추고 for로 잇는다.",
+		"prompt": "문자열 식을 계산하는 `calc`를 만드는 풀이 단계를 순서대로 말해 보라(오류는 `Either`).",
+		"points": [
+			"단계 나누기: `tokenize`, `parse`, `eval` 세 함수로 쪼갠다",
+			"타입: 각 함수가 `Either[String, …]`를 돌려주고 출력과 입력이 맞물린다",
+			"오류: 이상한 문자, 숫자 아닌 항, 빈 식은 각 단계에서 `Left`로 돌려준다",
+			"합치기: `calc`는 `for`로 세 단계를 잇고, 단계별로 따로 검증한다"
+		],
+		"answerCode": "def calc(s: String): Either[String, Int] =\n  for\n    tokens <- tokenize(s)\n    expr   <- parse(tokens)\n    value  <- eval(expr)\n  yield value",
+		"verify": "def tokenize(s: String): Either[String, List[String]] =\n  if s.exists(c => !(c.isDigit || c == '+')) then Left(\"bad char\") else Right(s.split('+').toList)\n\ndef parse(ts: List[String]): Either[String, List[Int]] =\n  ts.foldRight(Right(Nil): Either[String, List[Int]]) { (t, acc) =>\n    for\n      n    <- t.toIntOption.toRight(\"bad term: \" + t)\n      rest <- acc\n    yield n :: rest\n  }\n\ndef eval(ns: List[Int]): Either[String, Int] =\n  if ns.isEmpty then Left(\"empty\") else Right(ns.sum)\n\ndef calc(s: String): Either[String, Int] =\n  for\n    tokens <- tokenize(s)\n    expr   <- parse(tokens)\n    value  <- eval(expr)\n  yield value\n\ncalc(\"1+2+3\") // => Right(6)\ncalc(\"1+x\") // => Left(bad char)\ncalc(\"1++2\") // => Left(bad term: )",
+		"pattern": "staged-pipeline",
+		"unlock": [
+			"c-01-calculator"
+		]
+	},
+	{
+		"id": "staged-pipeline-line",
+		"kind": "line",
+		"topic": "errors",
+		"title": "파이프라인의 둘째 단계",
+		"summary": "각 단계는 앞 단계의 결과만 받는다.",
+		"prompt": "둘째 단계는 토큰 목록에서 구문 트리(식)를 만든다. 빈칸을 채워라.",
+		"promptCode": "for\n  tokens <- tokenize(s)\n  expr   <- ____\n  value  <- eval(expr)\nyield value",
+		"points": [
+			"`parse(tokens)`: 앞 단계의 출력 `tokens`가 이 단계의 입력이 된다. 원래 문자열 `s`를 다시 넘기지 않는다"
+		],
+		"answerCode": "expr   <- parse(tokens)",
+		"verify": "def tokenize(s: String): Either[String, List[String]] =\n  if s.exists(c => !(c.isDigit || c == '+')) then Left(\"bad char\") else Right(s.split('+').toList)\n\ndef parse(ts: List[String]): Either[String, List[Int]] =\n  ts.foldRight(Right(Nil): Either[String, List[Int]]) { (t, acc) =>\n    for\n      n    <- t.toIntOption.toRight(\"bad term: \" + t)\n      rest <- acc\n    yield n :: rest\n  }\n\ndef eval(ns: List[Int]): Either[String, Int] =\n  if ns.isEmpty then Left(\"empty\") else Right(ns.sum)\n\ndef calc(s: String): Either[String, Int] =\n  for\n    tokens <- tokenize(s)\n    expr   <- parse(tokens)\n    value  <- eval(expr)\n  yield value\n\ncalc(\"1+2+3\") // => Right(6)\ncalc(\"1+x\") // => Left(bad char)\ncalc(\"1++2\") // => Left(bad term: )",
+		"pattern": "staged-pipeline",
+		"unlock": [
+			"c-01-calculator"
+		]
+	},
+	{
+		"id": "group-aggregate-sort-recognize",
+		"kind": "recognize",
+		"topic": "maps",
+		"title": "그룹, 집계, 정렬과 동률 처리: 알아보기",
+		"summary": "목록을 키별로 모아 합계나 개수를 내고 순위나 상위 N개를 뽑되, 같은 값의 순서도 정해야 할 때",
+		"prompt": "주문 목록(고객, 수량, 단가)에서 고객별 총 구매 금액을 구하고 금액이 큰 고객부터 상위 n명을 돌려준다. 금액이 같으면 이름이 사전순으로 앞선 고객이 먼저이다.",
+		"points": [
+			"groupMapReduce로 고객별 합계를 구하고 (-합계, 이름)으로 sortBy한 뒤 take(n)한다",
+			"단서: 키별 집계 후 순위를 매기며, '같으면 이름순'이라는 동률 규칙이 따로 주어진다",
+			"합계만으로 정렬하면 동률의 순서가 입력 순서에 따라 흔들려 결과가 일정하지 않다"
+		],
+		"pattern": "group-aggregate-sort",
+		"unlock": [
+			"c-02-order-report"
+		]
+	},
+	{
+		"id": "group-aggregate-sort-steps",
+		"kind": "steps",
+		"topic": "maps",
+		"title": "그룹, 집계, 정렬과 동률 처리: 풀이 과정",
+		"summary": "묶고 줄이고, (-합계, 이름)으로 정렬해 자른다.",
+		"prompt": "주문 목록에서 고객별 합계 상위 n명을 뽑는 `topCustomers`의 풀이 단계를 순서대로 말해 보라(동률은 이름순).",
+		"points": [
+			"키: 고객 이름으로 묶는다",
+			"집계: 한 주문의 값을 `qty * unitPrice`로 뽑아 `_ + _`로 줄인다",
+			"정렬 키: `(-total, customer)`로 큰 합계가 먼저이고 동률은 이름순이 되게 한다",
+			"자르기: `take(n)`으로 상위 n명만 남긴다"
+		],
+		"answerCode": "def topCustomers(orders: List[Order], n: Int): List[(String, Int)] =\n  orders\n    .groupMapReduce(_.customer)(o => o.qty * o.unitPrice)(_ + _)\n    .toList\n    .sortBy((customer, total) => (-total, customer))\n    .take(n)",
+		"verify": "case class Order(customer: String, qty: Int, unitPrice: Int)\n\ndef topCustomers(orders: List[Order], n: Int): List[(String, Int)] =\n  orders\n    .groupMapReduce(_.customer)(o => o.qty * o.unitPrice)(_ + _)\n    .toList\n    .sortBy((customer, total) => (-total, customer))\n    .take(n)\n\nval orders = List(Order(\"bob\", 1, 10), Order(\"amy\", 2, 5), Order(\"cat\", 1, 7), Order(\"cat\", 1, 3), Order(\"bob\", 1, 5))\ntopCustomers(orders, 2) // => List((bob,15), (amy,10))",
+		"pattern": "group-aggregate-sort",
+		"unlock": [
+			"c-02-order-report"
+		]
+	},
+	{
+		"id": "group-aggregate-sort-line",
+		"kind": "line",
+		"topic": "maps",
+		"title": "sortBy의 내림차순 키",
+		"summary": "내림차순은 부호 반전, 동률은 보조 키.",
+		"prompt": "합계가 큰 고객이 먼저, 동률이면 이름 사전순이다. 정렬 키 튜플의 빈칸은?",
+		"promptCode": ".toList\n.sortBy((customer, total) => (____, customer))\n.take(n)",
+		"points": [
+			"`-total`: `sortBy`는 오름차순이므로 부호를 바꿔 큰 합계를 앞으로 보낸다. 이름은 두 번째 키로 동률을 가른다"
+		],
+		"answerCode": ".sortBy((customer, total) => (-total, customer))",
+		"verify": "case class Order(customer: String, qty: Int, unitPrice: Int)\n\ndef topCustomers(orders: List[Order], n: Int): List[(String, Int)] =\n  orders\n    .groupMapReduce(_.customer)(o => o.qty * o.unitPrice)(_ + _)\n    .toList\n    .sortBy((customer, total) => (-total, customer))\n    .take(n)\n\nval orders = List(Order(\"bob\", 1, 10), Order(\"amy\", 2, 5), Order(\"cat\", 1, 7), Order(\"cat\", 1, 3), Order(\"bob\", 1, 5))\ntopCustomers(orders, 2) // => List((bob,15), (amy,10))",
+		"pattern": "group-aggregate-sort",
+		"unlock": [
+			"c-02-order-report"
+		]
+	},
+	{
+		"id": "typeclass-derived-instances-recognize",
+		"kind": "recognize",
+		"topic": "context",
+		"title": "원소 인스턴스에서 유도하는 타입 클래스: 알아보기",
+		"summary": "타입마다 다르게 동작하되 List[A]나 Option[A]처럼 겹쳐 쓰이는 타입에도 같은 동작이 자동으로 되게 할 때",
+		"prompt": "`Int`, `String`뿐 아니라 `List[Option[Int]]`까지 모두 JSON 문자열로 바꾸고 싶다. 타입마다 함수를 따로 만들지 않고 겹친 타입에도 같은 방식이 통해야 한다.",
+		"points": [
+			"타입 클래스와 유도 given: 원소 타입의 인스턴스를 `using`으로 받아 List, Option 인스턴스를 만든다",
+			"단서: 타입에 따라 구현이 다르고, 컨테이너는 원소의 구현을 빌려 쓰며 중첩에도 대응해야 한다",
+			"`match`로 타입을 검사하거나 오버로딩하면 새 타입을 추가할 때마다 기존 코드를 고쳐야 한다"
+		],
+		"pattern": "typeclass-derived-instances",
+		"unlock": [
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "typeclass-derived-instances-steps",
+		"kind": "steps",
+		"topic": "context",
+		"title": "원소 인스턴스에서 유도하는 타입 클래스: 풀이 과정",
+		"summary": "컨테이너의 인스턴스는 원소의 인스턴스를 using으로 받아 만든다.",
+		"prompt": "`List`와 `Option`이 어떤 원소 타입이든 인코딩되게 하는 `Encoder` 구성 단계를 순서대로 말해 보라.",
+		"points": [
+			"능력 정의: `Encoder[A]`는 `encode(a: A): String` 하나를 가진다",
+			"기본 인스턴스: `Int` 같은 타입마다 `given`을 둔다",
+			"유도: `given [A](using e: Encoder[A])`로 원소의 인코더를 받아 `List`와 `Option`의 인코더를 만든다",
+			"호출부: `using`이 자동으로 풀려 `List[Option[Int]]`도 별도 코드 없이 동작한다"
+		],
+		"answerCode": "given [A](using e: Encoder[A]): Encoder[List[A]] with\n  def encode(xs: List[A]): String = xs.map(e.encode).mkString(\"[\", \",\", \"]\")\n\ngiven [A](using e: Encoder[A]): Encoder[Option[A]] with\n  def encode(o: Option[A]): String = o.fold(\"null\")(e.encode)",
+		"verify": "trait Encoder[A]:\n  def encode(a: A): String\n\ngiven Encoder[Int] with\n  def encode(n: Int): String = n.toString\n\ngiven [A](using e: Encoder[A]): Encoder[List[A]] with\n  def encode(xs: List[A]): String = xs.map(e.encode).mkString(\"[\", \",\", \"]\")\n\ngiven [A](using e: Encoder[A]): Encoder[Option[A]] with\n  def encode(o: Option[A]): String = o.fold(\"null\")(e.encode)\n\ndef toJson[A](a: A)(using e: Encoder[A]): String = e.encode(a)\n\ntoJson(List(Option(1), None)) // => [1,null]",
+		"pattern": "typeclass-derived-instances",
+		"unlock": [
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "typeclass-derived-instances-line",
+		"kind": "line",
+		"topic": "context",
+		"title": "유도 given의 using",
+		"summary": "유도 인스턴스는 원소 인스턴스를 using으로 받는다.",
+		"prompt": "`List[A]`의 인코더는 `A`의 인코더 `e`가 필요하다. 매개변수 자리의 빈칸은?",
+		"promptCode": "given [A](____): Encoder[List[A]] with\n  def encode(xs: List[A]): String = xs.map(e.encode).mkString(\"[\", \",\", \"]\")",
+		"points": [
+			"`using e: Encoder[A]`: 원소 타입의 인스턴스를 컴파일러가 찾아 넘기게 한다. 일반 매개변수로 두면 호출마다 직접 넘겨야 한다"
+		],
+		"answerCode": "given [A](using e: Encoder[A]): Encoder[List[A]] with",
+		"verify": "trait Encoder[A]:\n  def encode(a: A): String\n\ngiven Encoder[Int] with\n  def encode(n: Int): String = n.toString\n\ngiven [A](using e: Encoder[A]): Encoder[List[A]] with\n  def encode(xs: List[A]): String = xs.map(e.encode).mkString(\"[\", \",\", \"]\")\n\ngiven [A](using e: Encoder[A]): Encoder[Option[A]] with\n  def encode(o: Option[A]): String = o.fold(\"null\")(e.encode)\n\ndef toJson[A](a: A)(using e: Encoder[A]): String = e.encode(a)\n\ntoJson(List(Option(1), None)) // => [1,null]",
+		"pattern": "typeclass-derived-instances",
+		"unlock": [
+			"c-04-json-encoder"
+		]
+	},
+	{
+		"id": "state-action-composition-recognize",
+		"kind": "recognize",
+		"topic": "types",
+		"title": "State 동작 이어 붙이기: 알아보기",
+		"summary": "상태를 바꾸는 단계들을 차례로 실행하고 마지막에 상태에서 값을 읽어야 하되, var 없이 순수하게 하고 싶을 때",
+		"prompt": "사탕 자판기가 동전과 손잡이 입력 목록을 차례로 처리한다. 기계의 최종 상태가 남아야 하고 결과로는 들어 있는 동전 수를 돌려준다. 가변 변수는 쓰지 않는다.",
+		"points": [
+			"State 동작을 sequence와 flatMap(for)으로 이어 붙인다. 상태는 State가 대신 들고 간다",
+			"단서: 같은 상태가 여러 입력에 걸쳐 바뀌고 순수 함수로 남아야 하며, 마지막에 상태에서 값을 읽는다",
+			"`var`로 기계를 갱신하면 순수성이 깨지고, 직접 상태를 넘기면 단계마다 배관 코드가 늘어난다"
+		],
+		"pattern": "state-action-composition",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0613-candy-machine"
+		]
+	},
+	{
+		"id": "state-action-composition-steps",
+		"kind": "steps",
+		"topic": "types",
+		"title": "State 동작 이어 붙이기: 풀이 과정",
+		"summary": "규칙은 순수 함수, 동작은 modify, 목록은 sequence, 읽기는 get.",
+		"prompt": "입력 목록으로 자판기를 움직이고 동전 수를 돌려주는 `simulate`의 풀이 단계를 순서대로 말해 보라.",
+		"points": [
+			"순수 규칙: `update(i)(m)`이 입력 하나와 기계에서 새 기계를 돌려준다",
+			"동작으로: `State.modify(update(i))`로 상태 동작을 만든다",
+			"합치기: `inputs.map(...)`으로 동작 목록을 만들고 `sequence`로 하나로 합친다",
+			"읽기: for에서 `get`으로 최종 기계를 꺼내 `m.coins`를 yield한다"
+		],
+		"answerCode": "def update(i: Input)(m: Machine): Machine = (i, m) match\n  case (_, Machine(_, 0, _))              => m\n  case (Input.Coin, Machine(true, c, k))  => Machine(false, c, k + 1)\n  case (Input.Turn, Machine(false, c, k)) => Machine(true, c - 1, k)\n  case _                                  => m\n\ndef simulate(inputs: List[Input]): State[Machine, Int] =\n  for\n    _ <- State.sequence(inputs.map(i => State.modify[Machine](update(i))))\n    m <- State.get[Machine]\n  yield m.coins",
+		"verify": "enum Input:\n  case Coin, Turn\n\ncase class Machine(locked: Boolean, candies: Int, coins: Int)\n\ncase class State[S, +A](run: S => (A, S)):\n  def flatMap[B](f: A => State[S, B]): State[S, B] =\n    State { s =>\n      val (a, s2) = run(s)\n      f(a).run(s2)\n    }\n  def map[B](f: A => B): State[S, B] = flatMap(a => State.unit(f(a)))\n\nobject State:\n  def unit[S, A](a: A): State[S, A] = State(s => (a, s))\n  def get[S]: State[S, S] = State(s => (s, s))\n  def modify[S](f: S => S): State[S, Unit] = State(s => ((), f(s)))\n  def sequence[S, A](xs: List[State[S, A]]): State[S, List[A]] =\n    xs.foldRight(unit[S, List[A]](Nil))((x, acc) => x.flatMap(a => acc.map(a :: _)))\n\ndef update(i: Input)(m: Machine): Machine = (i, m) match\n  case (_, Machine(_, 0, _))              => m\n  case (Input.Coin, Machine(true, c, k))  => Machine(false, c, k + 1)\n  case (Input.Turn, Machine(false, c, k)) => Machine(true, c - 1, k)\n  case _                                  => m\n\ndef simulate(inputs: List[Input]): State[Machine, Int] =\n  for\n    _ <- State.sequence(inputs.map(i => State.modify[Machine](update(i))))\n    m <- State.get[Machine]\n  yield m.coins\n\nsimulate(List(Input.Coin, Input.Turn, Input.Coin, Input.Turn)).run(Machine(true, 5, 10)) // => (12,Machine(true,3,12))",
+		"pattern": "state-action-composition",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0613-candy-machine"
+		]
+	},
+	{
+		"id": "state-action-composition-line",
+		"kind": "line",
+		"topic": "types",
+		"title": "동작 목록의 sequence",
+		"summary": "동작 목록은 sequence로 하나의 동작이 된다.",
+		"prompt": "`inputs.map(...)`은 `List[State[Machine, Unit]]`이다. 이것을 하나의 동작으로 만드는 함수가 빈칸이다.",
+		"promptCode": "for\n  _ <- State.____(inputs.map(i => State.modify[Machine](update(i))))\n  m <- State.get[Machine]\nyield m.coins",
+		"points": [
+			"`sequence`: 동작 목록을 `State[Machine, List[Unit]]` 하나로 합쳐 차례로 실행하게 한다. `map`만 하면 동작이 실행되지 않은 목록일 뿐이다"
+		],
+		"answerCode": "_ <- State.sequence(inputs.map(i => State.modify[Machine](update(i))))",
+		"verify": "enum Input:\n  case Coin, Turn\n\ncase class Machine(locked: Boolean, candies: Int, coins: Int)\n\ncase class State[S, +A](run: S => (A, S)):\n  def flatMap[B](f: A => State[S, B]): State[S, B] =\n    State { s =>\n      val (a, s2) = run(s)\n      f(a).run(s2)\n    }\n  def map[B](f: A => B): State[S, B] = flatMap(a => State.unit(f(a)))\n\nobject State:\n  def unit[S, A](a: A): State[S, A] = State(s => (a, s))\n  def get[S]: State[S, S] = State(s => (s, s))\n  def modify[S](f: S => S): State[S, Unit] = State(s => ((), f(s)))\n  def sequence[S, A](xs: List[State[S, A]]): State[S, List[A]] =\n    xs.foldRight(unit[S, List[A]](Nil))((x, acc) => x.flatMap(a => acc.map(a :: _)))\n\ndef update(i: Input)(m: Machine): Machine = (i, m) match\n  case (_, Machine(_, 0, _))              => m\n  case (Input.Coin, Machine(true, c, k))  => Machine(false, c, k + 1)\n  case (Input.Turn, Machine(false, c, k)) => Machine(true, c - 1, k)\n  case _                                  => m\n\ndef simulate(inputs: List[Input]): State[Machine, Int] =\n  for\n    _ <- State.sequence(inputs.map(i => State.modify[Machine](update(i))))\n    m <- State.get[Machine]\n  yield m.coins\n\nsimulate(List(Input.Coin, Input.Turn, Input.Coin, Input.Turn)).run(Machine(true, 5, 10)) // => (12,Machine(true,3,12))",
+		"pattern": "state-action-composition",
+		"book": {
+			"id": "fpis",
+			"chapter": 6
+		},
+		"unlock": [
+			"fp-0613-candy-machine"
+		]
+	},
+	{
+		"id": "lazy-pipeline-early-exit-recognize",
+		"kind": "recognize",
+		"topic": "lazy",
+		"title": "지연 파이프라인으로 일찍 멈추기: 알아보기",
+		"summary": "후보를 만들어 조건을 검사하다 처음 맞는 것을 찾으면 끝내고 싶고, 입력이 크거나 무한일 수 있을 때",
+		"prompt": "시퀀스 `s` 안에 `sub`가 연속된 부분으로 들어 있는지 판별한다. 처음 찾는 즉시 끝나야 하고, `s`가 끝없는 시퀀스여도 `sub`가 앞쪽에 있으면 답이 나와야 한다.",
+		"points": [
+			"tails, startsWith, exists를 잇는 지연 파이프라인: 첫 일치에서 소비가 멈춘다",
+			"단서: 후보가 많고 '하나라도' 맞으면 되며 무한 입력에서도 끝나야 한다",
+			"`toList`로 먼저 펼친 뒤 검사하면 무한 입력에서 끝나지 않고, 유한이어도 전부 계산한다"
+		],
+		"pattern": "lazy-pipeline-early-exit",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0514-tails-has-subsequence"
+		]
+	},
+	{
+		"id": "lazy-pipeline-early-exit-steps",
+		"kind": "steps",
+		"topic": "lazy",
+		"title": "지연 파이프라인으로 일찍 멈추기: 풀이 과정",
+		"summary": "후보는 지연으로, 소비자는 첫 성공에서 멈추는 exists로.",
+		"prompt": "`s.hasSubsequence(sub)`를 만드는 풀이 단계를 순서대로 말해 보라(찾는 즉시 멈춘다).",
+		"points": [
+			"후보: `s.tails`로 모든 접미사를 지연해서 만든다",
+			"조건: 각 접미사에 `startsWith(sub)`를 적용한다",
+			"소비자: `exists`가 처음 `true`에서 멈춘다",
+			"경계: 빈 `sub`는 첫 접미사부터 일치하고 무한 `s`도 앞쪽에서 끝난다"
+		],
+		"answerCode": "def hasSubsequence[A](s: LazyList[A], sub: LazyList[A]): Boolean =\n  s.tails.exists(_.startsWith(sub))",
+		"verify": "def hasSubsequence[A](s: LazyList[A], sub: LazyList[A]): Boolean =\n  s.tails.exists(_.startsWith(sub))\n\nval nat = LazyList.from(0)\nhasSubsequence(nat, LazyList(5, 6, 7)) // => true\nhasSubsequence(LazyList(1, 2, 3), LazyList(1, 3)) // => false",
+		"pattern": "lazy-pipeline-early-exit",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0514-tails-has-subsequence"
+		]
+	},
+	{
+		"id": "lazy-pipeline-early-exit-line",
+		"kind": "line",
+		"topic": "lazy",
+		"title": "exists로 일찍 멈추기",
+		"summary": "하나라도 맞으면 끝내려면 exists이다.",
+		"prompt": "접미사 중 하나라도 `sub`로 시작하면 `true`이고 찾는 즉시 멈춰야 한다. 빈칸의 메서드는?",
+		"promptCode": "def hasSubsequence[A](s: LazyList[A], sub: LazyList[A]): Boolean =\n  s.tails.____(_.startsWith(sub))",
+		"points": [
+			"`exists`: 처음 `true`에서 멈춘다. `forall`은 하나라도 틀리면 바로 `false`가 되어 의미가 뒤집힌다"
+		],
+		"answerCode": "s.tails.exists(_.startsWith(sub))",
+		"verify": "def hasSubsequence[A](s: LazyList[A], sub: LazyList[A]): Boolean =\n  s.tails.exists(_.startsWith(sub))\n\nval nat = LazyList.from(0)\nhasSubsequence(nat, LazyList(5, 6, 7)) // => true\nhasSubsequence(LazyList(1, 2, 3), LazyList(1, 3)) // => false",
+		"pattern": "lazy-pipeline-early-exit",
+		"book": {
+			"id": "fpis",
+			"chapter": 5
+		},
+		"unlock": [
+			"fp-0514-tails-has-subsequence"
+		]
+	}
+]

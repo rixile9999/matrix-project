@@ -1,0 +1,752 @@
+[
+	{
+		"id": "lower-bound-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "이분 탐색 lower bound 알아보기",
+		"summary": "정렬된 배열에서 \"처음으로 조건을 만족하는 위치\"는 반열린 구간 이분 탐색이다.",
+		"prompt": "오름차순 배열 길이 n ≤ 2·10⁵, 질의 q ≤ 2·10⁵개. 각 질의 x마다 x 이상인 첫 원소의 위치(없으면 n)를 구하라.",
+		"points": [
+			"정렬 배열 위의 이분 탐색(lower bound)이다",
+			"정렬되어 있고 \"처음으로 ~ 이상인 위치\"를 묻는 점이 단서이다",
+			"질의마다 선형 탐색하면 O(nq)=4·10¹⁰이라 시간 초과다"
+		],
+		"pattern": "algo-lower-bound",
+		"unlock": []
+	},
+	{
+		"id": "lower-bound-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "이분 탐색 lower bound",
+		"summary": "구간 [lo, hi)를 들고 `a(mid) < x`이면 lo를 올리고 아니면 hi를 mid로 내린다.",
+		"prompt": "정렬된 배열 a에서 x 이상인 첫 위치(없으면 n)를 구하는 풀이의 단계를 순서대로 말해 보라.",
+		"points": [
+			"상태 정하기: 답이 있는 반열린 구간 (lo, hi), 처음은 (0, n)",
+			"구간 줄이기: `a(mid) < x`이면 mid는 답이 될 수 없으니 lo = mid + 1, 아니면 hi = mid",
+			"종료: lo >= hi이면 구간이 비었고 lo가 답이다",
+			"경계: 모두 x보다 작으면 lo가 n까지 가서 n이 나온다. 재귀 인자가 곧 상태라 var가 없다"
+		],
+		"answerCode": "import scala.annotation.tailrec\n@tailrec def lb(lo: Int, hi: Int): Int =\n  if lo >= hi then lo\n  else\n    val mid = lo + (hi - lo) / 2\n    if a(mid) < x then lb(mid + 1, hi) else lb(lo, mid)\nlb(0, a.length)",
+		"verify": "val a = Vector(1, 3, 3, 5, 8)\nval x = 3\nimport scala.annotation.tailrec\n@tailrec def lb(lo: Int, hi: Int): Int =\n  if lo >= hi then lo\n  else\n    val mid = lo + (hi - lo) / 2\n    if a(mid) < x then lb(mid + 1, hi) else lb(lo, mid)\nlb(0, a.length) // => 1",
+		"pattern": "algo-lower-bound",
+		"unlock": []
+	},
+	{
+		"id": "lower-bound-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "이분 탐색 lower bound의 핵심 한 줄",
+		"summary": "반열린 구간에서는 아래쪽이 mid + 1, 위쪽이 mid다. 위쪽을 mid - 1로 쓰면 답을 잃는다.",
+		"prompt": "반열린 구간 [lo, hi)에서 `a(mid) >= x`일 때 다음 호출의 hi 자리에 무엇이 들어가나?",
+		"promptCode": "import scala.annotation.tailrec\n@tailrec def lb(lo: Int, hi: Int): Int =\n  if lo >= hi then lo\n  else\n    val mid = lo + (hi - lo) / 2\n    if a(mid) < x then lb(mid + 1, hi) else lb(lo, ____)\nlb(0, a.length)",
+		"points": [
+			"`mid`: a(mid)가 답일 수 있으므로 hi는 열린 끝으로 mid까지만 줄이고 mid를 남겨 둔다",
+			"`mid - 1`로 쓰면 mid 자리가 정답일 때 답을 버리게 된다"
+		],
+		"answerCode": "if a(mid) < x then lb(mid + 1, hi) else lb(lo, mid)",
+		"verify": "val a = Vector(1, 3, 3, 5, 8)\nval x = 3\nimport scala.annotation.tailrec\n@tailrec def lb(lo: Int, hi: Int): Int =\n  if lo >= hi then lo\n  else\n    val mid = lo + (hi - lo) / 2\n    if a(mid) < x then lb(mid + 1, hi) else lb(lo, mid)\nlb(0, a.length) // => 1",
+		"pattern": "algo-lower-bound",
+		"unlock": []
+	},
+	{
+		"id": "bs-on-answer-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "답에 대한 이분 탐색: 막대 자르기 알아보기",
+		"summary": "답을 직접 구하기 어렵고 \"이 값이 되나?\"가 쉬우면서 단조이면 답 위에서 이분 탐색한다.",
+		"prompt": "길이 a_i인 막대 n ≤ 2·10⁵개(a_i ≤ 10⁹)를 잘라 길이가 같은 조각 k개 이상을 만들려 한다. 조각 길이의 최댓값을 구하라.",
+		"points": [
+			"답(조각 길이) 위의 이분 탐색이다",
+			"\"최대 길이\"를 묻고 길이를 정하면 조각 수를 세기 쉬우며, 길이가 길수록 조각이 줄어드는 단조성이 단서이다",
+			"길이를 1부터 하나씩 시도하면 10⁹번이라 느리다"
+		],
+		"pattern": "algo-bs-on-answer",
+		"unlock": []
+	},
+	{
+		"id": "bs-on-answer-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "답에 대한 이분 탐색: 막대 자르기",
+		"summary": "\"길이 L로 k조각이 나오나?\"는 단조이므로 가능/불가능의 경계를 이분 탐색한다.",
+		"prompt": "막대들을 잘라 같은 길이 조각 k개 이상을 얻는 최대 길이를 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 길이 후보 구간 (lo, hi), lo는 가능, hi는 불가능이라는 불변식",
+			"판정 함수: 길이 L이면 조각 수는 `a.map(_ / L).sum`이고 k 이상이면 가능",
+			"구간 줄이기: 가능하면 lo = mid, 불가능하면 hi = mid",
+			"범위 설정: lo=1은 가능, hi=`a.max + 1`은 조각이 0개라 불가능"
+		],
+		"answerCode": "import scala.annotation.tailrec\ndef ok(len: Int) = a.map(_ / len).sum >= k\n@tailrec def go(lo: Int, hi: Int): Int =\n  if hi - lo <= 1 then lo\n  else\n    val mid = (lo + hi) / 2\n    if ok(mid) then go(mid, hi) else go(lo, mid)\nval ans = go(1, a.max + 1)",
+		"verify": "val a = Vector(802, 743, 457, 539)\nval k = 11\nimport scala.annotation.tailrec\ndef ok(len: Int) = a.map(_ / len).sum >= k\n@tailrec def go(lo: Int, hi: Int): Int =\n  if hi - lo <= 1 then lo\n  else\n    val mid = (lo + hi) / 2\n    if ok(mid) then go(mid, hi) else go(lo, mid)\nval ans = go(1, a.max + 1) // => 200",
+		"pattern": "algo-bs-on-answer",
+		"unlock": []
+	},
+	{
+		"id": "bs-on-answer-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "답에 대한 이분 탐색: 막대 자르기의 핵심 한 줄",
+		"summary": "답 위 이분 탐색의 hi는 \"불가능이 보장된 값\"이어야 하므로 최대 후보보다 1 크게 잡는다.",
+		"prompt": "빈칸에 들어갈 값은? 불변식은 lo는 가능, hi는 불가능이고 길이가 `a.max`일 때 조각이 나올 수 있다.",
+		"promptCode": "import scala.annotation.tailrec\ndef ok(len: Int) = a.map(_ / len).sum >= k\n@tailrec def go(lo: Int, hi: Int): Int =\n  if hi - lo <= 1 then lo\n  else\n    val mid = (lo + hi) / 2\n    if ok(mid) then go(mid, hi) else go(lo, mid)\nval ans = go(1, a.max + ____)",
+		"points": [
+			"`1`: hi는 불가능이 보장돼야 하므로 최대 후보 a.max보다 하나 큰 값이다",
+			"`a.max`로 두면 그 값이 정답일 때 탐색에서 영영 반환되지 않는다"
+		],
+		"answerCode": "val ans = go(1, a.max + 1)",
+		"verify": "val a = Vector(802, 743, 457, 539)\nval k = 11\nimport scala.annotation.tailrec\ndef ok(len: Int) = a.map(_ / len).sum >= k\n@tailrec def go(lo: Int, hi: Int): Int =\n  if hi - lo <= 1 then lo\n  else\n    val mid = (lo + hi) / 2\n    if ok(mid) then go(mid, hi) else go(lo, mid)\nval ans = go(1, a.max + 1) // => 200",
+		"pattern": "algo-bs-on-answer",
+		"unlock": []
+	},
+	{
+		"id": "prefix-sums-recognize",
+		"kind": "recognize",
+		"topic": "collections",
+		"title": "구간 합 질의 알아보기",
+		"summary": "전처리 O(n) 한 번이면 구간 합 질의가 O(1)이다.",
+		"prompt": "길이 n ≤ 2·10⁵ 정수 배열과 질의 q ≤ 2·10⁵개가 주어진다. 각 질의는 l, r이며 a[l..r]의 합을 출력한다. 배열은 바뀌지 않는다.",
+		"points": [
+			"누적합(prefix sum)이다",
+			"같은 불변 배열에 구간 합 질의가 많은 점이 단서이다",
+			"질의마다 구간을 더하면 O(nq)라 시간 초과이고, 합이 크므로 Long이 필요하다"
+		],
+		"pattern": "algo-prefix-sums",
+		"unlock": []
+	},
+	{
+		"id": "prefix-sums-steps",
+		"kind": "steps",
+		"topic": "collections",
+		"title": "구간 합 질의",
+		"summary": "`pre = a.scanLeft(0L)(_ + _)`로 만들고 구간 합은 `pre(r + 1) - pre(l)`이다.",
+		"prompt": "불변 배열의 구간 합 질의를 O(1)에 답하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: pre(i)는 앞 i개의 합이고 길이는 n+1, pre(0)=0",
+			"전처리: `a.scanLeft(0L)(_ + _)` 한 번으로 O(n)에 만든다",
+			"질의: 0-based 닫힌 구간 [l, r]의 합은 `pre(r + 1) - pre(l)`",
+			"값이 커질 수 있으니 시작값을 `0L`로 둬 Long으로 누적한다"
+		],
+		"answerCode": "val pre = a.scanLeft(0L)(_ + _)\ndef sum(l: Int, r: Int): Long = pre(r + 1) - pre(l)\nval s = sum(1, 3)",
+		"verify": "val a = Vector(3, 1, 4, 1, 5)\nval pre = a.scanLeft(0L)(_ + _)\ndef sum(l: Int, r: Int): Long = pre(r + 1) - pre(l)\nval s = sum(1, 3) // => 6",
+		"pattern": "algo-prefix-sums",
+		"unlock": []
+	},
+	{
+		"id": "prefix-sums-line",
+		"kind": "line",
+		"topic": "collections",
+		"title": "구간 합 질의의 핵심 한 줄",
+		"summary": "pre는 \"앞 i개의 합\"이라 닫힌 구간 [l, r]은 pre(r + 1) - pre(l)이다.",
+		"prompt": "`pre(i)`는 앞 i개의 합이다. 0-based 닫힌 구간 [l, r]의 합을 구하는 줄의 빈칸은?",
+		"promptCode": "val pre = a.scanLeft(0L)(_ + _)\ndef sum(l: Int, r: Int): Long = pre(r + ____) - pre(l)\nval s = sum(1, 3)",
+		"points": [
+			"`1`: pre(r + 1)이 a(0)..a(r)의 합이므로 r까지 포함하려면 하나 더 간다",
+			"`pre(r) - pre(l)`로 쓰면 a(r)이 빠진다"
+		],
+		"answerCode": "def sum(l: Int, r: Int): Long = pre(r + 1) - pre(l)",
+		"verify": "val a = Vector(3, 1, 4, 1, 5)\nval pre = a.scanLeft(0L)(_ + _)\ndef sum(l: Int, r: Int): Long = pre(r + 1) - pre(l)\nval s = sum(1, 3) // => 6",
+		"pattern": "algo-prefix-sums",
+		"unlock": []
+	},
+	{
+		"id": "difference-array-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "구간 더하기 차분 알아보기",
+		"summary": "구간 갱신을 양 끝점 두 번의 갱신으로 바꾸고, 마지막에 누적합으로 복원한다.",
+		"prompt": "길이 n ≤ 2·10⁵ 배열이 모두 0이다. 연산 q ≤ 2·10⁵개(l, r, v)는 a[l..r]에 v를 더한다. 모든 연산 후 최종 배열을 출력하라.",
+		"points": [
+			"차분 배열(difference array)이다",
+			"구간에 더하기만 많이 하고 조회는 맨 끝에 한 번인 점이 단서이다",
+			"연산마다 구간을 돌면 O(nq)라 느리다. 중간 조회가 섞이면 세그먼트 트리/BIT가 필요하다"
+		],
+		"pattern": "algo-difference-array",
+		"unlock": []
+	},
+	{
+		"id": "difference-array-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "구간 더하기 차분",
+		"summary": "`d(l) += v`, `d(r + 1) -= v`로 기록하고 마지막에 `scanLeft`로 복원한다.",
+		"prompt": "모두 0인 배열에 구간 더하기 연산 q개를 적용한 최종 배열을 O(n+q)에 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 길이 n+1의 차분 배열 d (명령형이면 Array, 함수형이면 Vector)",
+			"연산마다 변환: d(l)에 v를 더하고 d(r + 1)에서 v를 뺀다",
+			"복원: d를 scanLeft로 누적하면 최종 배열이 된다",
+			"여유 칸: r + 1이 n일 수 있어 d의 길이는 n + 1"
+		],
+		"answerCode": "val d = ops.foldLeft(Vector.fill(n + 1)(0L)) { case (acc, (l, r, v)) =>\n  acc.updated(l, acc(l) + v).updated(r + 1, acc(r + 1) - v)\n}\nval res = d.take(n).scanLeft(0L)(_ + _).tail",
+		"verify": "val n = 5\nval ops = List((0, 2, 3), (1, 3, 2), (4, 4, 1))\nval d = ops.foldLeft(Vector.fill(n + 1)(0L)) { case (acc, (l, r, v)) =>\n  acc.updated(l, acc(l) + v).updated(r + 1, acc(r + 1) - v)\n}\nval res = d.take(n).scanLeft(0L)(_ + _).tail // => Vector(3, 5, 5, 2, 1)",
+		"pattern": "algo-difference-array",
+		"unlock": []
+	},
+	{
+		"id": "difference-array-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "구간 더하기 차분의 핵심 한 줄",
+		"summary": "더한 값을 끝나는 바로 다음 칸 r + 1에서 취소한다.",
+		"prompt": "a[l..r]에 v를 더하는 연산이다. 두 번째 갱신(-v)의 위치 빈칸은?",
+		"promptCode": "val d = ops.foldLeft(Vector.fill(n + 1)(0L)) { case (acc, (l, r, v)) =>\n  acc.updated(l, acc(l) + v).updated(____, acc(r + 1) - v)\n}\nval res = d.take(n).scanLeft(0L)(_ + _).tail",
+		"points": [
+			"`r + 1`: 구간이 r에서 끝나므로 영향이 r + 1부터 사라져야 한다",
+			"`r`에서 빼면 a(r)까지 v가 빠져 구간 길이가 하나 짧아진다"
+		],
+		"answerCode": "acc.updated(l, acc(l) + v).updated(r + 1, acc(r + 1) - v)",
+		"verify": "val n = 5\nval ops = List((0, 2, 3), (1, 3, 2), (4, 4, 1))\nval d = ops.foldLeft(Vector.fill(n + 1)(0L)) { case (acc, (l, r, v)) =>\n  acc.updated(l, acc(l) + v).updated(r + 1, acc(r + 1) - v)\n}\nval res = d.take(n).scanLeft(0L)(_ + _).tail // => Vector(3, 5, 5, 2, 1)",
+		"pattern": "algo-difference-array",
+		"unlock": []
+	},
+	{
+		"id": "two-pointers-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "두 포인터: 합이 target인 쌍 알아보기",
+		"summary": "합이 작으면 왼쪽을 올리고 크면 오른쪽을 내리며, 매번 정답이 될 수 없는 후보를 버린다.",
+		"prompt": "오름차순 배열(n ≤ 2·10⁵)에서 합이 정확히 t인 서로 다른 두 원소의 위치 쌍을 구하라. 없으면 없다고 답한다.",
+		"points": [
+			"정렬 배열 위의 두 포인터(양 끝에서 좁히기)이다",
+			"정렬되어 있고 \"합이 t인 쌍\"을 묻는 점이 단서이다",
+			"모든 쌍을 보면 O(n²)이다. 정렬이 없으면 해시 맵(Set)으로 푼다"
+		],
+		"pattern": "algo-two-pointers",
+		"unlock": []
+	},
+	{
+		"id": "two-pointers-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "두 포인터: 합이 target인 쌍",
+		"summary": "(i, j)를 양 끝에서 좁히며 합이 작으면 i++, 크면 j--.",
+		"prompt": "정렬된 배열에서 합이 t인 두 원소를 O(n)에 찾는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 양 끝에서 시작하는 포인터 (i, j), 재귀 인자로 들고 간다",
+			"비교: `a(i) + a(j)`가 t와 같으면 답, 작으면 i + 1, 크면 j - 1",
+			"정당성: 합이 작으면 a(i)는 어떤 j와도 t를 못 만든다. 그래서 버려도 된다",
+			"종료: i >= j이면 쌍이 없다(None)"
+		],
+		"answerCode": "import scala.annotation.tailrec\n@tailrec def go(i: Int, j: Int): Option[(Int, Int)] =\n  if i >= j then None\n  else\n    a(i) + a(j) match\n      case s if s == t => Some((i, j))\n      case s if s < t  => go(i + 1, j)\n      case _           => go(i, j - 1)\nval r = go(0, a.length - 1).map(_._2)",
+		"verify": "val a = Vector(1, 3, 4, 6, 9)\nval t = 7\nimport scala.annotation.tailrec\n@tailrec def go(i: Int, j: Int): Option[(Int, Int)] =\n  if i >= j then None\n  else\n    a(i) + a(j) match\n      case s if s == t => Some((i, j))\n      case s if s < t  => go(i + 1, j)\n      case _           => go(i, j - 1)\nval r = go(0, a.length - 1).map(_._2) // => Some(3)",
+		"pattern": "algo-two-pointers",
+		"unlock": []
+	},
+	{
+		"id": "two-pointers-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "두 포인터: 합이 target인 쌍의 핵심 한 줄",
+		"summary": "합이 작으면 왼쪽(작은 값)을 올려야 한다. 방향이 반대면 해를 지나친다.",
+		"prompt": "합이 t보다 작을 때 어느 포인터를 어떻게 움직이나? 빈칸에 들어갈 인자는?",
+		"promptCode": "import scala.annotation.tailrec\n@tailrec def go(i: Int, j: Int): Option[(Int, Int)] =\n  if i >= j then None\n  else\n    a(i) + a(j) match\n      case s if s == t => Some((i, j))\n      case s if s < t  => go(____, j)\n      case _           => go(i, j - 1)\nval r = go(0, a.length - 1).map(_._2)",
+		"points": [
+			"`i + 1`: 합이 모자라니 더 큰 값이 필요하고 오른쪽에서 가져올 수 있는 쪽은 i뿐이다",
+			"j를 줄이면 합이 더 작아져 정답을 버리게 된다"
+		],
+		"answerCode": "case s if s < t  => go(i + 1, j)",
+		"verify": "val a = Vector(1, 3, 4, 6, 9)\nval t = 7\nimport scala.annotation.tailrec\n@tailrec def go(i: Int, j: Int): Option[(Int, Int)] =\n  if i >= j then None\n  else\n    a(i) + a(j) match\n      case s if s == t => Some((i, j))\n      case s if s < t  => go(i + 1, j)\n      case _           => go(i, j - 1)\nval r = go(0, a.length - 1).map(_._2) // => Some(3)",
+		"pattern": "algo-two-pointers",
+		"unlock": []
+	},
+	{
+		"id": "sliding-window-recognize",
+		"kind": "recognize",
+		"topic": "maps",
+		"title": "슬라이딩 윈도우: 서로 다른 문자 k개 알아보기",
+		"summary": "(빈도 맵, 왼쪽 끝, 최선)을 들고 오른쪽을 늘린 뒤 조건이 깨지면 왼쪽을 줄인다.",
+		"prompt": "문자열 s(길이 ≤ 2·10⁵)에서 서로 다른 문자가 최대 k종인 가장 긴 연속 부분 문자열의 길이를 구하라.",
+		"points": [
+			"슬라이딩 윈도우(가변 길이 두 포인터) + 빈도 맵이다",
+			"\"연속 구간\"의 \"가장 긴\"을 묻고 구간을 넓히면 종류 수가 줄지 않는 단조성이 단서이다",
+			"모든 구간을 보면 O(n²)이다. 조건이 단조가 아니면(음수 합 등) 윈도우가 안 통한다"
+		],
+		"pattern": "algo-sliding-window",
+		"unlock": []
+	},
+	{
+		"id": "sliding-window-steps",
+		"kind": "steps",
+		"topic": "maps",
+		"title": "슬라이딩 윈도우: 서로 다른 문자 k개",
+		"summary": "(Map, l, best)를 foldLeft로 들고, 종류가 k를 넘으면 l을 올리며 빈도를 줄인다.",
+		"prompt": "서로 다른 문자가 최대 k종인 가장 긴 부분 문자열의 길이를 O(n)에 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: (문자 빈도 Map, 윈도우 왼쪽 l, 최선 길이)를 r마다 foldLeft로 들고 간다",
+			"확장: s(r)의 빈도를 1 늘린다",
+			"복구: `c.size > k`인 동안 s(l)의 빈도를 줄이고, 0이 되면 키를 지운 뒤 l + 1",
+			"갱신: 유효한 윈도우 길이 `r - l + 1`로 best를 max한다"
+		],
+		"answerCode": "import scala.annotation.tailrec\n@tailrec def shrink(c: Map[Char, Int], l: Int): (Map[Char, Int], Int) =\n  if c.size <= k then (c, l)\n  else shrink(c.updatedWith(s(l))(o => o.filter(_ > 1).map(_ - 1)), l + 1)\nval best = s.indices.foldLeft((Map.empty[Char, Int], 0, 0)) { case ((cnt, l, best), r) =>\n  val c1 = cnt.updatedWith(s(r))(o => Some(o.getOrElse(0) + 1))\n  val (c2, l2) = shrink(c1, l)\n  (c2, l2, best max (r - l2 + 1))\n}._3",
+		"verify": "val s = \"eceba\"\nval k = 2\nimport scala.annotation.tailrec\n@tailrec def shrink(c: Map[Char, Int], l: Int): (Map[Char, Int], Int) =\n  if c.size <= k then (c, l)\n  else shrink(c.updatedWith(s(l))(o => o.filter(_ > 1).map(_ - 1)), l + 1)\nval best = s.indices.foldLeft((Map.empty[Char, Int], 0, 0)) { case ((cnt, l, best), r) =>\n  val c1 = cnt.updatedWith(s(r))(o => Some(o.getOrElse(0) + 1))\n  val (c2, l2) = shrink(c1, l)\n  (c2, l2, best max (r - l2 + 1))\n}._3\nbest // => 3",
+		"pattern": "algo-sliding-window",
+		"unlock": []
+	},
+	{
+		"id": "sliding-window-line",
+		"kind": "line",
+		"topic": "maps",
+		"title": "슬라이딩 윈도우: 서로 다른 문자 k개의 핵심 한 줄",
+		"summary": "빈도가 0이 된 키는 맵에서 지워야 `size`가 종류 수가 된다.",
+		"prompt": "왼쪽 문자의 빈도를 1 줄이되 0이 되면 키를 지우는 줄이다. 빈칸은? (`None`이 되면 키가 사라진다)",
+		"promptCode": "import scala.annotation.tailrec\n@tailrec def shrink(c: Map[Char, Int], l: Int): (Map[Char, Int], Int) =\n  if c.size <= k then (c, l)\n  else shrink(c.updatedWith(s(l))(o => o.filter(_ > ____).map(_ - 1)), l + 1)\nval best = s.indices.foldLeft((Map.empty[Char, Int], 0, 0)) { case ((cnt, l, best), r) =>\n  val c1 = cnt.updatedWith(s(r))(o => Some(o.getOrElse(0) + 1))\n  val (c2, l2) = shrink(c1, l)\n  (c2, l2, best max (r - l2 + 1))\n}._3",
+		"points": [
+			"`1`: 빈도가 1이던 키는 줄이면 0이 되므로 filter에서 걸러 None이 되고 키가 지워진다",
+			"0을 남기면 `c.size`가 실제 종류 수보다 커져 윈도우가 필요 이상으로 줄어든다"
+		],
+		"answerCode": "else shrink(c.updatedWith(s(l))(o => o.filter(_ > 1).map(_ - 1)), l + 1)",
+		"verify": "val s = \"eceba\"\nval k = 2\nimport scala.annotation.tailrec\n@tailrec def shrink(c: Map[Char, Int], l: Int): (Map[Char, Int], Int) =\n  if c.size <= k then (c, l)\n  else shrink(c.updatedWith(s(l))(o => o.filter(_ > 1).map(_ - 1)), l + 1)\nval best = s.indices.foldLeft((Map.empty[Char, Int], 0, 0)) { case ((cnt, l, best), r) =>\n  val c1 = cnt.updatedWith(s(r))(o => Some(o.getOrElse(0) + 1))\n  val (c2, l2) = shrink(c1, l)\n  (c2, l2, best max (r - l2 + 1))\n}._3\nbest // => 3",
+		"pattern": "algo-sliding-window",
+		"unlock": []
+	},
+	{
+		"id": "monotonic-stack-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "단조 스택: 다음 큰 원소 알아보기",
+		"summary": "답을 기다리는 원소들을 스택에 쌓고, 큰 값이 오면 작은 것들을 한꺼번에 꺼내 답을 준다.",
+		"prompt": "길이 n ≤ 2·10⁵ 배열의 각 원소에 대해 오른쪽에서 처음으로 나오는 더 큰 값을 구하라. 없으면 -1이다.",
+		"points": [
+			"단조 스택이다",
+			"\"각 원소마다 오른쪽에서 처음 더 큰 값\"이라는 가까운 경계 질의가 단서이다",
+			"원소마다 오른쪽을 훑으면 O(n²)이다. 각 원소가 한 번 push, 한 번 pop이라 O(n)이다"
+		],
+		"pattern": "algo-monotonic-stack",
+		"unlock": []
+	},
+	{
+		"id": "monotonic-stack-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "단조 스택: 다음 큰 원소",
+		"summary": "(대기 중 인덱스 스택, 결과)를 foldLeft로 들고 가며 a(i)보다 작은 윗부분을 pop해 답을 준다.",
+		"prompt": "각 원소의 다음 큰 값을 O(n)에 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 답을 기다리는 인덱스의 List 스택(값은 아래에서 위로 줄어든다)과 결과 Vector",
+			"꺼내기: `st.span`으로 a(j) < a(i)인 윗부분을 모두 떼어 낸다",
+			"기록: 떼어 낸 j마다 결과(j)에 a(i)를 넣는다",
+			"쌓기: i를 스택에 올린다. 끝까지 남은 것은 초기값 -1"
+		],
+		"answerCode": "val res = a.indices.foldLeft((List.empty[Int], Vector.fill(a.length)(-1))) {\n  case ((st, acc), i) =>\n    val (popped, rest) = st.span(j => a(j) < a(i))\n    (i :: rest, popped.foldLeft(acc)((r, j) => r.updated(j, a(i))))\n}._2",
+		"verify": "val a = Vector(2, 1, 2, 4, 3)\nval res = a.indices.foldLeft((List.empty[Int], Vector.fill(a.length)(-1))) {\n  case ((st, acc), i) =>\n    val (popped, rest) = st.span(j => a(j) < a(i))\n    (i :: rest, popped.foldLeft(acc)((r, j) => r.updated(j, a(i))))\n}._2\nres // => Vector(4, 2, 4, -1, -1)",
+		"pattern": "algo-monotonic-stack",
+		"unlock": []
+	},
+	{
+		"id": "monotonic-stack-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "단조 스택: 다음 큰 원소의 핵심 한 줄",
+		"summary": "\"더 큰\" 값을 찾으므로 꺼내는 조건은 엄격한 `<`이다. 같은 값은 남긴다.",
+		"prompt": "\"더 큰\" 값을 찾는다(같은 값은 해당 없음). 스택 윗부분을 꺼내는 조건의 비교 연산자는?",
+		"promptCode": "val res = a.indices.foldLeft((List.empty[Int], Vector.fill(a.length)(-1))) {\n  case ((st, acc), i) =>\n    val (popped, rest) = st.span(j => a(j) ____ a(i))\n    (i :: rest, popped.foldLeft(acc)((r, j) => r.updated(j, a(i))))\n}._2",
+		"points": [
+			"`<`: 엄격히 작은 값만 이번 원소가 \"더 큰 값\"이 되어 답을 받는다",
+			"`<=`로 쓰면 같은 값이 답을 받아 \"더 큰\"이 아니라 \"크거나 같은\"이 된다"
+		],
+		"answerCode": "val (popped, rest) = st.span(j => a(j) < a(i))",
+		"verify": "val a = Vector(2, 1, 2, 4, 3)\nval res = a.indices.foldLeft((List.empty[Int], Vector.fill(a.length)(-1))) {\n  case ((st, acc), i) =>\n    val (popped, rest) = st.span(j => a(j) < a(i))\n    (i :: rest, popped.foldLeft(acc)((r, j) => r.updated(j, a(i))))\n}._2\nres // => Vector(4, 2, 4, -1, -1)",
+		"pattern": "algo-monotonic-stack",
+		"unlock": []
+	},
+	{
+		"id": "stack-matching-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "스택: 올바른 괄호열 알아보기",
+		"summary": "여는 기호는 push, 닫는 기호는 맨 위와 짝이 맞을 때만 pop. 끝에 비어 있어야 한다.",
+		"prompt": "문자열 s(길이 ≤ 10⁵)가 `()[]{}`로만 이루어져 있다. 모든 괄호가 올바르게 짝지어져 중첩되어 있는지 판정하라.",
+		"points": [
+			"스택이다",
+			"\"가장 최근에 열린 것이 먼저 닫혀야 한다\"는 후입선출 구조가 단서이다",
+			"여는/닫는 개수만 비교하면 `([)]`를 통과시킨다. 개수 카운터 하나로는 종류 순서를 못 본다"
+		],
+		"pattern": "algo-stack-matching",
+		"unlock": []
+	},
+	{
+		"id": "stack-matching-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "스택: 올바른 괄호열",
+		"summary": "(Option[스택])을 foldLeft로 들고 가며 실패하면 None, 끝에서 `_.isEmpty`를 확인한다.",
+		"prompt": "괄호열이 올바른지 판정하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 열린 괄호 스택 `Option[List[Char]]` (None은 이미 실패했음)",
+			"여는 괄호: 스택 맨 앞에 쌓는다",
+			"닫는 괄호: 맨 위가 짝일 때만 꺼내고, 아니면 None",
+			"끝 확인: 스택이 비어 있어야 한다. `((`는 중간엔 실패가 없다"
+		],
+		"answerCode": "val open = Map(')' -> '(', ']' -> '[', '}' -> '{')\nval ok = s.foldLeft(Option(List.empty[Char])) {\n  case (Some(st), c) if \"([{\".contains(c) => Some(c :: st)\n  case (Some(h :: t), c) if open.get(c).contains(h) => Some(t)\n  case _ => None\n}.exists(_.isEmpty)",
+		"verify": "val s = \"([{}])\"\nval open = Map(')' -> '(', ']' -> '[', '}' -> '{')\nval ok = s.foldLeft(Option(List.empty[Char])) {\n  case (Some(st), c) if \"([{\".contains(c) => Some(c :: st)\n  case (Some(h :: t), c) if open.get(c).contains(h) => Some(t)\n  case _ => None\n}.exists(_.isEmpty)\nok // => true",
+		"pattern": "algo-stack-matching",
+		"unlock": []
+	},
+	{
+		"id": "stack-matching-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "스택: 올바른 괄호열의 핵심 한 줄",
+		"summary": "`(()`는 도중에 실패하지 않으므로 마지막에 스택이 비었는지를 꼭 확인한다.",
+		"prompt": "마지막 줄의 빈칸은 \"끝까지 살아남았고 스택이 비었다\"를 판정한다. 무엇이 들어가나?",
+		"promptCode": "val open = Map(')' -> '(', ']' -> '[', '}' -> '{')\nval ok = s.foldLeft(Option(List.empty[Char])) {\n  case (Some(st), c) if \"([{\".contains(c) => Some(c :: st)\n  case (Some(h :: t), c) if open.get(c).contains(h) => Some(t)\n  case _ => None\n}.exists(____)",
+		"points": [
+			"`_.isEmpty`: Some이면서 스택이 빈 경우만 true. 닫히지 않은 여는 괄호가 남으면 false",
+			"`_.nonEmpty`나 Some 여부만 보면 `(()`를 통과시킨다"
+		],
+		"answerCode": "}.exists(_.isEmpty)",
+		"verify": "val s = \"([{}])\"\nval open = Map(')' -> '(', ']' -> '[', '}' -> '{')\nval ok = s.foldLeft(Option(List.empty[Char])) {\n  case (Some(st), c) if \"([{\".contains(c) => Some(c :: st)\n  case (Some(h :: t), c) if open.get(c).contains(h) => Some(t)\n  case _ => None\n}.exists(_.isEmpty)\nok // => true",
+		"pattern": "algo-stack-matching",
+		"unlock": []
+	},
+	{
+		"id": "grid-bfs-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "격자 BFS 최단 경로 알아보기",
+		"summary": "거리 d의 칸들을 한 층씩 확장하며, 칸은 넣을 때 방문 표시한다.",
+		"prompt": "n×m 격자(n,m ≤ 1000)에 `.`는 길, `#`는 벽이다. 상하좌우로 한 칸씩 이동해 (0,0)에서 (n-1,m-1)까지 가는 최소 이동 횟수를 구하라. 불가능하면 -1.",
+		"points": [
+			"BFS(너비 우선 탐색)이다",
+			"모든 이동 비용이 1인 최소 이동 횟수이므로 층별 확장이 최단 거리를 준다",
+			"DFS는 처음 찾은 경로가 최단이 아니고, 모든 경로를 보면 지수 시간이다"
+		],
+		"pattern": "algo-grid-bfs",
+		"unlock": []
+	},
+	{
+		"id": "grid-bfs-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "격자 BFS 최단 경로",
+		"summary": "(프런티어, 방문 집합, 거리)를 재귀 인자로 들고 층마다 이웃을 확장한다.",
+		"prompt": "격자에서 시작점부터 도착점까지 최소 이동 횟수를 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 거리 d인 칸들(프런티어), 지금까지 본 칸 집합, 거리 d",
+			"확장: 네 이웃 중 범위 안, 벽이 아님, 미방문만 남기고 `distinct`로 중복 제거",
+			"방문 처리: 다음 프런티어를 방문 집합에 넣는 시점은 큐에 넣을 때",
+			"종료: 프런티어에 목표가 있으면 d, 프런티어가 비면 -1"
+		],
+		"answerCode": "import scala.annotation.tailrec\n@tailrec def bfs(fr: List[(Int, Int)], seen: Set[(Int, Int)], d: Int): Int =\n  if fr.isEmpty then -1\n  else if fr.contains((n - 1, m - 1)) then d\n  else\n    val next = fr.flatMap((r, c) => List((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)))\n      .filter((r, c) => r >= 0 && r < n && c >= 0 && c < m && g(r)(c) != '#')\n      .distinct.filterNot(seen)\n    bfs(next, seen ++ next, d + 1)\nval steps = bfs(List((0, 0)), Set((0, 0)), 0)",
+		"verify": "val g = Vector(\"...\", \".#.\", \"#..\")\nval (n, m) = (g.length, g(0).length)\nimport scala.annotation.tailrec\n@tailrec def bfs(fr: List[(Int, Int)], seen: Set[(Int, Int)], d: Int): Int =\n  if fr.isEmpty then -1\n  else if fr.contains((n - 1, m - 1)) then d\n  else\n    val next = fr.flatMap((r, c) => List((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)))\n      .filter((r, c) => r >= 0 && r < n && c >= 0 && c < m && g(r)(c) != '#')\n      .distinct.filterNot(seen)\n    bfs(next, seen ++ next, d + 1)\nval steps = bfs(List((0, 0)), Set((0, 0)), 0) // => 4",
+		"pattern": "algo-grid-bfs",
+		"unlock": []
+	},
+	{
+		"id": "grid-bfs-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "격자 BFS 최단 경로의 핵심 한 줄",
+		"summary": "방문 표시는 꺼낼 때가 아니라 넣을 때 한다. 아니면 같은 칸이 여러 번 들어간다.",
+		"prompt": "다음 층 `next`로 재귀한다. 방문 집합에 무엇을 합쳐야 하나? (넣는 시점에 표시한다)",
+		"promptCode": "import scala.annotation.tailrec\n@tailrec def bfs(fr: List[(Int, Int)], seen: Set[(Int, Int)], d: Int): Int =\n  if fr.isEmpty then -1\n  else if fr.contains((n - 1, m - 1)) then d\n  else\n    val next = fr.flatMap((r, c) => List((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)))\n      .filter((r, c) => r >= 0 && r < n && c >= 0 && c < m && g(r)(c) != '#')\n      .distinct.filterNot(seen)\n    bfs(next, seen ++ ____, d + 1)\nval steps = bfs(List((0, 0)), Set((0, 0)), 0)",
+		"points": [
+			"`next`: 이번에 큐에 넣는 칸들을 지금 방문 처리해야 한다",
+			"꺼낼 때 표시하면 같은 칸이 한 층에 여러 번 들어가 시간이 폭발한다"
+		],
+		"answerCode": "bfs(next, seen ++ next, d + 1)",
+		"verify": "val g = Vector(\"...\", \".#.\", \"#..\")\nval (n, m) = (g.length, g(0).length)\nimport scala.annotation.tailrec\n@tailrec def bfs(fr: List[(Int, Int)], seen: Set[(Int, Int)], d: Int): Int =\n  if fr.isEmpty then -1\n  else if fr.contains((n - 1, m - 1)) then d\n  else\n    val next = fr.flatMap((r, c) => List((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)))\n      .filter((r, c) => r >= 0 && r < n && c >= 0 && c < m && g(r)(c) != '#')\n      .distinct.filterNot(seen)\n    bfs(next, seen ++ next, d + 1)\nval steps = bfs(List((0, 0)), Set((0, 0)), 0) // => 4",
+		"pattern": "algo-grid-bfs",
+		"unlock": []
+	},
+	{
+		"id": "dfs-components-recognize",
+		"kind": "recognize",
+		"topic": "recursion",
+		"title": "DFS: 연결 요소 개수 알아보기",
+		"summary": "미방문 정점마다 DFS로 덩어리 전체를 칠하고 덩어리 수를 1 올린다.",
+		"prompt": "정점 n ≤ 2·10⁵, 간선 m ≤ 2·10⁵인 무방향 그래프에서 연결된 덩어리의 개수를 구하라.",
+		"points": [
+			"DFS(또는 BFS) 연결 요소 세기이다",
+			"\"연결된 덩어리의 개수\"를 묻고 거리·순서는 필요 없는 점이 단서이다",
+			"재귀 DFS는 깊이 2·10⁵에서 스택이 넘칠 수 있어 명시적 스택의 꼬리 재귀나 BFS가 안전하다"
+		],
+		"pattern": "algo-dfs-components",
+		"unlock": []
+	},
+	{
+		"id": "dfs-components-steps",
+		"kind": "steps",
+		"topic": "recursion",
+		"title": "DFS: 연결 요소 개수",
+		"summary": "(방문 집합, 개수)를 foldLeft로 들고, 새 시작점마다 꼬리 재귀 DFS로 덩어리를 칠한다.",
+		"prompt": "무방향 그래프의 연결 요소 개수를 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 방문 Set과 센 개수의 쌍을 정점 0 until n에 대해 foldLeft로 들고 간다",
+			"시작점: 이미 방문했으면 건너뛰고 아니면 새 덩어리",
+			"탐색: 명시적 스택의 `@tailrec` DFS로 도달 가능한 정점을 모두 방문 처리",
+			"카운트: 새 덩어리 하나당 개수를 1 올린다"
+		],
+		"answerCode": "import scala.annotation.tailrec\nval adj = edges.flatMap((a, b) => List(a -> b, b -> a)).groupMap(_._1)(_._2).withDefaultValue(Nil)\n@tailrec def dfs(st: List[Int], seen: Set[Int]): Set[Int] = st match\n  case Nil => seen\n  case v :: rest =>\n    val nxt = adj(v).filterNot(seen)\n    dfs(nxt ::: rest, seen ++ nxt)\nval comps = (0 until n).foldLeft((Set.empty[Int], 0)) { case ((seen, cnt), v) =>\n  if seen(v) then (seen, cnt) else (dfs(List(v), seen + v), cnt + 1)\n}._2",
+		"verify": "val n = 6\nval edges = List((0, 1), (1, 2), (3, 4))\nimport scala.annotation.tailrec\nval adj = edges.flatMap((a, b) => List(a -> b, b -> a)).groupMap(_._1)(_._2).withDefaultValue(Nil)\n@tailrec def dfs(st: List[Int], seen: Set[Int]): Set[Int] = st match\n  case Nil => seen\n  case v :: rest =>\n    val nxt = adj(v).filterNot(seen)\n    dfs(nxt ::: rest, seen ++ nxt)\nval comps = (0 until n).foldLeft((Set.empty[Int], 0)) { case ((seen, cnt), v) =>\n  if seen(v) then (seen, cnt) else (dfs(List(v), seen + v), cnt + 1)\n}._2\ncomps // => 3",
+		"pattern": "algo-dfs-components",
+		"unlock": []
+	},
+	{
+		"id": "dfs-components-line",
+		"kind": "line",
+		"topic": "recursion",
+		"title": "DFS: 연결 요소 개수의 핵심 한 줄",
+		"summary": "탐색을 시작하는 점도 방문 집합에 넣어야 덩어리가 중복해서 세어지지 않는다.",
+		"prompt": "새 덩어리를 시작할 때 `dfs`에 넘기는 방문 집합에 무엇을 더해야 하나?",
+		"promptCode": "import scala.annotation.tailrec\nval adj = edges.flatMap((a, b) => List(a -> b, b -> a)).groupMap(_._1)(_._2).withDefaultValue(Nil)\n@tailrec def dfs(st: List[Int], seen: Set[Int]): Set[Int] = st match\n  case Nil => seen\n  case v :: rest =>\n    val nxt = adj(v).filterNot(seen)\n    dfs(nxt ::: rest, seen ++ nxt)\nval comps = (0 until n).foldLeft((Set.empty[Int], 0)) { case ((seen, cnt), v) =>\n  if seen(v) then (seen, cnt) else (dfs(List(v), seen + ____), cnt + 1)\n}._2",
+		"points": [
+			"`v`: 시작점 자신을 방문 처리해야 한다. 안 하면 이웃이 v를 다시 큐에 넣거나 되돌아가며 낭비한다",
+			"덩어리 수는 이 분기에서만 올라가므로 방문 집합이 정확해야 개수가 맞다"
+		],
+		"answerCode": "if seen(v) then (seen, cnt) else (dfs(List(v), seen + v), cnt + 1)",
+		"verify": "val n = 6\nval edges = List((0, 1), (1, 2), (3, 4))\nimport scala.annotation.tailrec\nval adj = edges.flatMap((a, b) => List(a -> b, b -> a)).groupMap(_._1)(_._2).withDefaultValue(Nil)\n@tailrec def dfs(st: List[Int], seen: Set[Int]): Set[Int] = st match\n  case Nil => seen\n  case v :: rest =>\n    val nxt = adj(v).filterNot(seen)\n    dfs(nxt ::: rest, seen ++ nxt)\nval comps = (0 until n).foldLeft((Set.empty[Int], 0)) { case ((seen, cnt), v) =>\n  if seen(v) then (seen, cnt) else (dfs(List(v), seen + v), cnt + 1)\n}._2\ncomps // => 3",
+		"pattern": "algo-dfs-components",
+		"unlock": []
+	},
+	{
+		"id": "topo-kahn-recognize",
+		"kind": "recognize",
+		"topic": "maps",
+		"title": "위상 정렬 (Kahn) 알아보기",
+		"summary": "진입 차수 0인 정점부터 빼며 이웃의 차수를 줄이고, 다 못 빼면 사이클이다.",
+		"prompt": "과목 n ≤ 2·10⁵개와 선수 관계 간선 m개(a → b는 a를 먼저 들어야 b)가 있다. 모든 과목을 들을 수 있는 순서를 하나 출력하거나 불가능하면 알려라.",
+		"points": [
+			"위상 정렬(Kahn 알고리즘)이다",
+			"선행 관계 DAG에서 \"가능한 순서\"를 묻고 불가능 판정이 사이클 검출이라는 점이 단서이다",
+			"정렬로는 부분 순서를 못 다룬다. 출력이 n개보다 적으면 사이클이다"
+		],
+		"pattern": "algo-topo-kahn",
+		"unlock": []
+	},
+	{
+		"id": "topo-kahn-steps",
+		"kind": "steps",
+		"topic": "maps",
+		"title": "위상 정렬 (Kahn)",
+		"summary": "(진입 차수 Map, 준비 목록, 출력)을 재귀로 들고, 출력이 n개가 아니면 사이클이다.",
+		"prompt": "선행 관계가 있는 정점들의 가능한 순서를 구하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: 진입 차수 Map, 차수 0인 준비 목록, 지금까지의 출력 List",
+			"꺼내기: 준비 목록의 정점 v를 출력에 붙인다",
+			"완화: v의 이웃 w의 차수를 1 줄이고 0이 되면 준비 목록에 넣는다",
+			"검증: 출력 길이가 n보다 작으면 사이클이 있어 순서가 없다"
+		],
+		"answerCode": "import scala.annotation.tailrec\nval adj = edges.groupMap(_._1)(_._2).withDefaultValue(Nil)\nval indeg0 = edges.groupMapReduce(_._2)(_ => 1)(_ + _).withDefaultValue(0)\n@tailrec def go(ready: List[Int], indeg: Map[Int, Int], out: List[Int]): List[Int] = ready match\n  case Nil => out.reverse\n  case v :: rest =>\n    val (indeg2, fresh) = adj(v).foldLeft((indeg, List.empty[Int])) { case ((m, rd), w) =>\n      (m.updated(w, m(w) - 1), if m(w) == 1 then w :: rd else rd)\n    }\n    go(fresh ::: rest, indeg2, v :: out)\nval order = go((0 until n).filter(indeg0(_) == 0).toList, indeg0, Nil)\nval acyclic = order.length == n",
+		"verify": "val n = 4\nval edges = List((0, 1), (0, 2), (1, 3), (2, 3))\nimport scala.annotation.tailrec\nval adj = edges.groupMap(_._1)(_._2).withDefaultValue(Nil)\nval indeg0 = edges.groupMapReduce(_._2)(_ => 1)(_ + _).withDefaultValue(0)\n@tailrec def go(ready: List[Int], indeg: Map[Int, Int], out: List[Int]): List[Int] = ready match\n  case Nil => out.reverse\n  case v :: rest =>\n    val (indeg2, fresh) = adj(v).foldLeft((indeg, List.empty[Int])) { case ((m, rd), w) =>\n      (m.updated(w, m(w) - 1), if m(w) == 1 then w :: rd else rd)\n    }\n    go(fresh ::: rest, indeg2, v :: out)\nval order = go((0 until n).filter(indeg0(_) == 0).toList, indeg0, Nil) // => List(0, 2, 1, 3)\nval acyclic = order.length == n // => true",
+		"pattern": "algo-topo-kahn",
+		"unlock": []
+	},
+	{
+		"id": "topo-kahn-line",
+		"kind": "line",
+		"topic": "maps",
+		"title": "위상 정렬 (Kahn)의 핵심 한 줄",
+		"summary": "사이클의 정점은 차수가 0이 되지 못해 출력에 못 들어오므로 `order.length == n`으로 판정한다.",
+		"prompt": "사이클 판정 줄의 빈칸은? 출력에 모든 정점이 들어갔는지 확인한다.",
+		"promptCode": "import scala.annotation.tailrec\nval adj = edges.groupMap(_._1)(_._2).withDefaultValue(Nil)\nval indeg0 = edges.groupMapReduce(_._2)(_ => 1)(_ + _).withDefaultValue(0)\n@tailrec def go(ready: List[Int], indeg: Map[Int, Int], out: List[Int]): List[Int] = ready match\n  case Nil => out.reverse\n  case v :: rest =>\n    val (indeg2, fresh) = adj(v).foldLeft((indeg, List.empty[Int])) { case ((m, rd), w) =>\n      (m.updated(w, m(w) - 1), if m(w) == 1 then w :: rd else rd)\n    }\n    go(fresh ::: rest, indeg2, v :: out)\nval order = go((0 until n).filter(indeg0(_) == 0).toList, indeg0, Nil)\nval acyclic = order.length == ____",
+		"points": [
+			"`n`: 정점 전체 수와 같아야 DAG다. 사이클 위의 정점은 진입 차수가 끝까지 남아 출력에 못 오른다",
+			"출력이 비어 있지 않은지만 보면 일부만 출력된 사이클 그래프를 통과시킨다"
+		],
+		"answerCode": "val acyclic = order.length == n",
+		"verify": "val n = 4\nval edges = List((0, 1), (0, 2), (1, 3), (2, 3))\nimport scala.annotation.tailrec\nval adj = edges.groupMap(_._1)(_._2).withDefaultValue(Nil)\nval indeg0 = edges.groupMapReduce(_._2)(_ => 1)(_ + _).withDefaultValue(0)\n@tailrec def go(ready: List[Int], indeg: Map[Int, Int], out: List[Int]): List[Int] = ready match\n  case Nil => out.reverse\n  case v :: rest =>\n    val (indeg2, fresh) = adj(v).foldLeft((indeg, List.empty[Int])) { case ((m, rd), w) =>\n      (m.updated(w, m(w) - 1), if m(w) == 1 then w :: rd else rd)\n    }\n    go(fresh ::: rest, indeg2, v :: out)\nval order = go((0 until n).filter(indeg0(_) == 0).toList, indeg0, Nil) // => List(0, 2, 1, 3)\nval acyclic = order.length == n // => true",
+		"pattern": "algo-topo-kahn",
+		"unlock": []
+	},
+	{
+		"id": "union-find-recognize",
+		"kind": "recognize",
+		"topic": "collections",
+		"title": "유니온 파인드: 연결 요소 수 알아보기",
+		"summary": "두 정점의 루트가 다르면 루트끼리 합치고, 합쳐진 횟수만큼 그룹 수가 줄어든다.",
+		"prompt": "정점 n ≤ 2·10⁵에 간선 m ≤ 2·10⁵개가 차례로 들어온다. 모든 간선을 넣은 뒤 연결된 그룹은 몇 개인가? (그룹 판정을 간선마다 받고 싶을 수도 있다)",
+		"points": [
+			"유니온 파인드(서로소 집합)이다",
+			"간선이 하나씩 추가되고 \"같은 그룹인가/그룹 수\"를 묻는 점이 단서이다",
+			"간선마다 DFS를 다시 하면 O(nm)이다. 삭제가 있으면 쓸 수 없다"
+		],
+		"pattern": "algo-union-find",
+		"unlock": []
+	},
+	{
+		"id": "union-find-steps",
+		"kind": "steps",
+		"topic": "collections",
+		"title": "유니온 파인드: 연결 요소 수",
+		"summary": "`parent` 배열 하나로 `find`와 루트끼리의 `union`을 하고 합쳐진 횟수를 뺀다.",
+		"prompt": "간선을 하나씩 넣으며 연결 요소 수를 구하는 풀이의 단계를 말해 보라. 어떤 자료구조가 알맞은가?",
+		"points": [
+			"상태 정하기: `parent` 배열. 값 하나를 제자리에서 계속 바꾸므로 여기서는 가변 Array가 맞는 도구다",
+			"find: 루트까지 올라가며 `parent(x) = parent(parent(x))`로 경로를 줄인다",
+			"union: 두 루트가 다르면 `parent(ra) = rb`로 잇고 true를 반환",
+			"답: n에서 합쳐진 횟수를 빼면 그룹 수"
+		],
+		"answerCode": "import scala.annotation.tailrec\nval parent = Array.tabulate(n)(identity)\n@tailrec def find(x: Int): Int =\n  if parent(x) == x then x\n  else\n    parent(x) = parent(parent(x))\n    find(parent(x))\ndef union(a: Int, b: Int): Boolean =\n  val (ra, rb) = (find(a), find(b))\n  if ra != rb then parent(ra) = rb\n  ra != rb\nval comps = n - edges.count((a, b) => union(a, b))",
+		"verify": "val n = 6\nval edges = List((0, 1), (1, 2), (3, 4), (0, 2))\nimport scala.annotation.tailrec\nval parent = Array.tabulate(n)(identity)\n@tailrec def find(x: Int): Int =\n  if parent(x) == x then x\n  else\n    parent(x) = parent(parent(x))\n    find(parent(x))\ndef union(a: Int, b: Int): Boolean =\n  val (ra, rb) = (find(a), find(b))\n  if ra != rb then parent(ra) = rb\n  ra != rb\nval comps = n - edges.count((a, b) => union(a, b)) // => 3",
+		"pattern": "algo-union-find",
+		"unlock": []
+	},
+	{
+		"id": "union-find-line",
+		"kind": "line",
+		"topic": "collections",
+		"title": "유니온 파인드: 연결 요소 수의 핵심 한 줄",
+		"summary": "루트끼리 잇는다. 정점 a를 직접 이으면 a가 속한 그룹의 나머지가 떨어져 나간다.",
+		"prompt": "두 그룹을 합치는 줄이다. `parent(?) = rb`에서 ?에 들어가는 것은? (find 결과 ra, rb가 있다)",
+		"promptCode": "import scala.annotation.tailrec\nval parent = Array.tabulate(n)(identity)\n@tailrec def find(x: Int): Int =\n  if parent(x) == x then x\n  else\n    parent(x) = parent(parent(x))\n    find(parent(x))\ndef union(a: Int, b: Int): Boolean =\n  val (ra, rb) = (find(a), find(b))\n  if ra != rb then parent(____) = rb\n  ra != rb\nval comps = n - edges.count((a, b) => union(a, b))",
+		"points": [
+			"`ra`: a의 루트를 b의 루트 밑으로 붙여야 그룹 전체가 함께 옮겨진다",
+			"`parent(a) = rb`로 쓰면 a만 이동하고 a의 루트에 매달린 다른 원소들은 분리된 채 남는다"
+		],
+		"answerCode": "if ra != rb then parent(ra) = rb",
+		"verify": "val n = 6\nval edges = List((0, 1), (1, 2), (3, 4), (0, 2))\nimport scala.annotation.tailrec\nval parent = Array.tabulate(n)(identity)\n@tailrec def find(x: Int): Int =\n  if parent(x) == x then x\n  else\n    parent(x) = parent(parent(x))\n    find(parent(x))\ndef union(a: Int, b: Int): Boolean =\n  val (ra, rb) = (find(a), find(b))\n  if ra != rb then parent(ra) = rb\n  ra != rb\nval comps = n - edges.count((a, b) => union(a, b)) // => 3",
+		"pattern": "algo-union-find",
+		"unlock": []
+	},
+	{
+		"id": "greedy-sort-recognize",
+		"kind": "recognize",
+		"topic": "collections",
+		"title": "구간 스케줄링(그리디) 알아보기",
+		"summary": "끝나는 시각이 빠른 구간부터 고르면 남는 시간이 최대여서 최적이다.",
+		"prompt": "시작·끝이 있는 구간 n ≤ 2·10⁵개 중 서로 겹치지 않게(끝점이 닿는 것은 허용) 최대 몇 개를 고를 수 있나?",
+		"points": [
+			"끝나는 시각 순 정렬 후 그리디(구간 스케줄링)이다",
+			"\"겹치지 않게 최대 개수\"를 묻는 점이 단서이고 교환 논증이 정당성을 준다",
+			"시작 시각이나 짧은 길이 순은 반례가 있다. 가장 일찍 끝나는 구간이어야 남는 시간이 최대다"
+		],
+		"pattern": "algo-greedy-sort",
+		"unlock": []
+	},
+	{
+		"id": "greedy-sort-steps",
+		"kind": "steps",
+		"topic": "collections",
+		"title": "구간 스케줄링(그리디)",
+		"summary": "(고른 수, 마지막 끝점)을 들고 끝점 순으로 훑으며 시작이 마지막 끝 이상이면 고른다.",
+		"prompt": "겹치지 않는 구간을 최대로 고르는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: (고른 구간 수, 마지막으로 고른 구간의 끝점)",
+			"정렬 기준: 끝점 오름차순. 가장 일찍 끝나는 것을 고르면 남는 구간이 최대(교환 논증)",
+			"훑기: 시작 >= 마지막 끝이면 고르고, 아니면 건너뛴다",
+			"갱신: 고르면 개수를 올리고 마지막 끝점을 이 구간의 끝으로 바꾼다"
+		],
+		"answerCode": "val cnt = intervals.sortBy(_._2).foldLeft((0, Int.MinValue)) {\n  case ((n, last), (s, e)) =>\n    if s >= last then (n + 1, e) else (n, last)\n}._1",
+		"verify": "val intervals = List((1, 3), (2, 4), (3, 5), (0, 6), (5, 7), (8, 9), (5, 9))\nval cnt = intervals.sortBy(_._2).foldLeft((0, Int.MinValue)) {\n  case ((n, last), (s, e)) =>\n    if s >= last then (n + 1, e) else (n, last)\n}._1\ncnt // => 4",
+		"pattern": "algo-greedy-sort",
+		"unlock": []
+	},
+	{
+		"id": "greedy-sort-line",
+		"kind": "line",
+		"topic": "collections",
+		"title": "구간 스케줄링(그리디)의 핵심 한 줄",
+		"summary": "정렬 키가 알고리즘의 정당성이다. 끝점으로 정렬해야 교환 논증이 선다.",
+		"prompt": "빈칸은 정렬 기준이다. 구간 (s, e)에서 무엇으로 정렬하나?",
+		"promptCode": "val cnt = intervals.sortBy(____).foldLeft((0, Int.MinValue)) {\n  case ((n, last), (s, e)) =>\n    if s >= last then (n + 1, e) else (n, last)\n}._1",
+		"points": [
+			"`_._2`: 끝점 오름차순이다. 가장 일찍 끝나는 구간을 고르면 남는 시간이 가장 크다",
+			"시작점 순(`_._1`)은 (0,6) 같은 긴 구간이 먼저 잡혀 반례가 된다"
+		],
+		"answerCode": "val cnt = intervals.sortBy(_._2).foldLeft((0, Int.MinValue)) {",
+		"verify": "val intervals = List((1, 3), (2, 4), (3, 5), (0, 6), (5, 7), (8, 9), (5, 9))\nval cnt = intervals.sortBy(_._2).foldLeft((0, Int.MinValue)) {\n  case ((n, last), (s, e)) =>\n    if s >= last then (n + 1, e) else (n, last)\n}._1\ncnt // => 4",
+		"pattern": "algo-greedy-sort",
+		"unlock": []
+	},
+	{
+		"id": "dp-prefix-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "1차원 DP: 인접하지 않은 최대 합 알아보기",
+		"summary": "dp(i) = max(건너뛰기 dp(i-1), 고르기 dp(i-2)+a(i)), 앞 두 값만 들고 간다.",
+		"prompt": "길이 n ≤ 10⁵ 양의 정수 배열에서 서로 인접하지 않은 원소들을 골라 합을 최대로 하라.",
+		"points": [
+			"1차원 DP(앞 두 값으로 전이)이다",
+			"\"인접 금지\"라는 제약이 i번째 선택을 i-2번째까지의 답과 연결하는 점이 단서이다",
+			"모든 부분집합은 2ⁿ이고, 그리디(큰 것부터)는 `[2,3,2]` 등에서 틀린다"
+		],
+		"pattern": "algo-dp-prefix",
+		"unlock": []
+	},
+	{
+		"id": "dp-prefix-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "1차원 DP: 인접하지 않은 최대 합",
+		"summary": "(dp(i-2), dp(i-1)) 쌍을 foldLeft로 들고 `max(p1, p2 + x)`로 갱신한다.",
+		"prompt": "인접하지 않게 골라 합을 최대로 하는 풀이의 단계를 말해 보라.",
+		"points": [
+			"상태 정하기: dp(i)는 앞 i개에서 얻는 최대 합이고 필요한 것은 (p2, p1) = (dp(i-2), dp(i-1))",
+			"전이: i번째를 건너뛰면 p1, 고르면 p2 + x이고 둘 중 큰 쪽",
+			"초기값: (0, 0)으로 시작하면 빈 입력도 0",
+			"갱신 후 한 칸씩 민다: 새 상태는 (p1, 새 dp)이고 답은 둘째 값"
+		],
+		"answerCode": "val best = a.foldLeft((0, 0)) { case ((p2, p1), x) =>\n  (p1, math.max(p1, p2 + x))\n}._2",
+		"verify": "val a = Vector(2, 7, 9, 3, 1)\nval best = a.foldLeft((0, 0)) { case ((p2, p1), x) =>\n  (p1, math.max(p1, p2 + x))\n}._2\nbest // => 12",
+		"pattern": "algo-dp-prefix",
+		"unlock": []
+	},
+	{
+		"id": "dp-prefix-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "1차원 DP: 인접하지 않은 최대 합의 핵심 한 줄",
+		"summary": "i번째를 고르면 바로 앞(i-1)은 못 쓰므로 dp(i-2)에 x를 더한다.",
+		"prompt": "(p2, p1) = (dp(i-2), dp(i-1))이다. 원소 x를 \"고르는\" 선택의 값을 만드는 빈칸은?",
+		"promptCode": "val best = a.foldLeft((0, 0)) { case ((p2, p1), x) =>\n  (p1, math.max(p1, ____ + x))\n}._2",
+		"points": [
+			"`p2`: x를 고르면 인접한 i-1은 쓸 수 없으니 dp(i-2)에 x를 더한다",
+			"`p1 + x`로 쓰면 인접한 두 원소를 함께 고르게 되어 제약을 어긴다"
+		],
+		"answerCode": "(p1, math.max(p1, p2 + x))",
+		"verify": "val a = Vector(2, 7, 9, 3, 1)\nval best = a.foldLeft((0, 0)) { case ((p2, p1), x) =>\n  (p1, math.max(p1, p2 + x))\n}._2\nbest // => 12",
+		"pattern": "algo-dp-prefix",
+		"unlock": []
+	},
+	{
+		"id": "knapsack-01-recognize",
+		"kind": "recognize",
+		"topic": "folds",
+		"title": "0/1 배낭 알아보기",
+		"summary": "물건마다 한 행씩 이전 행으로 새 행을 만든다. 같은 물건을 두 번 못 쓰게 이전 행을 읽는다.",
+		"prompt": "물건 n ≤ 100개(무게 w, 가치 v)와 배낭 용량 W ≤ 10⁴. 각 물건을 최대 한 번씩 넣어 총 무게 W 이하로 가치 합을 최대로 하라.",
+		"points": [
+			"0/1 배낭 DP이다",
+			"물건마다 넣거나 말거나이고 용량이 작아 용량 축으로 상태를 둘 수 있는 점이 단서이다",
+			"2ⁿ 완전탐색은 불가능하고, 가치/무게 비 그리디는 반례가 있다"
+		],
+		"pattern": "algo-knapsack-01",
+		"unlock": []
+	},
+	{
+		"id": "knapsack-01-steps",
+		"kind": "steps",
+		"topic": "folds",
+		"title": "0/1 배낭",
+		"summary": "`foldLeft`로 물건마다 새 Vector를 `tabulate`하면 읽기 전용 이전 행 덕에 중복 사용이 없다.",
+		"prompt": "0/1 배낭의 최대 가치를 구하는 풀이의 단계를 말해 보라. 가변 배열 대신 어떤 형태가 가능한가?",
+		"points": [
+			"상태 정하기: dp(c)는 용량 c 이하의 최대 가치 (Vector, 처음엔 모두 0)",
+			"물건마다 foldLeft: 새 행을 이전 행 dp로만 `tabulate`한다",
+			"전이: c >= w이면 `max(dp(c), dp(c - w) + v)`, 아니면 dp(c)",
+			"가변 Array 한 줄이면 c를 W부터 내려가며 갱신해야 같은 물건이 두 번 안 쓰인다"
+		],
+		"answerCode": "val best = items.foldLeft(Vector.fill(W + 1)(0)) { case (dp, (w, v)) =>\n  Vector.tabulate(W + 1)(c => if c >= w then math.max(dp(c), dp(c - w) + v) else dp(c))\n}.last",
+		"verify": "val items = List((1, 1), (3, 4), (4, 5), (5, 7))\nval W = 7\nval best = items.foldLeft(Vector.fill(W + 1)(0)) { case (dp, (w, v)) =>\n  Vector.tabulate(W + 1)(c => if c >= w then math.max(dp(c), dp(c - w) + v) else dp(c))\n}.last\nbest // => 9",
+		"pattern": "algo-knapsack-01",
+		"unlock": []
+	},
+	{
+		"id": "knapsack-01-line",
+		"kind": "line",
+		"topic": "folds",
+		"title": "0/1 배낭의 핵심 한 줄",
+		"summary": "넣는 선택은 \"남는 용량 c - w\"의 이전 행 값에 v를 더한다.",
+		"prompt": "물건 (w, v)를 넣는 선택의 값을 만드는 빈칸은? dp는 이전 물건까지의 행이다.",
+		"promptCode": "val best = items.foldLeft(Vector.fill(W + 1)(0)) { case (dp, (w, v)) =>\n  Vector.tabulate(W + 1)(c => if c >= w then math.max(dp(c), dp(c - ____) + v) else dp(c))\n}.last",
+		"points": [
+			"`w`: 물건을 넣으면 무게 w만큼 용량이 줄어 dp(c - w)에서 이어진다",
+			"`c`나 `v`를 빼면 이전 행의 엉뚱한 칸을 읽어 값이 틀린다"
+		],
+		"answerCode": "Vector.tabulate(W + 1)(c => if c >= w then math.max(dp(c), dp(c - w) + v) else dp(c))",
+		"verify": "val items = List((1, 1), (3, 4), (4, 5), (5, 7))\nval W = 7\nval best = items.foldLeft(Vector.fill(W + 1)(0)) { case (dp, (w, v)) =>\n  Vector.tabulate(W + 1)(c => if c >= w then math.max(dp(c), dp(c - w) + v) else dp(c))\n}.last\nbest // => 9",
+		"pattern": "algo-knapsack-01",
+		"unlock": []
+	}
+]
