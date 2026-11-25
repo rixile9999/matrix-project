@@ -34,6 +34,23 @@ describe('suggestWarmup', () => {
 	it('is null without level-1 problems', () => expect(suggestWarmup([P('d', 2, 'maps')], [])).toBeNull());
 });
 
+describe('suggestWarmup with Sprint struggles', () => {
+	const ps = [P('a', 1, 'syntax'), P('b', 1, 'maps'), P('c', 1, 'strings')];
+	it('is unchanged without them', () => expect(suggestWarmup(ps, [S({ topic: 'maps', hintsUsed: 2 })], [])).toBe(suggestWarmup(ps, [S({ topic: 'maps', hintsUsed: 2 })])));
+	it('prefers the topic of a Sprint struggle', () => expect(suggestWarmup(ps, [], [{ topic: 'strings', endedAt: 5 }])).toBe('c'));
+	it('uses the most recent struggle of either source', () => {
+		const ss = [S({ topic: 'maps', hintsUsed: 2, endedAt: 10 })];
+		expect(suggestWarmup(ps, ss, [{ topic: 'strings', endedAt: 20 }])).toBe('c');
+		expect(suggestWarmup(ps, ss, [{ topic: 'strings', endedAt: 5 }])).toBe('b');
+	});
+	it('with everything passed, takes the longest-ago problem of the struggled topic', () => {
+		const done = [P('a', 1, 'syntax', 1), P('b', 1, 'maps', 30), P('c', 1, 'maps', 20), P('d', 1, 'strings', 10)];
+		expect(suggestWarmup(done, [], [{ topic: 'maps', endedAt: 5 }])).toBe('c');
+		expect(suggestWarmup(done, [S({ topic: 'maps', hintsUsed: 2 })], [])).toBe('a'); // level-2 struggles do not change this branch
+	});
+	it('falls back to the global oldest when the struggled topic has no basics', () => expect(suggestWarmup([P('a', 1, 'syntax', 3), P('b', 1, 'maps', 2)], [], [{ topic: 'strings', endedAt: 1 }])).toBe('b'));
+});
+
 describe('nextUnpassed', () => {
 	const ps = [P('a', 2, 'syntax', 1), P('b', 2, 'maps'), P('c', 3, 'maps'), P('d', 2, 'maps')];
 	it('takes the first unpassed of the level in order', () => {

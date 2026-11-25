@@ -9,7 +9,7 @@ import { CARD_KINDS, CHECK_KINDS, capOvertime, gradeFromChecklist, type Check, t
 import type { MemoFacts } from '#lib/core/coach-prompt.ts';
 import { TOPICS, type BookMeta, type CheatEntry, type JudgeResult } from '#lib/core/lang.ts';
 import {
-	LIMIT_SEC, VERDICT, WEEK_GOAL, buildMemories, daysThisWeek, dueAfter, estimateMinutes, failedTwice, humanInterval, itemKey, noteStatus, permutation, pickSession,
+	LIMIT_SEC, VERDICT, WEEK_GOAL, buildMemories, daysThisWeek, dueAfter, estimateMinutes, failedTwice, humanInterval, isDue, itemKey, noteStatus, permutation, pickSession,
 	plan, previewDue, replay, type Item, type ItemType, type Memory, type Rating, type Review
 } from '#lib/core/memo-sched.ts';
 import type {
@@ -347,6 +347,40 @@ export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unkno
 	const recorded = recordCheck(c, isFirst, correct, ms, { order: orig, usedDistractors, status: result.status });
 	const message = correct ? null : usedDistractors.length ? c.distractors[usedDistractors[0]].why : firstFailure(result);
 	return { ...none, correct, recorded, message };
+}
+
+// ---------- for Sparring (Recall) ----------
+export type RecallKind = 'trace' | 'approach' | 'bug';
+const recallKinds = new Set<string>(['trace', 'approach', 'bug']);
+
+/** Unlocked trace / approach / bug checks (order checks need the judge) with what the Recall order needs: due or last answered wrong, and the last review time. */
+export function recallPool(): { id: string; kind: RecallKind; topic: string; urgent: boolean; lastAt: number | null }[] {
+	const w = world();
+	return w.checks
+		.filter((c) => recallKinds.has(c.kind) && open(w, c.unlock))
+		.map((c) => {
+			const m = w.memories.get(itemKey('check', c.id));
+			return { id: c.id, kind: c.kind as RecallKind, topic: c.topic, urgent: !!m && (isDue(m, w.at) || m.lastRating === 1), lastAt: m?.card.last_review ? Math.floor(m.card.last_review.getTime() / 1000) : null };
+		});
+}
+
+/** The check as shown (options in their fixed display order), for an unlocked trace / approach / bug check; null otherwise. */
+export function recallView(id: unknown): MemoCheckView | null {
+	const c = openCheck(id);
+	return c && recallKinds.has(c.kind) ? checkView(c) : null;
+}
+
+export type CheckKey = { view: MemoCheckView; correctIndex: number; whys: string[]; why: string | null; fixed: string | null };
+
+/** Everything about a trace / approach / bug check, answer included, in displayed order. Only for runs that are over: never call it for a check still to be answered. Null for unknown ones. */
+export function checkKey(id: string): CheckKey | null {
+	const c = world().checks.find((x) => x.id === id);
+	if (!c || !recallKinds.has(c.kind)) return null;
+	const view = checkView(c);
+	if (c.kind === 'bug') return { view, correctIndex: c.bugIndex, whys: [], why: c.why, fixed: c.fixed };
+	if (c.kind === 'order') return null;
+	const perm = permutation(4, c.id);
+	return { view, correctIndex: perm.indexOf(c.answer), whys: perm.map((i) => c.options[i].why), why: null, fixed: null };
 }
 
 /** The correct line order as displayed pool indexes; only once an answer to this check has been recorded in the last hour. */

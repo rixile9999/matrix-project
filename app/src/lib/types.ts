@@ -294,3 +294,246 @@ export type CoachVerifyResponse = {
 	steps: { ok: boolean; actual: string | null }[]; // actual = real toString, null when it could not be evaluated
 	error: string | null; // compile error text when nothing could be run
 };
+
+// ---------------------------------------------------------------------------
+// Sparring (스파링): Sprint = 5 already-passed level-1 problems back to back against the real judge, one clock;
+// Recall = 90 seconds of unlocked trace / approach / bug checks. Pure logic: src/lib/core/spar.ts, server: src/lib/server/spar.ts.
+// Storage is append-only (spar_runs + spar_events); totals, splits, "best" and every label below are recomputed from the events.
+// No points, badges or streaks: only records, compared with the learner's own earlier runs.
+//
+// Conventions of this section
+//  - `*At` = unix seconds; `*Ms` = milliseconds. `elapsedMs` fields are the SERVER's clock at the moment the response was made
+//    (ms since the run started): the page runs its own clock as `elapsedMs + (performance.now() - receivedAt)`.
+//  - One run is active at a time (both kinds together). Starting while one is active redirects to that run instead.
+//  - A run is `running` until it has a `finish` or `abandon` event. The server appends those lazily: a Sprint open for more than
+//    2 hours, or a Recall open past its deadline + 60 s without being finished, becomes `abandoned` the next time anything looks at it.
+//    A Recall whose deadline passed less than 60 s ago becomes `finished` (its valid answers stand).
+//  - Run ids are integers in the URL (`/spar/sprint/12`). Unknown id, non-integer id, or a run of the other kind -> 404.
+//  - Every non-GET request needs the same-origin header (hooks.server.ts), like the rest of the app.
+//  - Errors from endpoints: HTTP 400 (bad body), 409 (state does not allow it) with a `SparError` body. `over: true` means the run is
+//    no longer running: leave the screen and go to `runUrl`.
+//  - Secrets: no hint, note, target, intent or model solution of a Sprint problem is ever sent (not on the result page either;
+//    link to /lang/<problemId> instead). Recall whys and the correct answer of a check are sent only after that check was answered
+//    (the single index `highlight`) and the explanations only by `/spar/run/[run]` once the run is over.
+import type { SparKind, SparStatus } from './core/spar.ts';
+export type { SparKind, SparStatus };
+
+export type SparError = { error: string; over?: boolean; runUrl?: string };
+
+/** One line of the records list, and the summary shape used on the home page. Computed from the run's events. */
+export type SparRecordRow = {
+	id: number;
+	kind: SparKind;
+	startedAt: number;
+	status: SparStatus; // 'running' only for the active run (its label is "진행 중")
+	// Short label for the list: sprint finished without skip "6:27" (m:ss); sprint finished with skips "건너뜀 1";
+	// recall finished "9 · 90%" (correct count · accuracy rounded), recall with no answer "0개"; abandoned (any kind) "중단"; running "진행 중".
+	label: string;
+	totalMs: number | null; // sprint finished (with or without skips): start -> last pass/skip; otherwise null
+	skipped: number; // sprint: skipped problems; 0 for recall
+	answered: number; // recall: answers that counted; 0 for sprint
+	correct: number; // recall: of those, right; 0 for sprint
+	accuracy: number | null; // recall with answered > 0: correct / answered (0..1); otherwise null
+	// Best of its kind, so at most one row per kind is true.
+	//   sprint: finished, no skip, smallest totalMs (tie: the earlier run). A run with a skip or an abandon is never best.
+	//   recall: finished, accuracy >= 0.8, most correct (tie: higher accuracy, then the earlier run). Null best when no run qualifies.
+	best: boolean;
+};
+
+/** Per kind on the home page. */
+export type SparKindHome = {
+	eligible: number; // sprint: passed level-1 non-book problems; recall: unlocked trace/approach/bug checks
+	needed: number; // minimum to start: 5 for both
+	startable: boolean; // eligible >= needed (the server refuses otherwise)
+	best: SparRecordRow | null;
+	last: SparRecordRow | null; // latest finished run (skips allowed, abandoned ones not)
+	trend: SparRecordRow[]; // up to the last 5 finished runs, OLDEST first (for a small sparkline: totalMs for sprint, correct for recall)
+};
+
+/** `/spar` load. */
+export type SparHomeData = {
+	sprint: SparKindHome;
+	recall: SparKindHome;
+	active: { id: number; kind: SparKind; startedAt: number; url: string } | null; // a running run, to offer "이어서"; url = its run page
+	runs: number; // all recorded runs, abandoned included ("기록 23회")
+};
+// `/spar` form actions (POST forms; 303 redirect on success):
+//   ?/startSprint  ?/startRecall   (no fields)
+//   - a run is already active (either kind) -> redirects to that run (/spar/sprint/<id> or /spar/recall/<id>), nothing new is created
+//   - not enough material -> fail(409, { error }) with a Korean message, e.g. "통과한 기본 문제가 5개 이상 있어야 합니다. 지금 3개입니다."
+//   - success -> redirect to /spar/sprint/<id> or /spar/recall/<id>. The clock starts at that moment on the server.
+export type SparStartFailure = { error: string };
+
+// ---------- Sprint ----------
+/** A Sprint problem as shown. Deliberately without hints, notes, targets, refs, intent, solution (and book problems never appear). */
+export type SparSprintProblem = {
+	id: string;
+	topic: TopicId;
+	topicLabel: string; // Korean, e.g. "컬렉션"
+	kind: LangKind; // write | fix | refactor | complete
+	title: string;
+	limitSec: number; // the problem's own limit: the page may show it as a soft reference, nothing is enforced
+	statement: string; // inline `code` allowed
+	starter: string;
+	avoid: string[]; // only for kind 'refactor' (a run fails while one remains), else []
+	bestCumMs: number | null; // best run's cumulative time at THIS position (see SparSprintData.best); null when there is no best run yet
+};
+
+/** A problem already left behind in this run, in run order. */
+export type SparSprintDone = {
+	problemId: string;
+	title: string;
+	outcome: 'passed' | 'skipped';
+	splitMs: number; // from the previous pass/skip (or the run start) to this one
+	cumMs: number; // from the run start to this one
+	runs: number; // how many times it was judged (a skipped problem may have 0)
+	bestCumMs: number | null; // best run's cumulative time at the same position; null when there is no best run yet
+	deltaMs: number | null; // cumMs - bestCumMs: negative = ahead of the best run ("12초 빠름"), positive = behind; null without best
+};
+
+/** `/spar/sprint/[run]` load while the run is running (otherwise 303 -> /spar/run/<id>), and the `sprint` field of every Sprint endpoint response. */
+export type SparSprintData = {
+	run: { id: number; startedAt: number };
+	status: SparStatus; // load always sees 'running'; an endpoint response may say 'finished' (last problem passed/skipped) or 'abandoned'
+	runUrl: string | null; // set unless running: where the result is (`/spar/run/<id>`) -> navigate there
+	total: number; // 5
+	index: number; // 0-based position of `problem` (== done.length); == total when finished
+	problem: SparSprintProblem | null; // null unless running
+	code: string; // editor content for `problem`: the code of its last judged run in this run, else the starter
+	lastResult: JudgeResult | null; // result of that last judged run (shown under the editor after reload), else null
+	runs: number; // judged runs of `problem` so far
+	done: SparSprintDone[];
+	// The best run to race against: finished, no skip, smallest total. cumMs[i] = its cumulative time after position i (length 5). null = no best yet,
+	// then show no comparison. While solving, `problem.bestCumMs` is the pace to beat for the current position.
+	best: { id: number; totalMs: number; cumMs: number[] } | null;
+	elapsedMs: number; // server clock for the one run clock
+	cheat: CheatEntry[]; // the whole cheat sheet (static, same as /lang/[id]); opening an entry should POST .../lookup
+};
+// POST /spar/sprint/[run]/run   JSON { problemId: string, code: string } -> SparSprintRunResponse
+//   Judges for real (serialized with other judge jobs; can take many seconds; the run clock keeps running). A failing, non-compiling or
+//   timed-out run is recorded and the run stays on the same problem. A pass is stamped with the moment the code was SUBMITTED (judge latency is not
+//   charged to the learner), then the run moves to the next problem, or finishes after the 5th.
+//   409 when `problemId` is not the current problem (stale tab: reload) or the run is no longer running (SparError.over).
+export type SparSprintRunResponse = {
+	result: JudgeResult; // same as /lang: status, cases, output, avoided (a refactor problem fails while an avoided keyword remains)
+	passed: boolean;
+	sprint: SparSprintData; // the state AFTER this run: on a pass, `done` has a new last row (use its deltaMs for the pace message) and `problem` is the next one
+};
+// POST /spar/sprint/[run]/skip  JSON { problemId: string } -> SparSprintSkipResponse
+//   Records a skip of the current problem (the run can no longer be the best) and moves on; 409 like `run`.
+export type SparSprintSkipResponse = { sprint: SparSprintData };
+// POST /spar/sprint/[run]/lookup  JSON { entryId: string } -> LangLookupResponse ({ recorded })
+//   Cheat sheet opened for an entry, recorded against the current problem. Ignored silently ({ recorded: false }) for unknown entries or a run that is not running.
+// POST /spar/sprint/[run]/abandon  (no body) -> SparAbandonResponse. Marks a running run abandoned ("중단"); on a run already over it changes nothing.
+export type SparAbandonResponse = { runUrl: string };
+
+// ---------- Recall ----------
+/** `/spar/recall/[run]` load while the run is running (otherwise 303 -> /spar/run/<id>) and the state the page starts from. */
+export type SparRecallData = {
+	run: { id: number; startedAt: number };
+	durationMs: number; // 90000
+	elapsedMs: number; // server clock; the deadline is durationMs. Reaching it, navigate to /spar/run/<id> (the server settles the run as finished).
+	listSize: number; // checks in this run's fixed list (up to 40; more than can be answered in 90 s)
+	answered: number; // counted answers so far
+	correct: number; // of those, right
+	// The check to answer now, exactly like /memo/check but only kinds trace (`code` + `options`), approach (`options`), bug (`lines`: tap the wrong line).
+	// Options are in their fixed display order. Nothing about the answer. `limitSec` is irrelevant here.
+	current: MemoCheckView;
+};
+// POST /spar/recall/[run]/answer  JSON { id: string, choice: number } -> SparRecallAnswerResponse
+//   `id` must be the current check, `choice` = displayed option index (trace/approach) or line index (bug). Only the first answer of a check counts;
+//   the server holds the cursor, so a double tap or a stale id is NOT counted (accepted: false, `next` = the check that is really current).
+//   An answer arriving after startedAt + 90 s is NOT counted: { accepted: false, over: true, runUrl } (the run is settled as finished).
+//   An accepted answer is also recorded as a memo review of that check by the same rule as POST /memo/check/answer (first answer within an hour only;
+//   rating 3 right / 1 wrong, overtime cap), so nothing is double-recorded whichever page the learner answered on first.
+//   A run that is not running any more (finished, abandoned, deadline passed) also answers 200 { accepted: false, over: true, runUrl }.
+//   400 (SparError) for a malformed choice.
+export type SparRecallAnswerResponse = {
+	accepted: boolean;
+	over: boolean; // no more checks: the deadline passed or the list is exhausted. Show the flash if accepted, then navigate to runUrl.
+	correct: boolean | null; // null when not accepted
+	highlight: number | null; // index to mark in the half-second flash: the RIGHT option/line (compare with the tapped one to colour it); null when not accepted
+	answered: number;
+	correctCount: number;
+	next: MemoCheckView | null; // null when over
+	runUrl: string | null; // set when over
+};
+// POST /spar/recall/[run]/abandon  (no body) -> SparAbandonResponse (as for Sprint)
+
+// ---------- Run detail (result page and a past run's page) ----------
+/** What a Sprint problem looked like in a run, with its numbers. Still no hints/solution: link to /lang/<problemId> for those. */
+export type SparSprintResultRow = {
+	problemId: string;
+	title: string;
+	topicLabel: string;
+	kind: LangKind;
+	limitSec: number;
+	outcome: 'passed' | 'skipped' | null; // null = never reached (abandoned run)
+	splitMs: number | null; // null when not reached
+	cumMs: number | null;
+	overLimit: boolean; // splitMs > limitSec * 1000 (skipped problems count too): such a problem fed the warm-up suggestion on /lang
+	runs: number; // judged runs ("두 번 실행했습니다")
+	bestSplitMs: number | null; // split of the same problem in the comparison run (below), null when that run did not have it
+	lookups: { entryId: string; title: string }[]; // cheat entries opened on this problem, deduplicated, first-opened order
+};
+
+/** The extreme rows, relative to the baseline named by `basis`: 'best' = the comparison run's split of that problem; 'limit' = the problem's own limitSec
+ *  (used when no row has a comparison split, which is common because sprints avoid recent problems). deltaMs = splitMs - baseline. */
+export type SparSprintExtreme = { problemId: string; title: string; deltaMs: number; basis: 'best' | 'limit' };
+
+type SparDetailBase = {
+	id: number;
+	startedAt: number;
+	status: 'finished' | 'abandoned'; // a running run redirects to its own screen instead
+	label: string; // same as SparRecordRow.label
+	isBest: boolean; // this run is currently the best of its kind
+};
+
+export type SparSprintDetail = SparDetailBase & {
+	kind: 'sprint';
+	totalMs: number | null; // null for an abandoned run
+	skipped: number;
+	// Comparison run = the best run among those BEFORE this one (finished, no skip, smallest total); null for the first. Fixed in time: a later, faster run does not change it.
+	previousBest: { id: number; totalMs: number } | null;
+	deltaMs: number | null; // totalMs - previousBest.totalMs (negative = faster); null without previousBest, without total, or when this run had a skip
+	problems: SparSprintResultRow[]; // all 5 in run order
+	slowest: SparSprintExtreme | null; // "가장 느려진 곳": largest positive delta; null if none is positive
+	fastest: SparSprintExtreme | null; // largest negative delta; null if none is negative
+	lookupCount: number; // all cheat sheet openings in the run
+};
+
+/** One answered check of a Recall run, with everything now allowed to be shown. Option/line order = the order the learner saw. */
+export type SparRecallAnswerRow = {
+	checkId: string;
+	kind: 'trace' | 'approach' | 'bug';
+	kindLabel: string;
+	prompt: string;
+	code: string | null; // trace
+	lines: string[]; // bug: the code lines as shown
+	options: string[]; // trace/approach: as shown
+	choice: number; // displayed index tapped
+	correctIndex: number; // displayed index of the right option (trace/approach) or the wrong line (bug)
+	correct: boolean;
+	whys: string[]; // trace/approach: why of every displayed option, same order as `options`; bug: []
+	why: string | null; // bug: why that line is wrong
+	fixed: string | null; // bug: the corrected line
+	ms: number; // time spent on it (previous answer or run start -> this answer)
+	recorded: boolean; // false when the same check had been answered within the hour elsewhere, so this answer was not logged as a review
+};
+
+export type SparRecallDetail = SparDetailBase & {
+	kind: 'recall';
+	answered: number;
+	correct: number;
+	accuracy: number | null; // 0..1; null when nothing was answered
+	listSize: number;
+	previousBest: { id: number; correct: number; accuracy: number } | null; // best among earlier runs; null for the first or when none qualified
+	answers: SparRecallAnswerRow[]; // in answer order; missed ones are the rows with correct === false
+};
+
+export type SparRunDetail = SparSprintDetail | SparRecallDetail;
+/** `/spar/run/[run]` load. A running run redirects (303) to its own screen (/spar/sprint/<id> or /spar/recall/<id>); unknown -> 404. */
+export type SparRunData = { detail: SparRunDetail };
+
+/** `/spar/records` load: newest first, at most 100 rows. Link each row to `/spar/run/<id>` (a running one redirects to its screen). */
+export type SparRecordsData = { rows: SparRecordRow[]; total: number; truncated: boolean };

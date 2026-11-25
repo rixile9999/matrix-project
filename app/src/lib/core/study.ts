@@ -11,18 +11,25 @@ export const struggled = (s: StudySession) => s.hintsUsed >= 2 || s.overtime || 
 export const nextUnpassed = (problems: StudyProblem[], level: 1 | 2 | 3): string | null =>
 	problems.find((p) => p.level === level && p.passedAt === null)?.id ?? null;
 
+/** A Sparring Sprint problem that was skipped or took longer than its own limit: a struggled level-1 session of `topic` that ended at `endedAt`. */
+export type SprintStruggle = { topic: TopicId; endedAt: number };
+
 /**
- * Level-1 warm-up: an unpassed problem on the topic of the most recent struggled level-2 session;
- * else the first unpassed one; when all are passed, the one passed longest ago. Null if there are none.
+ * Level-1 warm-up: an unpassed problem on the topic of the most recent struggle (a struggled level-2 session or a Sprint struggle);
+ * else the first unpassed one; when all are passed, the one passed longest ago, or, if a Sprint struggle exists, the one passed
+ * longest ago on that struggle's topic. Null if there are none. Without Sprint struggles this is the level-2-only rule.
  */
-export function suggestWarmup(problems: StudyProblem[], sessions: StudySession[]): string | null {
+export function suggestWarmup(problems: StudyProblem[], sessions: StudySession[], sprint: SprintStruggle[] = []): string | null {
 	const basics = problems.filter((p) => p.level === 1);
 	const open = basics.filter((p) => p.passedAt === null);
+	const latest = <T extends { topic: TopicId; endedAt: number }>(list: T[]) => list.reduce<T | null>((a, s) => (!a || s.endedAt >= a.endedAt ? s : a), null);
+	const oldest = (list: StudyProblem[]) => list.reduce<StudyProblem | null>((a, p) => (!a || p.passedAt! < a.passedAt! ? p : a), null);
+	const fromSprint = latest(sprint);
 	if (open.length) {
-		const last = sessions.filter((s) => s.level === 2 && struggled(s)).reduce<StudySession | null>((a, s) => (!a || s.endedAt >= a.endedAt ? s : a), null);
+		const last = latest([...sessions.filter((s) => s.level === 2 && struggled(s)), ...sprint]);
 		return (open.find((p) => p.topic === last?.topic) ?? open[0]).id;
 	}
-	return basics.reduce<StudyProblem | null>((a, p) => (!a || p.passedAt! < a.passedAt! ? p : a), null)?.id ?? null;
+	return (oldest(basics.filter((p) => p.topic === fromSprint?.topic)) ?? oldest(basics))?.id ?? null;
 }
 
 export type StageGroup = { stage: string | null; cases: CaseResult[]; ok: number }; // case names have the stage prefix removed

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db } from './db.ts';
+import { sprintStruggleSessions } from './spar-log.ts';
 import { judge, loadBooks, loadGiven, loadProblem, loadSolution } from './judge.ts';
 import { listCheatEntries, cheatIndex } from './cheatsheet.ts';
 import { LEVELS, TOPICS, type BookMeta, type CheatEntry, type JudgeResult, type LangProblem, type TopicId } from '#lib/core/lang.ts';
@@ -96,7 +97,7 @@ function openSession(problemId: string, message: string): SessionRow {
 
 // ---------- cheat sheet ----------
 /** Static content that may be half written: a missing or broken file means "nothing yet". */
-function cheatEntries(): CheatEntry[] {
+export function cheatEntries(): CheatEntry[] {
 	try {
 		return listCheatEntries(LANG);
 	} catch {
@@ -111,6 +112,9 @@ function cheatIds(): Set<string> {
 		return new Set();
 	}
 }
+
+/** True for an id that exists in the cheat sheet. */
+export const isCheatEntry = (entryId: unknown): entryId is string => typeof entryId === 'string' && cheatIds().has(entryId);
 
 /** Records that the open session looked at an entry. Returns false (and writes nothing) for ended or missing sessions and unknown entries. */
 export function recordLookup(problemId: string, entryId: unknown): boolean {
@@ -143,6 +147,12 @@ const passedTimes = () =>
 	new Map(
 		(db.prepare("SELECT problem_id, MAX(ended_at) AS at FROM lang_sessions WHERE lang = ? AND outcome = 'passed' GROUP BY problem_id").all(LANG) as { problem_id: string; at: number }[]).map((r) => [r.problem_id, r.at])
 	);
+
+/** Complete, non-book level-1 problems passed at least once, in curriculum order: what a Sparring Sprint may draw from. */
+export function passedBasics(): LangProblem[] {
+	const at = passedTimes();
+	return curriculum().filter((p) => p.level === 1 && at.has(p.id));
+}
 
 const LEVEL_KEYS = [1, 2, 3] as const;
 
@@ -198,7 +208,7 @@ export function listView(): LangHomeData {
 	});
 	const wanted: [LangSuggestion['key'], string, string | null][] = [
 		['continue', '이어서', nextUnpassed(study, 2)],
-		['warmup', '기본 워밍업', suggestWarmup(study, sessions)],
+		['warmup', '기본 워밍업', suggestWarmup(study, sessions, sprintStruggleSessions((id) => (level.get(id)?.level === 1 ? level.get(id) : undefined)))],
 		['challenge', '복합 도전', nextUnpassed(study, 3)]
 	];
 	const suggestions = wanted.flatMap(([key, label, id]) => (id ? [{ key, label, problemId: id, title: items.get(id)!.title }] : []));

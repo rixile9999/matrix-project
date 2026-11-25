@@ -6,6 +6,7 @@
 	import CheatSheet from '#lib/CheatSheet.svelte';
 	import Coach from '#lib/Coach.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
+	import TimeGlyph from '#lib/TimeGlyph.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import { mmss } from '#lib/rank.ts';
 	import { COACH_NAME } from '#lib/core/coach.ts';
@@ -187,7 +188,7 @@
 	);
 </script>
 
-<svelte:head><title>{fin ? '' : `${over ? '+' : ''}${mmss(Math.abs(remaining))} · `}{p.title} · Matrix</title></svelte:head>
+<svelte:head><title>{p.title} · Matrix</title></svelte:head>
 
 <svelte:window onkeydowncapture={keys} />
 
@@ -211,7 +212,7 @@
 				{#if fin}
 					<span class="lang-clock mono" style="font-size:15px;color:var(--muted)">{mmss(fin.elapsedSec)}</span>
 				{:else}
-					<span class="lang-clock" class:over role="timer" aria-label={over ? '초과 시간' : '남은 시간'}>{mmss(Math.abs(remaining))}</span>
+					<TimeGlyph remainingSec={remaining} limitSec={p.limitSec} size={26} />
 				{/if}
 			</div>
 			{#if !fin}<span class="note">제한 {mmss(p.limitSec)}{over ? ' · 시간이 지났지만 계속 풀 수 있습니다' : ''}</span>{/if}

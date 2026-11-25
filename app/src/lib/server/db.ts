@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS coach_messages (
 	access TEXT NOT NULL CHECK (access IN ('limited', 'full')), error INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS coach_messages_ctx ON coach_messages(context_kind, context_id, id);
+-- Sparring: append-only. A run fixes its item ids at the start; everything else (totals, splits, best, labels) is recomputed from the events.
+CREATE TABLE IF NOT EXISTS spar_runs (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('sprint', 'recall')),
+	started_at INTEGER NOT NULL, started_ms INTEGER NOT NULL, items TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS spar_events (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, run_id INTEGER NOT NULL, seq INTEGER NOT NULL, at INTEGER NOT NULL, ms INTEGER NOT NULL,
+	type TEXT NOT NULL CHECK (type IN ('run', 'pass', 'skip', 'lookup', 'answer', 'finish', 'abandon')), item_id TEXT, payload TEXT NOT NULL,
+	UNIQUE (run_id, seq)
+);
+CREATE INDEX IF NOT EXISTS spar_events_run ON spar_events(run_id, seq);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 
