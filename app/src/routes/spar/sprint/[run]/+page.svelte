@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
-	import { Ambience, AmbienceControls, audio } from '#lib/ambience/index.ts';
+	import { AmbienceControls, audio } from '#lib/ambience/index.ts';
+	import { stage } from '#lib/ambience/stage.svelte.ts';
 	import CheatSheet from '#lib/CheatSheet.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
 	import TimeGlyph from '#lib/TimeGlyph.svelte';
@@ -59,6 +60,7 @@
 	const lastCum = $derived(lastDone?.cumMs ?? 0);
 	const frac = $derived(p ? Math.min(0.9, Math.max(0, (nowMs - lastCum) / (p.limitSec * 1000))) * 0.85 : 0);
 	const progress = $derived(Math.min(1, (sp.done.length + frac) / sp.total));
+	$effect(() => { stage.scene = 'run'; stage.progress = progress; });
 	const pace = $derived(lastDone && lastDone.deltaMs !== null ? lastDone.deltaMs : null);
 
 	function paceText(ms: number): { pre: string; b: string } {
@@ -171,7 +173,6 @@
 
 <svelte:head><title>Sprint · Matrix</title></svelte:head>
 <svelte:window onkeydowncapture={keys} />
-<Ambience scene="run" {progress} />
 
 <main class="a-page">
 	<div class="a-top">

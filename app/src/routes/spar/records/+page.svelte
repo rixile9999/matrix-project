@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Ambience } from '#lib/ambience/index.ts';
+	import { stage } from '#lib/ambience/stage.svelte.ts';
+	$effect(() => { stage.scene = 'still'; stage.progress = undefined; });
 	import { fmtDate } from '#lib/spar/format.ts';
 	import type { SparRecordsData } from '#lib/types.ts';
 
@@ -7,7 +8,6 @@
 </script>
 
 <svelte:head><title>Sparring 기록 · Matrix</title></svelte:head>
-<Ambience scene="still" />
 
 <main class="a-page mid">
 	<div class="a-top"><a href="/spar" style="color:inherit;text-decoration:none">‹ Sparring</a><span>{data.total}회</span></div>

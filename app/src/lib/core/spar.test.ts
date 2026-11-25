@@ -156,6 +156,11 @@ describe('sprintExtremes', () => {
 		expect(x.fastest).toEqual({ id: 'b', deltaMs: -30_000, basis: 'limit' });
 	});
 	it('has no slowest when nothing is over', () => expect(sprintExtremes(rows([10_000, 10_000, 10_000]), () => null, () => 60).slowest).toBeNull());
+	it('never names a skipped problem', () => {
+		const ev = [E('pass', 'a', 50_000), E('skip', 'b', 58_000), E('pass', 'c', 100_000)];
+		const x = sprintExtremes(sprintSummary(['a', 'b', 'c'], ev).rows, () => null, () => 90);
+		expect(x.fastest).toEqual({ id: 'c', deltaMs: -48_000, basis: 'limit' });
+	});
 });
 
 describe('recall', () => {

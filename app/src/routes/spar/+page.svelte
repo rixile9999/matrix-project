@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Ambience, AmbienceControls, audio, settings } from '#lib/ambience/index.ts';
+	import { AmbienceControls, audio, settings } from '#lib/ambience/index.ts';
+	import { stage } from '#lib/ambience/stage.svelte.ts';
+	$effect(() => { stage.scene = 'home'; stage.progress = undefined; });
 	import Spark from '#lib/spar/Spark.svelte';
 	import { fmtMs } from '#lib/core/spar.ts';
 	import type { SparHomeData, SparKindHome } from '#lib/types.ts';
@@ -25,7 +27,6 @@
 </script>
 
 <svelte:head><title>Sparring · Matrix</title></svelte:head>
-<Ambience scene="home" />
 
 <main class="a-page mid">
 	<div class="a-top"><span>Sparring</span><a class="a-small" href="/spar/records" style="color:var(--a-dim)">기록 {data.runs}회</a></div>

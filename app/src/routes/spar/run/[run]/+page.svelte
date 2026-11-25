@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
-	import { Ambience } from '#lib/ambience/index.ts';
+	import { fireBloom, stage } from '#lib/ambience/stage.svelte.ts';
+	$effect(() => { stage.scene = 'result'; stage.progress = undefined; });
 	import { renderInline } from '#lib/inline.ts';
 	import { fmtMs } from '#lib/core/spar.ts';
 	import { fmtDateLong, fmtSpan } from '#lib/spar/format.ts';
@@ -12,12 +13,11 @@
 	const d = $derived(data.detail);
 
 	// Fresh from a finished run: one bloom, once. Opened later: the picture is simply settled.
-	let bloom = $state(0);
 	const fresh = untrack(() => page.url.searchParams.get('fresh') === '1');
 	onMount(() => {
 		if (!fresh) return;
 		const t = setTimeout(() => {
-			bloom = 1;
+			fireBloom();
 			try { replaceState(page.url.pathname, {}); } catch { /* router not ready: harmless */ }
 		}, 500);
 		return () => clearTimeout(t);
@@ -34,7 +34,6 @@
 </script>
 
 <svelte:head><title>{d.kind === 'sprint' ? 'Sprint' : 'Recall'} 결과 · Matrix</title></svelte:head>
-<Ambience scene="result" {bloom} />
 
 <main class="a-page mid">
 	<div class="a-top">

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
-	import { Ambience, AmbienceControls, audio } from '#lib/ambience/index.ts';
+	import { AmbienceControls, audio } from '#lib/ambience/index.ts';
+	import { stage } from '#lib/ambience/stage.svelte.ts';
 	import TimeGlyph from '#lib/TimeGlyph.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import type { MemoCheckView, SparAbandonResponse, SparError, SparRecallAnswerResponse, SparRecallData } from '#lib/types.ts';
@@ -23,6 +24,7 @@
 
 	const left = $derived(Math.max(0, data.durationMs - elapsed));
 	const progress = $derived(Math.min(1, elapsed / data.durationMs));
+	$effect(() => { stage.scene = 'run'; stage.progress = progress; });
 	const go = (url: string) => {
 		if (leaving) return;
 		leaving = true;
@@ -101,7 +103,6 @@
 </script>
 
 <svelte:head><title>Recall · Matrix</title></svelte:head>
-<Ambience scene="run" {progress} />
 
 <main class="a-page narrow">
 	<div class="a-top">

@@ -134,7 +134,7 @@ export type SprintExtreme = { id: string; deltaMs: number; basis: 'best' | 'limi
  * no row has one, the problem's own limit. `bestSplit(id)` / `limitSec(id)` give them.
  */
 export function sprintExtremes(rows: SprintRow[], bestSplit: (id: string) => number | null, limitSec: (id: string) => number): { slowest: SprintExtreme | null; fastest: SprintExtreme | null } {
-	const reached = rows.filter((r) => r.splitMs !== null);
+	const reached = rows.filter((r) => r.outcome === 'passed' && r.splitMs !== null); // a skip is quick but says nothing about speed
 	const basis = reached.some((r) => bestSplit(r.id) !== null) ? 'best' : 'limit';
 	const deltas = reached.flatMap((r) => {
 		const base = basis === 'best' ? bestSplit(r.id) : limitSec(r.id) * 1000;
