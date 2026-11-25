@@ -1,0 +1,245 @@
+<title>Matrix Operator 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one desktop problem screen with a state switch above it, then two visual blocks and one phone screen. */
+:root {
+	--bg: #f2f4f8; --surface: #ffffff; --ink: #141a24; --muted: #5b6676; --line: #d8dee8;
+	--accent: #2f4fd8; --on-accent: #ffffff; --ok: #1c7f47; --bad: #c0342d; --warn: #9a6a00;
+	--f-display: 'Space Grotesk', 'IBM Plex Sans KR', system-ui, sans-serif;
+	--f-body: 'IBM Plex Sans KR', system-ui, -apple-system, sans-serif;
+	--f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+	--bg: #0f131a; --surface: #171d27; --ink: #e7ecf3; --muted: #95a1b3; --line: #2a3342;
+	--accent: #8aa2ff; --on-accent: #0f131a; --ok: #4cc38a; --bad: #f0776f; --warn: #e0b040; color-scheme: dark } }
+:root[data-theme="dark"] {
+	--bg: #0f131a; --surface: #171d27; --ink: #e7ecf3; --muted: #95a1b3; --line: #2a3342;
+	--accent: #8aa2ff; --on-accent: #0f131a; --ok: #4cc38a; --bad: #f0776f; --warn: #e0b040; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body);
+	padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.doc { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+h1 { font: 700 26px/1.2 var(--f-display); margin: 0 0 6px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; max-width: 64ch; }
+h2 { font: 700 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+section > p { font-size: 13px; color: var(--muted); margin: 0 0 12px; max-width: 70ch; }
+code, pre, .mono { font-family: var(--f-mono); font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; }
+code { font-size: .9em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 1px 5px; border-radius: 4px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); margin-bottom: 12px; }
+.seg button { border: 0; background: transparent; padding: 8px 14px; font-size: 13px; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+.screen { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--bg); }
+.bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--line); font-size: 13px; }
+.bar b { font: 700 15px var(--f-display); }
+.clock { margin-left: auto; font: 600 15px var(--f-mono); font-variant-numeric: tabular-nums; }
+.clock.over { color: var(--warn); } .clock.done { color: var(--ok); }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.work { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.work p { margin: 0; font-size: 14px; }
+pre.code { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.side { border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-width: 0; min-height: 430px; }
+@media (max-width: 760px) { .side { border-left: 0; border-top: 1px solid var(--line); } }
+.tabs { display: flex; border-bottom: 1px solid var(--line); font-size: 13px; }
+.tabs span { padding: 9px 14px; color: var(--muted); }
+.tabs span.on { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px var(--accent); }
+.pane { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
+
+.locked { margin: auto; text-align: center; color: var(--muted); font-size: 14px; max-width: 26ch; }
+.locked b { display: block; color: var(--ink); font: 700 16px var(--f-display); margin-bottom: 6px; }
+.note { font-size: 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 7px 9px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 4px 11px; font-size: 12px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.me { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-radius: 12px 12px 2px 12px; padding: 8px 11px; font-size: 14px; max-width: 90%; }
+.bot { background: var(--bg); border: 1px solid var(--line); border-radius: 12px 12px 12px 2px; padding: 10px 11px; font-size: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.bot p { margin: 0; }
+.who { font: 600 11px var(--f-mono); color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.again { border: 0; background: none; padding: 0; font-size: 12px; color: var(--accent); text-decoration: underline; align-self: flex-start; }
+.ask { display: flex; gap: 6px; margin-top: auto; }
+.ask input { flex: 1; min-width: 0; font: 14px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+.ask button { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); border-radius: 10px; padding: 0 14px; font-weight: 600; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 5px 9px; font-size: 12.5px; }
+
+/* visual blocks */
+.viz { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.viz-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.badge { font: 600 11px var(--f-mono); color: var(--ok); border: 1px solid var(--ok); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.cells { display: flex; gap: 6px; flex-wrap: wrap; }
+.cell { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; display: grid; place-items: center; font: 600 15px var(--f-mono); background: var(--bg); }
+.cell.seen { color: var(--muted); }
+.cell.now { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.acc { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.acc b { font: 700 22px var(--f-display); font-variant-numeric: tabular-nums; }
+.step-line { font: 12.5px var(--f-mono); color: var(--muted); min-height: 1.5em; }
+.viz input[type=range] { width: 100%; accent-color: var(--accent); }
+.flow { display: flex; flex-direction: column; gap: 4px; font: 12.5px/1.5 var(--f-mono); }
+.flow .box { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; background: var(--bg); overflow-wrap: anywhere; }
+.flow .arrow { color: var(--muted); padding-left: 10px; font-size: 12px; font-family: var(--f-body); }
+.flow mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.diff div { font: 12px/1.6 var(--f-mono); border: 1px solid var(--line); border-radius: 8px; padding: 8px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); }
+.diff small { display: block; font: 600 11px var(--f-body); color: var(--muted); margin-bottom: 4px; }
+.diff .hl { background: color-mix(in srgb, var(--warn) 25%, transparent); }
+
+.phone { background: var(--bg); border: 1px solid var(--line); border-radius: 26px; padding: 18px 16px 0; display: flex; flex-direction: column; gap: 12px; width: 340px; max-width: 100%; overflow: hidden; }
+.q { font: 600 16px/1.45 var(--f-body); margin: 0; }
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+.drawer { background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; padding: 10px 12px 16px; margin: 4px -16px 0; display: flex; flex-direction: column; gap: 10px; }
+.grip { width: 36px; height: 4px; border-radius: 2px; background: var(--line); align-self: center; }
+</style>
+
+<div class="doc">
+<header>
+	<h1>Operator 창 시안</h1>
+	<p class="lead">문제 화면 우측에 붙는 질문응답 창입니다. 타이머가 도는 동안은 잠기고, 시간이 끝나면 열립니다. 상태 버튼과 슬라이더는 눌러 볼 수 있고, 대화 내용은 모두 예시입니다.</p>
+</header>
+
+<section>
+	<h2>1. 문제 화면과 Operator 창</h2>
+	<p>세 가지 상태를 바꿔 보세요. Operator에게 넘어가는 정보도 상태마다 다릅니다.</p>
+	<div class="seg" role="group" aria-label="세션 상태">
+		<button type="button" data-state="run" aria-pressed="true">타이머 동작 중</button>
+		<button type="button" data-state="over" aria-pressed="false">제한 시간 초과</button>
+		<button type="button" data-state="done" aria-pressed="false">통과·포기 뒤</button>
+	</div>
+	<div class="screen">
+		<div class="bar"><b>b-08 누적 합</b><span>기본 · fold·누적</span><span class="clock" id="clock">1:12</span></div>
+		<div class="cols">
+			<div class="work">
+				<p>리스트 <code>xs</code>의 모든 원소의 합을 <code>foldLeft</code>로 구한다.</p>
+				<pre class="code">def total(xs: List[Int]): Int =
+  xs.foldLeft(0)((acc, x) => acc + x)</pre>
+				<p style="font-size:13px;color:var(--muted)" id="result">아직 실행하지 않았습니다.</p>
+			</div>
+			<div class="side">
+				<div class="tabs"><span>치트시트</span><span class="on">Operator</span></div>
+				<div class="pane" id="pane"></div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section>
+	<h2>2. 설명에 쓰는 그림</h2>
+	<p>Operator가 정해진 형식으로 답하면 화면이 그림으로 바꿔 그립니다. 추적 값은 채점기로 실제 실행해 대조하고, 맞으면 "실행 확인됨"을 붙입니다.</p>
+	<div class="pair">
+		<div class="viz">
+			<div class="viz-head"><span>구조 그림: <code>for</code>가 풀리는 과정</span></div>
+			<div class="flow">
+				<div class="box">for a &lt;- xs; b &lt;- ys <mark>if a &lt; b</mark> yield a + b</div>
+				<div class="arrow">↓ 앞 생성기는 flatMap</div>
+				<div class="box">xs.<mark>flatMap</mark>(a =&gt; for b &lt;- ys if a &lt; b yield a + b)</div>
+				<div class="arrow">↓ 가드는 withFilter, 마지막 생성기는 map</div>
+				<div class="box">xs.flatMap(a =&gt; ys.<mark>withFilter</mark>(b =&gt; a &lt; b).<mark>map</mark>(b =&gt; a + b))</div>
+			</div>
+		</div>
+		<div class="viz">
+			<div class="viz-head"><span>코드 비교: 내 코드와 모범답안</span></div>
+			<div class="diff">
+				<div><small>내 코드</small>var s = 0
+<span class="hl">for x &lt;- xs do s += x</span>
+s</div>
+				<div><small>모범답안</small><span class="hl">xs.foldLeft(0)(_ + _)</span></div>
+			</div>
+			<p style="margin:0;font-size:13px;color:var(--muted)">달라진 줄만 강조합니다. 통과하거나 포기한 뒤에만 나옵니다.</p>
+		</div>
+	</div>
+</section>
+
+<section>
+	<h2>3. 휴대폰: 암기 카드에서 묻기</h2>
+	<p>답이 이미 공개된 화면이라 제한 없이 묻습니다. 아래에서 올라오는 창으로 엽니다.</p>
+	<div class="phone">
+		<p class="q"><code>for</code>에 <code>if</code> 가드를 붙였더니 <code>Either</code>에서 컴파일이 깨진다. 왜인가?</p>
+		<div class="sheet">가드는 <code>withFilter</code> 호출로 바뀌는데 <code>Either</code>에는 <code>withFilter</code>가 없다.</div>
+		<div class="drawer">
+			<div class="grip"></div>
+			<div class="chips" role="group" aria-label="Operator 선택">
+				<button class="chip" type="button" aria-pressed="true">Claude Code</button>
+				<button class="chip" type="button" aria-pressed="false">Codex</button>
+				<button class="chip" type="button" aria-pressed="false">Qwen Code</button>
+			</div>
+			<div class="me">그럼 Option은 왜 돼?</div>
+			<div class="bot"><p><code>Option</code>에는 걸러 낸 결과를 담을 <code>None</code>이 있다. <code>Either</code>는 걸러 냈을 때 <code>Left</code>에 무엇을 넣을지 정할 수 없어서 만들지 않았다.</p></div>
+			<div class="ask"><input type="text" placeholder="이 카드에 대해 묻기" aria-label="질문"><button type="button">묻기</button></div>
+		</div>
+	</div>
+</section>
+</div>
+
+<script>
+const STEPS = [
+	{ i: -1, acc: 0, line: '시작값 acc = 0' },
+	{ i: 0, acc: 3, line: 'acc = 0 + 3' },
+	{ i: 1, acc: 4, line: 'acc = 3 + 1' },
+	{ i: 2, acc: 8, line: 'acc = 4 + 4' },
+	{ i: 3, acc: 8, line: '끝. 결과는 8' }
+];
+const XS = [3, 1, 4];
+const chips = `<div class="chips" role="group" aria-label="Operator 선택">
+	<button class="chip" type="button" aria-pressed="true">Claude Code</button>
+	<button class="chip" type="button" aria-pressed="false">Codex</button>
+	<button class="chip" type="button" aria-pressed="false">Qwen Code</button></div>`;
+const ask = `<div class="ask"><input type="text" placeholder="질문 입력" aria-label="질문"><button type="button">묻기</button></div>`;
+const trace = `<div class="viz">
+	<div class="viz-head"><span>단계별 추적</span><span class="badge">실행 확인됨</span></div>
+	<div class="cells" id="cells"></div>
+	<div class="acc">acc <b id="acc">0</b></div>
+	<div class="step-line" id="stepline"></div>
+	<input type="range" id="slider" min="0" max="4" value="0" aria-label="단계">
+</div>`;
+const PANES = {
+	run: { clock: ['1:12', ''], result: '아직 실행하지 않았습니다.',
+		html: `<div class="locked"><b>Operator offline</b>제한 시간이 끝나거나 문제를 마치면 열립니다. 그동안은 치트시트와 힌트를 쓸 수 있습니다.</div>` },
+	over: { clock: ['+0:48', 'over'], result: '테스트 4개 중 3개 통과 · 빈 리스트 실패',
+		html: chips + `<div class="note">Operator가 받는 것: 문제, 내 코드, 마지막 채점 결과. 모범답안은 받지 않습니다. 질문은 기록됩니다.</div>
+		<div class="me">빈 리스트에서 왜 틀리지?</div>
+		<div class="bot"><div class="who"><span>Claude Code</span><span>2.1초</span></div><p>지금 코드는 <code>reduce</code>를 쓰고 있다. <code>reduce</code>는 첫 원소를 시작값으로 쓰는데, 빈 리스트에는 첫 원소가 없다. 시작값을 직접 주는 방법을 떠올려 보자.</p>
+		<button class="again" type="button">Codex에게 다시 묻기</button></div>` + ask },
+	done: { clock: ['통과 2:05', 'done'], result: '테스트 4개 모두 통과',
+		html: chips + `<div class="note">Operator가 받는 것: 문제, 내 코드, 채점 결과, 모범답안, 노트.</div>
+		<div class="quick"><button type="button">단계별로 보여 줘</button><button type="button">모범답안과 비교</button><button type="button">비슷한 문제는?</button></div>
+		<div class="me">foldLeft가 어떻게 도는지 단계별로 보여 줘</div>
+		<div class="bot"><div class="who"><span>Claude Code</span><span>3.4초</span></div><p><code>List(3, 1, 4)</code>로 따라가 본다. 슬라이더를 움직이면 한 단계씩 넘어간다.</p>` + trace + `</div>` + ask }
+};
+
+function drawTrace() {
+	const slider = document.getElementById('slider');
+	if (!slider) return;
+	const paint = () => {
+		const s = STEPS[+slider.value];
+		document.getElementById('cells').innerHTML = XS.map((x, k) =>
+			`<div class="cell ${k === s.i ? 'now' : k < s.i ? 'seen' : ''}">${x}</div>`).join('');
+		document.getElementById('acc').textContent = s.acc;
+		document.getElementById('stepline').textContent = s.line;
+	};
+	slider.addEventListener('input', paint);
+	paint();
+}
+function show(state) {
+	const p = PANES[state];
+	document.getElementById('pane').innerHTML = p.html;
+	const c = document.getElementById('clock');
+	c.textContent = p.clock[0];
+	c.className = 'clock ' + p.clock[1];
+	document.getElementById('result').textContent = p.result;
+	document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.state === state)));
+	drawTrace();
+}
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => show(b.dataset.state)));
+document.addEventListener('click', (e) => {
+	const chip = e.target.closest('.chip');
+	if (!chip) return;
+	chip.parentElement.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+});
+show('run');
+</script>

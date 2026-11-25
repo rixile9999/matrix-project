@@ -1,6 +1,8 @@
 <script lang="ts">
 	import MemoClock from '#lib/MemoClock.svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
+	import Coach from '#lib/Coach.svelte';
+	import { COACH_NAME } from '#lib/core/coach.ts';
 	import { renderInline } from '#lib/inline.ts';
 	import { capOvertime, gradeFromChecklist } from '#lib/core/memo.ts';
 	import { VERDICT } from '#lib/core/memo-sched.ts';
@@ -20,6 +22,22 @@
 	let done = $state(false);
 	let doneAt = $state(0);
 	let tally = $state<Record<1 | 2 | 3, number>>({ 1: 0, 2: 0, 3: 0 });
+
+	// Operator bottom sheet: only after the reveal; hidden when the card has no thread (synthetic cards)
+	let askOpen = $state(false);
+	let askOk = $state(false);
+	$effect(() => {
+		const id = card?.id;
+		if (!reveal || !id) {
+			askOk = false;
+			return;
+		}
+		let live = true;
+		fetch(`/coach/thread?kind=memo&id=${encodeURIComponent(id)}`)
+			.then((r) => live && (askOk = r.ok))
+			.catch(() => live && (askOk = false));
+		return () => (live = false);
+	});
 
 	const card = $derived(data.cards[i]);
 	const n = $derived(ticks.filter(Boolean).length);
@@ -65,6 +83,7 @@
 				doneAt = Date.now();
 			} else {
 				i++;
+				askOpen = false;
 				reveal = null;
 				stoppedAt = null;
 				startedAt = Date.now();
@@ -77,6 +96,8 @@
 </script>
 
 <svelte:head><title>복습 · Matrix</title></svelte:head>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && askOpen && (askOpen = false)} />
 
 <div class="memo">
 	{#if data.cards.length === 0}
@@ -116,6 +137,9 @@
 			<div class="m-verdict" role="status">{reveal.points.length}개 중 {n}개 · <b>{VERDICT[grade]}</b>{#if over && n >= reveal.points.length} (시간 초과){/if} · 다음 복습 {reveal.next[n]}</div>
 		{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
+		{#if reveal && askOk}
+			<button class="m-btn ghost" type="button" onclick={() => (askOpen = true)}>{COACH_NAME}에게 묻기</button>
+		{/if}
 		{#if reveal}
 			<button class="m-btn" type="button" onclick={next} disabled={busy}>{i + 1 >= data.cards.length ? '끝내기' : '다음 카드'}</button>
 		{:else}
@@ -123,3 +147,16 @@
 		{/if}
 	{/if}
 </div>
+
+{#if askOpen && reveal && card}
+	<button class="co-scrim" type="button" tabindex="-1" aria-label="닫기" onclick={() => (askOpen = false)}></button>
+	<div class="co-sheet" role="dialog" aria-label="{COACH_NAME}에게 묻기">
+		<div class="co-sheet-bar">
+			<b>{COACH_NAME}</b>
+			<button class="btn ghost small" type="button" onclick={() => (askOpen = false)}>닫기</button>
+		</div>
+		<div class="co-sheet-body">
+			{#key card.id}<Coach context={{ kind: 'memo', id: card.id }} placeholder="이 카드에 대해 묻기" />{/key}
+		</div>
+	</div>
+{/if}

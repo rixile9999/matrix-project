@@ -1,9 +1,10 @@
 // Verifies memo content: schema, references, and every piece of code by actually running it.
 // Usage: node scripts/verify-memo.ts [lang] [fileFilter]   (fileFilter = substring of a cards/checks file name)
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { judge, loadBooks, loadProblem } from '../src/lib/server/judge.ts';
+import { SCALA_CLI, annotatedBody, freshDir, parseShows, scalaErrors } from '../src/lib/server/scala-run.ts';
 import { loadPatterns, memoFiles, readMemoFile } from '../src/lib/server/memo-content.ts';
 import { TOPICS } from '../src/lib/core/lang.ts';
 import type { Check, MemoCard } from '../src/lib/core/memo.ts';
@@ -125,37 +126,22 @@ for (const c of checks) {
 if (snippets.length) {
 	const expected = new Map<string, string>();
 	const obj = (k: string) => 'M_' + k.replace(/\W/g, '_');
-	const gen = (s: { key: string; code: string }) =>
-		`object ${obj(s.key)}:\n` +
-		s.code.split('\n').map((line, i) => {
-			const m = line.match(/^(\s*)(.*?)\s*\/\/ => (.*)$/);
-			if (!m) return '  ' + line;
-			expected.set(`${s.key}|${i + 1}`, m[3].trim());
-			const def = m[2].match(/^(?:lazy\s+)?val\s+(\w+)\s*(?::[^=]+)?=[^=>]/);
-			return def ? `  ${m[1]}${m[2]}\n  ${m[1]}Cheat.show("${s.key}", ${i + 1}, ${def[1]})` : `  ${m[1]}Cheat.show("${s.key}", ${i + 1}, ${m[2]})`;
-		}).join('\n') + '\n';
+	const gen = (s: { key: string; code: string }) => `object ${obj(s.key)}:\n${annotatedBody(s.key, s.code, expected)}`;
 	const dir = resolve(process.env.JUDGE_DIR ?? 'data/judge', 'memo-' + lang);
-	rmSync(dir, { recursive: true, force: true });
-	mkdirSync(dir, { recursive: true });
-	copyFileSync(resolve('cheatsheet/_harness/Cheat.scala'), join(dir, 'Cheat.scala'));
+	freshDir(dir);
 	for (const s of snippets) writeFileSync(join(dir, `${obj(s.key)}.scala`), gen(s));
 	writeFileSync(join(dir, 'Main.scala'), `@main def run(): Unit =\n${snippets.map((s) => `  Cheat.touch(${obj(s.key)})`).join('\n')}\n`);
-	const local = resolve('../tools/scala-cli');
-	const cli = process.env.SCALA_CLI ?? (existsSync(local) ? local : 'scala-cli');
 	let out = '';
 	try {
-		out = execFileSync(cli, ['run', dir, '-q'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000 });
+		out = execFileSync(SCALA_CLI, ['run', dir, '-q'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000 });
 	} catch (e) {
 		const x = e as { stdout?: string; stderr?: string };
 		out = x.stdout ?? '';
-		bad.push('snippets failed to compile/run:\n' + (x.stderr ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n').filter((l) => l.startsWith('[error]')).join('\n').replaceAll(dir + '/', ''));
+		bad.push('snippets failed to compile/run:\n' + scalaErrors(x.stderr ?? '', dir));
 	}
 	const actualByKey = new Map<string, string[]>();
 	const seen = new Set<string>();
-	for (const line of out.split('\n')) {
-		if (!line.startsWith('##SHOW|')) continue;
-		const [, key, n, ...rest] = line.split('|');
-		const actual = rest.join('|').trim();
+	for (const { key, n, actual } of parseShows(out)) {
 		seen.add(`${key}|${n}`);
 		actualByKey.set(key, [...(actualByKey.get(key) ?? []), actual]);
 		if (expected.get(`${key}|${n}`) !== actual) bad.push(`${key} line ${n}: annotated "${expected.get(`${key}|${n}`)}", actual "${actual}"`);

@@ -4,9 +4,11 @@
 	import { onDestroy, untrack } from 'svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
 	import CheatSheet from '#lib/CheatSheet.svelte';
+	import Coach from '#lib/Coach.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import { mmss } from '#lib/rank.ts';
+	import { COACH_NAME } from '#lib/core/coach.ts';
 	import { LEVELS, TOPICS, type JudgeResult } from '#lib/core/lang.ts';
 	import { groupStages } from '#lib/core/study.ts';
 	import type { LangHintResponse, LangKind, LangLookupResponse, LangRunResponse, LangSessionData } from '#lib/types.ts';
@@ -131,13 +133,26 @@
 	const related = $derived(refs.flatMap((id) => byId.get(id) ?? []));
 	const looked = $derived((fin?.lookedUp ?? []).flatMap((id) => byId.get(id)?.title ?? []));
 	let panelOpen = $state(false);
+	let tab = $state<'cheat' | 'coach'>('cheat');
+	let coachSeen = $state(false); // mount the Operator panel on first use, then keep it
+	$effect(() => {
+		if (panelOpen && tab === 'coach') coachSeen = true;
+	});
+	// access changes when the session finishes or restarts: re-fetch the thread
+	const coachKey = $derived(`${s.id}:${fin ? 1 : 0}`);
 	let reveal = $state<{ id: string; n: number } | null>(null);
 	let sheet: { focusSearch: () => void } | undefined;
 
 	function openPanel() {
+		tab = 'cheat';
+		panelOpen = true;
+	}
+	function openCoach() {
+		tab = 'coach';
 		panelOpen = true;
 	}
 	function openRef(id: string) {
+		tab = 'cheat';
 		panelOpen = true;
 		reveal = { id, n: (reveal?.n ?? 0) + 1 };
 	}
@@ -152,7 +167,7 @@
 		if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
 			e.preventDefault();
 			e.stopPropagation(); // keep the editor's own Ctrl-K binding out of it
-			if (panelOpen) panelOpen = false;
+			if (panelOpen && tab === 'cheat') panelOpen = false;
 			else {
 				openPanel();
 				sheet?.focusSearch();
@@ -305,7 +320,8 @@
 				<button class="btn" type="button" onclick={run} disabled={running}>{running ? '실행 중…' : '실행'}</button>
 				<span class="note">⌘/Ctrl + Enter</span>
 				<span class="grow"></span>
-				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen}>치트시트</button>
+				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>치트시트</button>
+				<button class="btn ghost" type="button" onclick={openCoach} aria-expanded={panelOpen && tab === 'coach'}>{COACH_NAME}{#if !fin && !over}<svg class="co-lock" viewBox="0 0 16 16" width="12" height="12" aria-label="잠김" role="img"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6" /></svg>{/if}</button>
 				<button class="btn ghost" type="button" onclick={hint} disabled={hinting || hints.length >= 2}>힌트 보기 ({hints.length}/2)</button>
 				{#if !confirming}
 					<button class="btn ghost" type="button" onclick={() => (confirming = true)}>답 보기</button>
@@ -322,7 +338,10 @@
 				</div>
 			{/if}
 		{:else}
-			<div class="lang-bar"><button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen}>치트시트</button></div>
+			<div class="lang-bar">
+				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>치트시트</button>
+				<button class="btn ghost" type="button" onclick={openCoach} aria-expanded={panelOpen && tab === 'coach'}>{COACH_NAME}</button>
+			</div>
 			<div class="lang-box lang-sol">
 				<div class="lang-cap">모범 답안</div>
 				<div class="lang-ed short">
@@ -332,16 +351,24 @@
 		{/if}
 	</div>
 
-	<button class="cheat-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label="치트시트 닫기" onclick={() => (panelOpen = false)}></button>
-	<aside class="cheat-panel" class:open={panelOpen} aria-label="치트시트" aria-hidden={!panelOpen}>
+	<button class="cheat-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label="패널 닫기" onclick={() => (panelOpen = false)}></button>
+	<aside class="cheat-panel" class:open={panelOpen} class:tab-coach={tab === 'coach'} aria-label={tab === 'coach' ? COACH_NAME : '치트시트'} aria-hidden={!panelOpen}>
 		<div class="cheat-bar">
-			<b>치트시트</b>
-			<span class="note">⌘/Ctrl + K</span>
+			<div class="cheat-tabs" role="tablist">
+				<button class="cheat-tab" type="button" role="tab" aria-selected={tab === 'cheat'} onclick={() => (tab = 'cheat')}>치트시트</button>
+				<button class="cheat-tab" type="button" role="tab" aria-selected={tab === 'coach'} onclick={() => (tab = 'coach')}>{COACH_NAME}</button>
+			</div>
+			{#if tab === 'cheat'}<span class="note cheat-key">⌘/Ctrl + K</span>{/if}
 			<span class="grow"></span>
 			<button class="btn ghost small" type="button" onclick={() => (panelOpen = false)}>닫기</button>
 		</div>
-		<div class="cheat-scroll">
+		<div class="cheat-scroll" hidden={tab !== 'cheat'}>
 			<CheatSheet bind:this={sheet} entries={data.cheat} {reveal} onopen={lookup} />
 		</div>
+		{#if coachSeen}
+			<div class="cheat-coach" hidden={tab !== 'coach'}>
+				<Coach context={{ kind: 'lang', id: p.id }} getCode={() => code} refreshKey={coachKey} />
+			</div>
+		{/if}
 	</aside>
 </div>

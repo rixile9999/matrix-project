@@ -1,8 +1,9 @@
 // Compiles every cheat sheet snippet and checks each `// => text` annotation against the real value.
 // Usage: node scripts/verify-cheatsheet.ts [lang] [topic ...]   (no topics = all; also checks the id list)
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { SCALA_CLI, annotatedBody, freshDir, parseShows, scalaErrors } from '../src/lib/server/scala-run.ts';
 import { cheatIndex, listCheatEntries } from '../src/lib/server/cheatsheet.ts';
 import { TOPICS, type CheatEntry } from '../src/lib/core/lang.ts';
 
@@ -29,45 +30,25 @@ for (const e of entries) {
 // 2. generate one object per entry; annotated lines become Cheat.show calls.
 const expected = new Map<string, string>();
 const objName = (id: string) => 'E_' + id.replace(/\W/g, '_');
-function generate(e: CheatEntry): string {
-	const body = e.code.split('\n').map((line, i) => {
-		const m = line.match(/^(\s*)(.*?)\s*\/\/ => (.*)$/);
-		if (!m) return '  ' + line;
-		const [, indent, code, exp] = m;
-		expected.set(`${e.id}|${i + 1}`, exp.trim());
-		const def = code.match(/^(?:lazy\s+)?val\s+(\w+)\s*(?::[^=]+)?=[^=>]/);
-		return def
-			? `  ${indent}${code}\n  ${indent}Cheat.show("${e.id}", ${i + 1}, ${def[1]})`
-			: `  ${indent}Cheat.show("${e.id}", ${i + 1}, ${code})`;
-	});
-	return `object ${objName(e.id)}:\n${body.join('\n')}\n`;
-}
+const generate = (e: CheatEntry) => `object ${objName(e.id)}:\n${annotatedBody(e.id, e.code, expected)}`;
 const dir = resolve(process.env.JUDGE_DIR ?? 'data/judge', 'cheatsheet-' + lang);
-rmSync(dir, { recursive: true, force: true });
-mkdirSync(dir, { recursive: true });
-copyFileSync(resolve('cheatsheet/_harness/Cheat.scala'), join(dir, 'Cheat.scala'));
+freshDir(dir);
 for (const e of entries) writeFileSync(join(dir, `${objName(e.id)}.scala`), generate(e));
 writeFileSync(join(dir, 'Main.scala'), `@main def run(): Unit =\n${entries.map((e) => `  Cheat.touch(${objName(e.id)})`).join('\n') || '  ()'}\n`);
 
 // 3. compile + run, compare.
-const local = resolve('../tools/scala-cli');
-const cli = process.env.SCALA_CLI ?? (existsSync(local) ? local : 'scala-cli');
 let out = '';
 try {
-	out = execFileSync(cli, ['run', dir, '-q'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000 });
+	out = execFileSync(SCALA_CLI, ['run', dir, '-q'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000 });
 } catch (err) {
 	const e = err as { stdout?: string; stderr?: string };
 	out = e.stdout ?? '';
-	const errs = (e.stderr ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n').filter((l) => l.startsWith('[error]'));
-	problems.push('compile/run failed:\n' + errs.join('\n').replaceAll(dir + '/', ''));
+	problems.push('compile/run failed:\n' + scalaErrors(e.stderr ?? '', dir));
 }
 const seen = new Set<string>();
-for (const line of out.split('\n')) {
-	if (!line.startsWith('##SHOW|')) continue;
-	const [, id, n, ...rest] = line.split('|');
+for (const { key: id, n, actual } of parseShows(out)) {
 	const key = `${id}|${n}`;
 	seen.add(key);
-	const actual = rest.join('|').trim();
 	if (expected.get(key) !== actual) problems.push(`${id} line ${n}: annotated "${expected.get(key)}", actual "${actual}"`);
 }
 for (const key of expected.keys()) if (!seen.has(key)) problems.push(`${key.replace('|', ' line ')}: never evaluated`);

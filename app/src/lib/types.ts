@@ -250,3 +250,47 @@ export type MemoSolutionResponse = { order: number[] };
 export type MemoNoteRow = { id: string; title: string; summary: string | null /* null while locked */; status: NoteStatus; locked: boolean };
 export type MemoNoteGroup = { key: string; heading: string; sub: string | null; steps: string[]; rows: MemoNoteRow[] };
 export type MemoNotesData = { groups: MemoNoteGroup[]; shaky: number };
+
+// ---------------------------------------------------------------------------
+// Operator (the question-answering side panel; name in core/coach.ts COACH_NAME). Rules and the answer format:
+// src/lib/core/coach.ts. Server: src/lib/server/coach.ts. Log: the append-only coach_messages table.
+// Access is decided by the server on every request; the client's own idea of it only controls what is shown.
+import type { BackendId, CoachAccess, CoachContext } from './core/coach.ts';
+
+export type CoachMessage = {
+	id: number;
+	role: 'user' | 'coach';
+	text: string; // coach: the raw answer (parse with parseAnswer)
+	backend: BackendId | null; // coach messages only
+	ms: number | null; // coach messages: time to the complete answer
+	at: number; // unix seconds
+	error: boolean; // coach message that failed (text = the reason, shown as such)
+};
+
+/** GET /coach/thread?kind=lang|memo&id=…  (400 bad params, 404 unknown item). The thread is the messages of the current
+ *  language session (lang) or of the last 24 hours on that card (memo), oldest first. */
+export type CoachThreadResponse = {
+	access: CoachAccess;
+	opensAt: number | null; // lang + locked + open session: unix seconds when the limit ends (the panel unlocks itself then)
+	gets: string[]; // what the backend is given at this access level, Korean labels, e.g. ["문제", "내 코드", "채점 결과"]
+	backends: { id: BackendId; label: string }[];
+	messages: CoachMessage[];
+};
+
+// POST /coach/ask  JSON { context: CoachContext, backend: BackendId, question: string, code?: string }
+//   `code` = the editor's current text (lang only; falls back to the last run's code).
+//   403 { error } when access is 'locked'; 400 for a bad body; 404 unknown item.
+//   Otherwise 200 with an NDJSON stream (content-type application/x-ndjson), one CoachEvent per line:
+export type CoachEvent =
+	| { type: 'start'; userMessageId: number }
+	| { type: 'delta'; text: string } // append to the answer so far
+	| { type: 'done'; message: CoachMessage } // the stored answer (text = the full answer)
+	| { type: 'error'; message: CoachMessage }; // stored with error: true
+
+// POST /coach/verify  JSON { messageId: number, block: number /* index among the answer's trace segments */ }
+//   Runs the trace block's steps through the Scala toolchain. 404 unknown message/block.
+export type CoachVerifyResponse = {
+	ok: boolean; // every step's value matched
+	steps: { ok: boolean; actual: string | null }[]; // actual = real toString, null when it could not be evaluated
+	error: string | null; // compile error text when nothing could be run
+};

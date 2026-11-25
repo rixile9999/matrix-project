@@ -4,9 +4,9 @@ import { join, resolve } from 'node:path';
 import { findAvoided, parseCases, type BookMeta, type JudgeResult, type LangProblem } from '#lib/core/lang.ts';
 
 const PROBLEMS_DIR = resolve(process.env.PROBLEMS_DIR ?? 'problems');
-const WORK_DIR = resolve(process.env.JUDGE_DIR ?? 'data/judge');
+export const WORK_DIR = resolve(process.env.JUDGE_DIR ?? 'data/judge');
 const LOCAL_CLI = resolve('../tools/scala-cli');
-const SCALA_CLI = process.env.SCALA_CLI ?? (existsSync(LOCAL_CLI) ? LOCAL_CLI : 'scala-cli');
+export const SCALA_CLI = process.env.SCALA_CLI ?? (existsSync(LOCAL_CLI) ? LOCAL_CLI : 'scala-cli');
 const TIMEOUT_MS = 90_000; // the first run also downloads the compiler
 
 const problemDir = (lang: string, id: string) => join(PROBLEMS_DIR, lang, id);
@@ -41,11 +41,16 @@ export function loadBooks(lang: string): Record<string, BookMeta> {
 
 let queue: Promise<unknown> = Promise.resolve();
 
-/** Compiles `code` together with the problem's tests and runs them. Runs are serialized. */
-export function judge(lang: string, problem: LangProblem, code: string): Promise<JudgeResult> {
-	const run = queue.then(() => runOnce(lang, problem, code));
+/** Runs `fn` after every earlier scala-cli job has finished; judge runs and the Operator's trace checks share this queue. */
+export function serialized<T>(fn: () => Promise<T>): Promise<T> {
+	const run = queue.then(fn);
 	queue = run.catch(() => {});
 	return run;
+}
+
+/** Compiles `code` together with the problem's tests and runs them. Runs are serialized. */
+export function judge(lang: string, problem: LangProblem, code: string): Promise<JudgeResult> {
+	return serialized(() => runOnce(lang, problem, code));
 }
 
 function runOnce(lang: string, problem: LangProblem, code: string): Promise<JudgeResult> {

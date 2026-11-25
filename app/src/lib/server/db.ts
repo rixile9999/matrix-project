@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS memo_reviews (
 	at INTEGER NOT NULL, rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4), elapsed_ms INTEGER NOT NULL, detail TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS memo_reviews_item ON memo_reviews(item_type, item_id);
+-- Operator (question-answering panel): every question and answer, append-only. session_id = the lang session the thread belongs to.
+CREATE TABLE IF NOT EXISTS coach_messages (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, context_kind TEXT NOT NULL CHECK (context_kind IN ('lang', 'memo')), context_id TEXT NOT NULL,
+	session_id INTEGER, backend TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('user', 'coach')), text TEXT NOT NULL, ms INTEGER,
+	access TEXT NOT NULL CHECK (access IN ('limited', 'full')), error INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS coach_messages_ctx ON coach_messages(context_kind, context_id, id);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 

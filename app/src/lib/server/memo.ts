@@ -6,6 +6,7 @@ import { findProblem } from './lang.ts';
 import { listCheatEntries } from './cheatsheet.ts';
 import { memoFiles, readMemoFile } from './memo-content.ts';
 import { CARD_KINDS, CHECK_KINDS, capOvertime, gradeFromChecklist, type Check, type MemoCard, type Pattern } from '#lib/core/memo.ts';
+import type { MemoFacts } from '#lib/core/coach-prompt.ts';
 import { TOPICS, type BookMeta, type CheatEntry, type JudgeResult } from '#lib/core/lang.ts';
 import {
 	LIMIT_SEC, VERDICT, WEEK_GOAL, buildMemories, daysThisWeek, dueAfter, estimateMinutes, failedTwice, humanInterval, itemKey, noteStatus, permutation, pickSession,
@@ -202,6 +203,18 @@ function openCard(id: unknown): { w: World; c: AnyCard } | null {
 	const w = world();
 	const c = w.cards.find((x) => x.id === id);
 	return c && cardOpen(w, c) ? { w, c } : null;
+}
+
+/** A card with everything the Operator may know about it, or null for an unknown or locked card. */
+export function coachCard(id: unknown): MemoFacts | null {
+	const f = openCard(id);
+	if (!f) return null;
+	const c = f.c;
+	const pat = c.pattern ? patterns()[c.pattern] : undefined;
+	return {
+		kind: c.kind === 'syntax' ? '문법' : CARD_KINDS[c.kind], title: c.title, prompt: c.prompt, promptCode: c.promptCode, points: c.entry ? [] : c.points, answerCode: c.answerCode ?? c.entry?.code ?? null, summary: c.summary || c.entry?.text || '',
+		pattern: pat ? { title: pat.title, when: pat.when, steps: pat.steps } : null
+	};
 }
 
 export function revealCard(id: unknown, elapsedMs?: unknown): MemoRevealResponse | null {

@@ -365,3 +365,18 @@ export function revealSolution(problemId: string): void {
 	if (!s) throw new Error('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.');
 	if (s.ended_at === null) endSession(s.id, 'revealed', []);
 }
+
+/** What the Operator needs about a problem: its latest session, that session's last run, and (lazily) the solution. Null for an unknown problem. */
+export function coachBasis(problemId: string) {
+	const problem = findProblem(problemId);
+	if (!problem) return null;
+	const s = latestSession(problemId);
+	const last = s ? (db.prepare('SELECT code, result FROM lang_runs WHERE session_id = ? ORDER BY id DESC LIMIT 1').get(s.id) as { code: string; result: string } | undefined) : undefined;
+	return {
+		problem,
+		session: s ? { id: s.id, startedAt: s.started_at, endedAt: s.ended_at, outcome: s.outcome, elapsedSec: s.elapsed_sec } : null,
+		lastRun: last ? { code: last.code, result: JSON.parse(last.result) as JudgeResult } : null,
+		given: problem.book ? givenCode(problem.id) : null,
+		solution: () => loadSolution(LANG, problem.id)
+	};
+}
