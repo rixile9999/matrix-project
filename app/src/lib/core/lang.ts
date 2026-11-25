@@ -49,14 +49,23 @@ export function parseCases(stdout: string): { cases: CaseResult[]; rest: string 
 	return { cases, rest: rest.join('\n').trim() };
 }
 
-/** Which of `avoid` appear as whole words in the code, ignoring comments and string literals. */
+/**
+ * Which of `avoid` appear in the code, ignoring comments and string literals. Entries are whole words
+ * ("for"), several words with any whitespace between them ("case class"), or symbols ("=>", "::").
+ */
 export function findAvoided(code: string, avoid: string[]): string[] {
 	const stripped = code
 		.replace(/"""[\s\S]*?"""/g, '""')
 		.replace(/"(?:\\.|[^"\\\n])*"/g, '""')
 		.replace(/\/\*[\s\S]*?\*\//g, ' ')
 		.replace(/\/\/.*$/gm, ' ');
-	return avoid.filter((w) => new RegExp(`(?<![\\w.])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\w)`).test(stripped));
+	const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return avoid.filter((w) => {
+		const body = w.trim().split(/\s+/).map(esc).join('\\s+');
+		// word boundaries only where the entry itself starts / ends with a word character
+		const re = new RegExp(`${/^\w/.test(w) ? '(?<![\\w.])' : ''}${body}${/\w$/.test(w) ? '(?!\\w)' : ''}`);
+		return re.test(stripped);
+	});
 }
 
 export const TOPICS = {
@@ -71,7 +80,8 @@ export const TOPICS = {
 	lazy: '지연 평가',
 	types: '타입·ADT',
 	functions: '함수',
-	context: 'given·extension'
+	context: 'given·extension',
+	sugar: '컴파일러 변환'
 } as const;
 export type TopicId = keyof typeof TOPICS;
 

@@ -1,0 +1,25 @@
+{
+	"id": "d-20-right-assoc-cons",
+	"order": 2011,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-operators",
+		"list-build"
+	],
+	"title": "오른쪽 결합 연산자 +:",
+	"limitSec": 150,
+	"targets": [
+		"콜론으로 끝나는 연산자",
+		"오른쪽 결합 수신자"
+	],
+	"avoid": [],
+	"statement": "직접 만든 리스트 `MyList`에 `1 +: 2 +: Empty`처럼 앞에 원소를 붙이는 연산자 `+:`를 만들어라. 테스트가 이 식을 그대로 쓴다. `x +: xs`는 `xs`의 앞에 `x`를 붙인 새 리스트다.",
+	"starter": "enum MyList[+A]:\n  case Empty\n  case Cons(head: A, tail: MyList[A])\n\n  def +:[B >: A](x: B): MyList[B] = ???\n\n  def toList: List[A] = this match\n    case Empty => Nil\n    case Cons(h, t) => h :: t.toList\n\nimport MyList.*\n",
+	"hints": [
+		"이름이 `:`로 끝나는 연산자는 오른쪽 피연산자가 수신자다. 그래서 `x +: xs`는 `xs.+:(x)`이고, `+:`는 `MyList` 안의 메서드여야 한다.",
+		"`a ++: b`가 `b`에 `a`를 붙이는 연산자라면 `b.++:(a)`로 불리므로, `def ++:(a: …)`를 `b`의 타입 안에 둔다."
+	],
+	"notes": "이름이 `:`로 끝나는 연산자는 오른쪽 결합이며 수신자가 오른쪽 피연산자이다. `1 +: 2 +: Empty`는 `Empty.+:(2).+:(1)`로 풀린다. 왼쪽 피연산자는 인자로 들어가므로 메서드는 오른쪽 타입의 멤버로 정의한다. `::`가 `List`에서 하는 일이 바로 이것이다."
+}

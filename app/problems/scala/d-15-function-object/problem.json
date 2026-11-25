@@ -1,0 +1,28 @@
+{
+	"id": "d-15-function-object",
+	"order": 2008,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-lambda",
+		"lambda",
+		"hof"
+	],
+	"title": "람다를 함수 객체로",
+	"limitSec": 150,
+	"targets": [
+		"람다 = Function1 객체",
+		"apply"
+	],
+	"avoid": [
+		"=>"
+	],
+	"statement": "`transform`은 리스트의 각 원소를 `x * 2 + 1`로 바꾼다. 람다 `x => …` 없이, `Function1[Int, Int]`를 직접 만들어 `map`에 넘기도록 다시 써라. `=>` 기호는 코드 어디에도 쓸 수 없다.",
+	"starter": "def transform(xs: List[Int]): List[Int] =\n  xs.map(x => x * 2 + 1)\n",
+	"hints": [
+		"람다는 `apply` 메서드가 하나인 `Function1` 객체다. `new Function1[Int, Int]:` 아래에 `def apply(x: Int): Int = …`를 쓴다.",
+		"`xs.map(s => s.length)`는: `val f = new Function1[String, Int]:` 줄 아래에 `def apply(s: String): Int = s.length`, 그리고 `xs.map(f)`."
+	],
+	"notes": "`x => x * 2 + 1`은 `Function1[Int, Int]`를 구현한 익명 객체이고 본문이 `apply`가 된다. `f(3)`은 `f.apply(3)`의 줄임이다. `map`은 함수 값만 받으므로 람다 대신 이런 객체도 넘길 수 있다."
+}

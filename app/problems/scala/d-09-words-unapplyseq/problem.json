@@ -1,0 +1,28 @@
+{
+	"id": "d-09-words-unapplyseq",
+	"order": 2004,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-unapply",
+		"varargs",
+		"match-list"
+	],
+	"title": "Words와 Quoted 추출자",
+	"limitSec": 480,
+	"targets": [
+		"unapplySeq",
+		"가변 길이 패턴",
+		"불리언 추출자",
+		"중첩 패턴"
+	],
+	"avoid": [],
+	"statement": "`Tests.scala`의 `describe`는 `case Quoted() =>`, `case Words() =>`, `case Words(w) =>`, `case Words(\"go\", dir) =>`, `case Words(first, rest*) =>` 패턴을 쓴다. 두 추출자를 완성하라. `Words`는 문자열을 공백(여러 개여도 하나로, 앞뒤 공백 무시)으로 나눈 단어 목록으로 매칭된다. 빈 문자열이나 공백뿐이면 단어가 0개다. `Quoted`는 길이가 2 이상이고 앞뒤가 모두 `\"`일 때만 매칭된다.",
+	"starter": "// Words: 공백으로 나눈 단어들. Quoted: 앞뒤가 큰따옴표인 문자열.\nobject Words:\n  def unapplySeq(s: String): Option[Seq[String]] = ???\n\nobject Quoted:\n  def unapply(s: String): Boolean = ???\n",
+	"hints": [
+		"값을 하나씩 꺼내는 패턴은 `unapply`, 개수가 정해지지 않은 패턴(`rest*`)은 `unapplySeq`가 `Option[Seq[…]]`를 돌려준다. `Quoted()`처럼 값을 꺼내지 않는 패턴은 `unapply`가 `Boolean`을 돌려준다.",
+		"`object Csv { def unapplySeq(s: String): Option[Seq[String]] = Some(s.split(\",\").toSeq) }`면 `\"a,b,c\" match { case Csv(h, t*) => … }`가 된다."
+	],
+	"notes": "`unapplySeq`가 `Some(seq)`를 돌려주면 패턴의 앞쪽 항목은 `seq`의 앞에서부터 맞추고 `rest*`는 나머지를 받는다. 항목 수가 정확히 맞아야 하는 패턴(`Words(w)`)도 같은 `seq` 길이로 판단한다. `Boolean`을 돌려주는 `unapply`는 `Name()`처럼 인자 없는 패턴이 된다. 문자열 리터럴 같은 중첩 패턴은 꺼낸 값에 `==`로 적용된다."
+}

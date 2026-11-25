@@ -1,0 +1,26 @@
+{
+	"id": "d-21-vec2-ops",
+	"order": 2009,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "complete",
+	"refs": [
+		"sugar-operators",
+		"sugar-apply-update"
+	],
+	"title": "Vec2 연산자와 s(i) += n",
+	"limitSec": 420,
+	"targets": [
+		"unary_-",
+		"+= 풀이",
+		"apply/update"
+	],
+	"avoid": [],
+	"statement": "테스트가 `p += Vec2(3, 4)`, `-p`, `p - q`, `s(1) += 5` 같은 식을 쓴다. `Vec2`에는 `+`, `-`, 단항 `-`를, `Scores`에는 `apply`와 `update`를 채워 이 식들이 컴파일되고 동작하게 하라. `+=`는 따로 정의하지 않는다. `Scores(n)`은 0으로 채운 `n`칸 점수표다.",
+	"starter": "case class Vec2(x: Int, y: Int):\n  def +(o: Vec2): Vec2 = ???\n  def -(o: Vec2): Vec2 = ???\n  def unary_- : Vec2 = ???\n\nclass Scores(n: Int):\n  private val a = Array.fill(n)(0)\n  def apply(i: Int): Int = ???\n  def update(i: Int, v: Int): Unit = ???\n",
+	"hints": [
+		"`a += b`는 `+=` 메서드가 없으면 `a = a + b`가 되고, `-x`는 `x.unary_-`, `s(i) = v`는 `s.update(i, v)`, `s(i)`는 `s.apply(i)`다.",
+		"`Temp`에서 단항 `!`를 만든다면: `def unary_! : Temp = …`. 인덱스 대입 `t(0) = 5`가 되게 하려면 `def update(i: Int, v: Int): Unit`을 둔다."
+	],
+	"notes": "`a += b`는 `+=` 메서드가 없고 `a`가 `var`이면 `a = a + b`로 바뀐다. 단항 `-x`는 `x.unary_-`를 부른다. `s(i)`는 `s.apply(i)`, `s(i) = v`는 `s.update(i, v)`이며, `s(i) += n`은 `s.update(i, s.apply(i) + n)`으로 풀린다."
+}

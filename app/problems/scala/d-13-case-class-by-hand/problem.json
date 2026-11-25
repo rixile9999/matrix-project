@@ -1,0 +1,32 @@
+{
+	"id": "d-13-case-class-by-hand",
+	"order": 2005,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-case-class",
+		"case-class",
+		"companion",
+		"sugar-unapply"
+	],
+	"title": "case class를 손으로 풀기 (Money)",
+	"limitSec": 480,
+	"targets": [
+		"case class 전개",
+		"unapply",
+		"copy",
+		"equals/hashCode/toString",
+		"범용 apply"
+	],
+	"avoid": [
+		"case class"
+	],
+	"statement": "아래 `Money`는 `case class`로 잘 동작한다. `case class` 없이 일반 `class`와 동반 객체로 다시 써서 같은 테스트를 통과시켜라. 테스트는 `new` 없는 생성, `Money(n, \\\"KRW\\\")` 같은 패턴 매칭, `copy`, `==`와 `Set`, `toString`을 쓴다.",
+	"starter": "case class Money(amount: Int, cur: String)\n",
+	"hints": [
+		"패턴 매칭은 동반 객체의 `unapply`가, 나머지는 클래스 안의 `copy`(기본값은 현재 필드), `equals`, `hashCode`, `toString`이 맡는다. 생성자 호출은 `new` 없이도 되는지 먼저 확인해 보라.",
+		"`Name(first, last)`라면 `def copy(first: String = this.first, last: String = this.last) = new Name(first, last)`, `object Name: def unapply(n: Name): Some[(String, String)] = Some((n.first, n.last))`."
+	],
+	"notes": "`case class`는 `val` 필드, `copy`, `equals`, `hashCode`, `toString`, 동반 객체의 `unapply`를 만든다. Scala 3에서는 일반 클래스도 `Money(5, \\\"KRW\\\")`처럼 `new` 없이 만들 수 있어서(범용 apply) `apply`를 직접 쓸 필요가 없다. 패턴 `Money(n, c)`는 `Money.unapply`의 결과를 푼다. `copy`의 기본값 인자는 `this`의 현재 필드를 가리킨다."
+}

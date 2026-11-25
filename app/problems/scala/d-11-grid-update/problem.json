@@ -1,0 +1,25 @@
+{
+	"id": "d-11-grid-update",
+	"order": 2006,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "complete",
+	"refs": [
+		"sugar-apply-update"
+	],
+	"title": "g(r, c) = v 가 되게 하기",
+	"limitSec": 150,
+	"targets": [
+		"update",
+		"a(i) = v 대입 문법",
+		"apply"
+	],
+	"avoid": [],
+	"statement": "`Grid(w, h)`는 `h`행 `w`열이고 모든 칸이 처음엔 0이다(행 우선으로 `cells`에 저장). `Tests.scala`는 `g(1, 2) = 5`로 쓰고 `g(1, 2)`로 읽는다. `apply`와 `update`를 완성하라.",
+	"starter": "class Grid(val w: Int, val h: Int):\n  private val cells = Array.fill(w * h)(0)\n  def apply(r: Int, c: Int): Int = ???\n  def update(r: Int, c: Int, v: Int): Unit = ???\n",
+	"hints": [
+		"`g(r, c) = v`는 `g.update(r, c, v)`로, `g(r, c)`는 `g.apply(r, c)`로 바뀐다. `update`는 값을 마지막 인자로 받는다.",
+		"`class Bag { private val m = collection.mutable.Map[String, Int](); def apply(k: String) = m.getOrElse(k, 0); def update(k: String, v: Int) = m(k) = v }`면 `b(\"a\") = 2`가 된다."
+	],
+	"notes": "`x(args) = v`는 `x.update(args, v)` 호출이다. 읽는 쪽은 `apply`라서 둘을 같이 만들면 `Array`나 `Map`처럼 쓸 수 있다. `update`가 없으면 대입 문법이 컴파일되지 않는다. 값은 항상 마지막 인자로 들어간다."
+}

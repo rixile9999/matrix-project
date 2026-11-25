@@ -1,0 +1,28 @@
+{
+	"id": "d-04-cheap-pairs",
+	"order": 2001,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-for",
+		"for-guard-multi"
+	],
+	"title": "예산 안의 값싼 쌍 (for 없이)",
+	"limitSec": 420,
+	"targets": [
+		"for 가드 → withFilter",
+		"for 안의 val 바인딩",
+		"다중 생성기 → flatMap"
+	],
+	"avoid": [
+		"for"
+	],
+	"statement": "가격 목록 `prices`에서 `a < b`인 모든 쌍을 `a`, `b`의 목록 순서(바깥 `a`, 안쪽 `b`)로 훑는다. 합 `total = a + b`가 `budget` 이하인 쌍마다 `(a * b, total)`을 모은다. 아래 `for` 구현은 맞게 동작한다. `for` 없이 다시 써라. 중간의 `if` 가드와 `total = …` 바인딩이 각각 무엇으로 바뀌는지가 핵심이다.",
+	"starter": "def cheapPairs(prices: List[Int], budget: Int): List[(Int, Int)] =\n  for\n    a <- prices\n    b <- prices\n    if a < b\n    total = a + b\n    if total <= budget\n  yield (a * b, total)\n",
+	"hints": [
+		"`if`는 `withFilter`, 생성기는 `flatMap`/`map`이 된다. `total = a + b`는 `b`와 `total`을 함께 들고 가야 하므로 중간 `map`에서 튜플로 묶는다.",
+		"`for x <- xs; y = x * 2; if y > 3 yield y`는 `xs.map(x => (x, x * 2)).withFilter((x, y) => y > 3).map((x, y) => y)`이다."
+	],
+	"notes": "`if` 가드는 `withFilter`, 마지막 생성기는 `map`, 그 앞 생성기는 `flatMap`으로 바뀐다. `y = e` 바인딩은 값 `y`를 이후 단계에서도 쓸 수 있게 `map(x => (x, e))`로 튜플에 묶어 보낸다. 가드가 바인딩 앞에 있으면 바인딩 앞에서, 뒤에 있으면 뒤에서 걸러진다. 결과 순서는 바깥 생성기부터 안쪽 순서이다."
+}

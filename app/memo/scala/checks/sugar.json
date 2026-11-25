@@ -1,0 +1,275 @@
+[
+	{
+		"id": "sugar-order-cheap-pairs",
+		"kind": "order",
+		"topic": "sugar",
+		"prompt": "`for`로 쓴 `cheapPairs`(`a < b` 가드, `total = a + b`, `total <= budget` 가드)를 `for` 없이 컴파일러가 만드는 모양으로 조립하라.",
+		"unlock": ["d-04-cheap-pairs"],
+		"problem": "d-04-cheap-pairs",
+		"lines": [
+			"def cheapPairs(prices: List[Int], budget: Int): List[(Int, Int)] =",
+			"  prices.flatMap(a =>",
+			"    prices",
+			"      .withFilter(b => a < b)",
+			"      .map(b => (b, a + b))",
+			"      .withFilter((_, total) => total <= budget)",
+			"      .map((b, total) => (a * b, total)))"
+		],
+		"distractors": [
+			{
+				"line": "  prices.map(a =>",
+				"replaces": 1,
+				"why": "마지막이 아닌 생성기는 `flatMap`이다. `map`이면 안쪽 목록이 그대로 중첩되어 `List[List[...]]`가 된다."
+			},
+			{
+				"line": "      .withFilter((_, total) => total < budget)",
+				"replaces": 5,
+				"why": "가드 `total <= budget`은 조건을 그대로 옮긴다. 등호를 빼면 합이 예산과 같은 쌍이 사라진다."
+			}
+		]
+	},
+	{
+		"id": "sugar-order-maybe",
+		"kind": "order",
+		"topic": "sugar",
+		"prompt": "`Maybe`를 `for`에 쓰려면 `flatMap`과 `withFilter`가 필요하다(`map`은 주어진다). 두 메서드를 조립하라.",
+		"unlock": ["d-05-maybe-for"],
+		"problem": "d-05-maybe-for",
+		"given": "enum Maybe[+A]:\n  case Just(value: A)\n  case Empty\n\n  def map[B](f: A => B): Maybe[B] = this match\n    case Just(a) => Just(f(a))\n    case Empty   => Empty\n",
+		"lines": [
+			"  def flatMap[B](f: A => Maybe[B]): Maybe[B] = this match",
+			"    case Just(a) => f(a)",
+			"    case Empty   => Empty",
+			"  def withFilter(p: A => Boolean): Maybe[A] = this match",
+			"    case Just(a) if p(a) => this",
+			"    case _               => Empty"
+		],
+		"distractors": [
+			{
+				"line": "    case Just(a) => Just(f(a))",
+				"replaces": 1,
+				"why": "`flatMap`의 `f`는 이미 `Maybe`를 돌려준다. 다시 `Just`로 싸면 `Maybe[Maybe[B]]`가 된다. 풀어 주는 쪽은 `f(a)` 그대로다."
+			},
+			{
+				"line": "  def filter(p: A => Boolean): Maybe[A] = this match",
+				"replaces": 3,
+				"why": "`for`의 `if` 가드는 `filter`가 아니라 `withFilter`를 부른다. 이름이 다르면 가드가 있는 `for`가 컴파일되지 않는다."
+			}
+		]
+	},
+	{
+		"id": "sugar-order-point-equals",
+		"kind": "order",
+		"topic": "sugar",
+		"prompt": "좌표 `Point(x, y)`를 값으로 비교하고 `Set`/`Map` 키로 쓰게 하려면 `equals`와 `hashCode`를 짝으로 정의해야 한다. 조립하라.",
+		"unlock": ["d-12-equals-hashcode"],
+		"problem": "d-12-equals-hashcode",
+		"lines": [
+			"class Point(val x: Int, val y: Int):",
+			"  override def equals(other: Any): Boolean = other match",
+			"    case p: Point => x == p.x && y == p.y",
+			"    case _ => false",
+			"  override def hashCode: Int = (x, y).hashCode"
+		],
+		"distractors": [
+			{
+				"line": "  override def hashCode: Int = System.identityHashCode(this)",
+				"replaces": 4,
+				"why": "같다고 판정한 두 객체는 해시도 같아야 한다. 객체마다 다른 해시면 `equals`가 참이어도 `HashSet`이 중복을 못 잡는다."
+			},
+			{
+				"line": "    case _ => true",
+				"replaces": 3,
+				"why": "다른 타입과 비교할 때는 `false`여야 한다. `true`이면 문자열이나 `null`과도 같아진다."
+			}
+		]
+	},
+	{
+		"id": "sugar-order-money-by-hand",
+		"kind": "order",
+		"topic": "sugar",
+		"prompt": "`case class Money(amount: Int, cur: String)`가 만들어 주던 것을 손으로 쓴다. `copy`, `equals`, `hashCode`, `toString`, 패턴용 `unapply`를 조립하라.",
+		"unlock": ["d-13-case-class-by-hand"],
+		"problem": "d-13-case-class-by-hand",
+		"lines": [
+			"class Money(val amount: Int, val cur: String):",
+			"  def copy(amount: Int = this.amount, cur: String = this.cur): Money = new Money(amount, cur)",
+			"  override def equals(other: Any): Boolean = other match",
+			"    case m: Money => amount == m.amount && cur == m.cur",
+			"    case _ => false",
+			"  override def hashCode: Int = (amount, cur).hashCode",
+			"  override def toString: String = s\"Money($amount,$cur)\"",
+			"object Money:",
+			"  def unapply(m: Money): Some[(Int, String)] = Some((m.amount, m.cur))"
+		],
+		"distractors": [
+			{
+				"line": "  override def toString: String = s\"Money($amount, $cur)\"",
+				"replaces": 6,
+				"why": "`case class`의 `toString`은 쉼표 뒤에 공백이 없다: `Money(5,KRW)`. 문자열 비교에서는 공백 하나도 다른 값이다."
+			},
+			{
+				"line": "  def unapply(m: Money): Some[(String, Int)] = Some((m.cur, m.amount))",
+				"replaces": 8,
+				"why": "`unapply`가 돌려주는 튜플의 순서가 곧 패턴의 필드 순서다. 생성자 순서(`amount`, `cur`)와 같아야 한다."
+			}
+		]
+	},
+	{
+		"id": "sugar-order-cons-operator",
+		"kind": "order",
+		"topic": "sugar",
+		"prompt": "`1 +: 2 +: Empty`가 `Cons(1, Cons(2, Empty))`가 되도록 `MyList`에 `+:`를 정의하고 `toList`를 완성하라.",
+		"unlock": ["d-20-right-assoc-cons"],
+		"problem": "d-20-right-assoc-cons",
+		"lines": [
+			"enum MyList[+A]:",
+			"  case Empty",
+			"  case Cons(head: A, tail: MyList[A])",
+			"  def +:[B >: A](x: B): MyList[B] = Cons(x, this)",
+			"  def toList: List[A] = this match",
+			"    case Empty => Nil",
+			"    case Cons(h, t) => h :: t.toList"
+		],
+		"distractors": [
+			{
+				"line": "  def :+[B >: A](x: B): MyList[B] = Cons(x, this)",
+				"replaces": 3,
+				"why": "오른쪽 결합은 이름이 `:`로 끝날 때만이다. `:+`는 왼쪽 결합이라 `1 +: 2 +: Empty`가 `+:`를 찾지 못한다."
+			}
+		]
+	},
+	{
+		"id": "sugar-trace-guard-position",
+		"kind": "trace",
+		"topic": "sugar",
+		"prompt": "마지막 줄 `calls`의 값은? (`if`가 첫째 생성기 바로 뒤에 있다)",
+		"unlock": ["d-04-cheap-pairs"],
+		"code": "var calls = 0\ndef ok(x: Int): Boolean = { calls += 1; x > 1 }\nfor a <- List(1, 2, 3) if ok(a); b <- List(1, 2) yield (a, b)\ncalls",
+		"options": [
+			{ "text": "3", "why": "가드는 `a`의 `withFilter`에 붙는다. `a`마다 한 번, 안쪽 `b` 반복과 무관하게 세 번 불린다." },
+			{ "text": "6", "why": "가드를 `b` 뒤에 둔 `for`의 횟수다. 여기서는 안쪽 생성기보다 앞이라 쌍마다 평가되지 않는다." },
+			{ "text": "2", "why": "통과한 `a`(2, 3)만 센 값이다. `ok`는 통과 여부를 알아내려고 모든 `a`에 대해 불린다." },
+			{ "text": "9", "why": "`a`, `b`, 가드를 모두 곱한 값이 아니다. 가드는 한 생성기에만 걸린다." }
+		],
+		"answer": 0,
+		"verify": "var calls = 0\ndef ok(x: Int): Boolean = { calls += 1; x > 1 }\nval r = for a <- List(1, 2, 3) if ok(a); b <- List(1, 2) yield (a, b)\ncalls // => 3"
+	},
+	{
+		"id": "sugar-trace-right-assoc",
+		"kind": "trace",
+		"topic": "sugar",
+		"prompt": "`t.log`의 값은?",
+		"unlock": ["d-20-right-assoc-cons"],
+		"code": "class Trail(val log: String):\n  def +:(x: Int): Trail = Trail(log + x)\nval t = 1 +: 2 +: 3 +: Trail(\"\")\nt.log",
+		"options": [
+			{ "text": "321", "why": "`+:`는 `:`로 끝나서 오른쪽 결합이고 메서드는 오른쪽 피연산자의 것이다. `3`이 먼저 붙고 `1`이 마지막에 붙는다." },
+			{ "text": "123", "why": "왼쪽부터 처리한다고 본 값이다. `x +: t`는 `t.+:(x)`이므로 가장 오른쪽 호출이 먼저 실행된다." },
+			{ "text": "6", "why": "`log`는 문자열이다. `+`가 아니라 `log + x`의 문자열 이어붙이기다." },
+			{ "text": "컴파일 오류", "why": "`Int`에는 `+:`가 없지만 컴파일러가 `Trail(\"\").+:(3)`으로 뒤집어 부르므로 문제없다." }
+		],
+		"answer": 0,
+		"verify": "class Trail(val log: String):\n  def +:(x: Int): Trail = Trail(log + x)\nval t = 1 +: 2 +: 3 +: Trail(\"\")\nt.log // => 321"
+	},
+	{
+		"id": "sugar-trace-plus-assign",
+		"kind": "trace",
+		"topic": "sugar",
+		"prompt": "마지막 줄의 값은?",
+		"unlock": ["d-21-vec2-ops"],
+		"code": "case class Vec(x: Int, y: Int):\n  def +(o: Vec): Vec = Vec(x + o.x, y + o.y)\nvar a = Vec(1, 1)\nval b = a\na += Vec(1, 1)\n(a, b)",
+		"options": [
+			{ "text": "(Vec(2,2),Vec(1,1))", "why": "`a += v`는 `a = a + v`로 풀린다. 새 객체를 `a`에 다시 대입할 뿐이라 `b`가 가리키던 옛 객체는 그대로다." },
+			{ "text": "(Vec(2,2),Vec(2,2))", "why": "객체를 제자리에서 바꾼다고 본 값이다. `Vec`에는 `+=` 메서드가 없고 `+`는 새 값을 만든다." },
+			{ "text": "(Vec(1,1),Vec(1,1))", "why": "`+`의 결과를 대입하지 않은 경우다. `+=`는 `var`에 다시 대입한다." },
+			{ "text": "컴파일 오류", "why": "`+=` 메서드가 없으면 컴파일러가 `a = a + v`로 풀어 준다. 대상이 `var`이므로 가능하다." }
+		],
+		"answer": 0,
+		"verify": "case class Vec(x: Int, y: Int):\n  def +(o: Vec): Vec = Vec(x + o.x, y + o.y)\nvar a = Vec(1, 1)\nval b = a\na += Vec(1, 1)\n(a, b) // => (Vec(2,2),Vec(1,1))"
+	},
+	{
+		"id": "sugar-trace-which-given",
+		"kind": "trace",
+		"topic": "sugar",
+		"prompt": "`maxOption`은 어느 `given`을 쓰고 결과는?",
+		"unlock": ["d-19-wrong-given"],
+		"code": "case class Ver(major: Int, minor: Int)\nobject Ver:\n  given Ordering[Ver] = Ordering.by(v => (v.major, v.minor))\ngiven Ordering[Ver] = Ordering.by(v => s\"${v.major}.${v.minor}\")\nList(Ver(1, 9), Ver(1, 10)).maxOption",
+		"options": [
+			{ "text": "Some(Ver(1,9))", "why": "현재 범위에 보이는 `given`이 먼저다. 문자열 순서에서 \"1.9\"가 \"1.10\"보다 크다." },
+			{ "text": "Some(Ver(1,10))", "why": "동반 객체의 `given`은 범위에서 못 찾았을 때의 예비 자리다. 보이는 `given`이 있으면 거기까지 가지 않는다." },
+			{ "text": "None", "why": "목록이 비어야 `None`이다. 두 원소가 있으니 `Some`이다." },
+			{ "text": "컴파일 오류(모호함)", "why": "서로 다른 탐색 단계에 있으므로 우선순위가 갈린다. 같은 단계에서 둘이 겹칠 때만 모호하다." }
+		],
+		"answer": 0,
+		"verify": "case class Ver(major: Int, minor: Int)\nobject Ver:\n  given Ordering[Ver] = Ordering.by(v => (v.major, v.minor))\ngiven Ordering[Ver] = Ordering.by(v => s\"${v.major}.${v.minor}\")\nList(Ver(1, 9), Ver(1, 10)).maxOption // => Some(Ver(1,9))"
+	},
+	{
+		"id": "sugar-trace-equals-no-hashcode",
+		"kind": "trace",
+		"topic": "sugar",
+		"prompt": "`equals`만 재정의하고 `hashCode`는 두었다. `(small, big)`의 값은?",
+		"unlock": ["d-12-equals-hashcode"],
+		"code": "class P(val n: Int):\n  override def equals(o: Any): Boolean = o match { case p: P => p.n == n; case _ => false }\nval small = Set(P(1), P(1)).size\nval big = (1 to 10).flatMap(i => List(P(i), P(i))).toSet.size\n(small, big)",
+		"options": [
+			{ "text": "(1,16)", "why": "원소가 4개 이하인 작은 `Set`은 `==`로만 비교해 중복을 지운다. 4개를 넘으면 해시 표로 바뀌는데, 이후에는 같은 값이어도 해시가 달라 중복이 남는다(4 + 6x2 = 16)." },
+			{ "text": "(1,10)", "why": "`equals`가 맞으니 항상 중복이 지워진다고 본 값이다. 해시 기반 `Set`은 해시가 다르면 `equals`를 부르지도 않는다." },
+			{ "text": "(2,16)", "why": "작은 `Set`은 `hashCode`를 쓰지 않고 `==`로 비교하므로 `small`은 1이다." },
+			{ "text": "(2,10)", "why": "`small`과 `big` 모두 거꾸로 짚은 값이다. 작은 쪽은 지워지고 큰 쪽은 남는다." }
+		],
+		"answer": 0,
+		"verify": "class P(val n: Int):\n  override def equals(o: Any): Boolean = o match { case p: P => p.n == n; case _ => false }\nval small = Set(P(1), P(1)).size\nval big = (1 to 10).flatMap(i => List(P(i), P(i))).toSet.size\n(small, big) // => (1,16)"
+	},
+	{
+		"id": "sugar-bug-seats-order",
+		"kind": "bug",
+		"topic": "sugar",
+		"prompt": "`for r <- rows; c <- cols yield s\"$r$c\"`가 풀리는 모양이다. 행 우선 순서(`1A, 1B, 2A, 2B`)가 나와야 한다. 틀린 줄은?",
+		"unlock": ["d-02-seat-labels"],
+		"problem": "d-02-seat-labels",
+		"lines": [
+			"def seats(rows: List[Int], cols: List[Char]): List[String] =",
+			"  val pairs = cols.flatMap(c => rows.map(r => (r, c)))",
+			"  pairs.map((r, c) => s\"$r$c\")"
+		],
+		"bugIndex": 1,
+		"fixed": "  val pairs = rows.flatMap(r => cols.map(c => (r, c)))",
+		"why": "먼저 쓴 생성기가 바깥 `flatMap`이 된다. `rows`가 바깥이어야 행마다 열이 이어지고, 바꾸면 열 우선으로 나온다."
+	},
+	{
+		"id": "sugar-bug-parser-flatmap",
+		"kind": "bug",
+		"topic": "sugar",
+		"prompt": "`Parser`의 `flatMap`이다. `item.flatMap(a => item.map(b => s\"$a$b\")).run(\"abcd\")`는 `Some((ab,cd))`여야 한다. 틀린 줄은?",
+		"unlock": ["d-06-parser-for"],
+		"problem": "d-06-parser-for",
+		"given": "def pure[A](a: A): Parser[A] = Parser(s => Some((a, s)))\n\nval item: Parser[Char] =\n  Parser(s => s.headOption.map(c => (c, s.drop(1))))\n",
+		"lines": [
+			"case class Parser[A](run: String => Option[(A, String)]):",
+			"  def map[B](f: A => B): Parser[B] =",
+			"    Parser(s => run(s).map((a, rest) => (f(a), rest)))",
+			"  def flatMap[B](f: A => Parser[B]): Parser[B] =",
+			"    Parser(s => run(s).flatMap((a, rest) => f(a).run(s)))",
+			"  def withFilter(p: A => Boolean): Parser[A] =",
+			"    Parser(s => run(s).filter((a, _) => p(a)))"
+		],
+		"bugIndex": 4,
+		"fixed": "    Parser(s => run(s).flatMap((a, rest) => f(a).run(rest)))",
+		"why": "다음 파서는 앞 파서가 먹고 남은 입력 `rest`에서 이어 읽어야 한다. 원래 입력 `s`를 주면 같은 글자를 다시 읽는다."
+	},
+	{
+		"id": "sugar-bug-poly-horner",
+		"kind": "bug",
+		"topic": "sugar",
+		"prompt": "계수 `List(1, 2, 3)`인 `Poly`를 `p(2)`로 부르면 `1 + 2·2 + 3·4 = 17`이어야 한다. `apply`에서 틀린 줄은?",
+		"unlock": ["d-10-poly-apply"],
+		"problem": "d-10-poly-apply",
+		"lines": [
+			"class Poly(val coeffs: List[Int]):",
+			"  def apply(x: Int): Int =",
+			"    coeffs.foldLeft(0)((c, acc) => c + x * acc)"
+		],
+		"bugIndex": 2,
+		"fixed": "    coeffs.foldRight(0)((c, acc) => c + x * acc)",
+		"why": "`c + x * acc`는 낮은 차수 계수부터 바깥에 두는 모양이라 오른쪽 끝부터 접어야 한다. `foldLeft`는 계수 순서가 거꾸로 적용된다."
+	}
+]

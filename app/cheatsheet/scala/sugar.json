@@ -1,0 +1,58 @@
+[
+	{
+		"id": "sugar-for",
+		"topic": "sugar",
+		"title": "for … yield → flatMap · map · withFilter",
+		"code": "val xs = List(1, 2, 3)\nval a = for x <- xs; y <- xs if x < y yield x * y // => List(2, 3, 6)\nval b = xs.flatMap(x => xs.withFilter(x < _).map(x * _)) // => List(2, 3, 6)\na == b // => true",
+		"text": "`for`의 앞쪽 제너레이터는 `flatMap`, 마지막 제너레이터는 `map`, `if` 가드는 `withFilter`로 바뀐다. 이 변환 덕에 `map`·`flatMap`·`withFilter`가 있는 타입은 모두 `for`에 쓸 수 있다."
+	},
+	{
+		"id": "sugar-for-foreach",
+		"topic": "sugar",
+		"title": "yield 없는 for → foreach",
+		"code": "val xs = List(1, 2, 3)\nval a, b = collection.mutable.ListBuffer[Int]()\nfor x <- xs do a += x * 2\nxs.foreach(x => b += x * 2)\na.toList // => List(2, 4, 6)\na == b // => true",
+		"text": "`yield` 없는 `for ... do`는 `foreach` 호출로 바뀐다. 결과값이 없으니 부수효과를 위한 반복이다."
+	},
+	{
+		"id": "sugar-unapply",
+		"topic": "sugar",
+		"title": "패턴 매칭 → unapply",
+		"code": "object Ext:\n  def unapply(n: Int): Option[(Int, Int)] = Some((n / 10, n % 10))\nval r1 = 42 match { case Ext(a, b) => a + b } // => 6\nval o = Ext.unapply(42) // => Some((4,2))\nval r2 = o match { case Some((a, b)) => a + b } // => 6",
+		"text": "`case Ext(a, b)`는 `Ext.unapply(값)`을 호출해 `Some`이면 안의 값을 a, b에 묶는다. `None`이면 그 case는 건너뛴다."
+	},
+	{
+		"id": "sugar-apply-update",
+		"topic": "sugar",
+		"title": "f(x) · a(i) = v → apply · update",
+		"code": "object Dbl:\n  def apply(x: Int) = x * 2\nDbl(4) // => 8\nDbl.apply(4) // => 8\nval a = Array(1, 2, 3)\na(0) = 9\na.update(1, 8)\na.toList // => List(9, 8, 3)",
+		"text": "`f(x)`는 `f.apply(x)`이고, `a(i) = v`는 `a.update(i, v)`다. 그래서 `List(1, 2)`나 `Map` 조회도 모두 `apply` 호출이다."
+	},
+	{
+		"id": "sugar-case-class",
+		"topic": "sugar",
+		"title": "case class가 만들어 주는 것",
+		"code": "case class P(x: Int, y: Int)\nval p = P(1, 2) // => P(1,2)\nP.apply(1, 2) == p // => true\np.copy(y = 5) // => P(1,5)\nval P(a, b) = p\na + b // => 3\np.hashCode == P(1, 2).hashCode // => true",
+		"text": "`case class`는 컴패니언의 `apply`·`unapply`, 값 기준 `==`·`hashCode`, `toString`, `copy`를 자동으로 만든다."
+	},
+	{
+		"id": "sugar-lambda",
+		"topic": "sugar",
+		"title": "람다 → Function 객체",
+		"code": "val f = (x: Int) => x + 1\nval g = new Function1[Int, Int]:\n  def apply(x: Int) = x + 1\nf(1) // => 2\ng(1) // => 2\nf.apply(1) == g.apply(1) // => true\nList(1, 2).map(g) // => List(2, 3)",
+		"text": "람다는 `apply` 메서드가 하나인 `Function1` 객체다. 함수를 호출하는 `f(1)`도 `f.apply(1)`이다."
+	},
+	{
+		"id": "sugar-using",
+		"topic": "sugar",
+		"title": "using · given이 채워 주는 인자",
+		"code": "given Int = 10\ndef add(x: Int)(using n: Int) = x + n\nadd(1) // => 11\nadd(1)(using 10) // => 11\ndef gt[A: Ordering](a: A, b: A) = Ordering[A].gt(a, b)\ndef gt2[A](a: A, b: A)(using Ordering[A]) = Ordering[A].gt(a, b)\ngt(2, 1) // => true\ngt2(2, 1) // => true",
+		"text": "`using` 인자를 생략하면 컴파일러가 범위의 given을 찾아 채운다. 직접 넘기려면 `(using 값)`이다. 컨텍스트 바운드 `[A: Ordering]`는 이름 없는 `using` 매개변수의 줄임이다."
+	},
+	{
+		"id": "sugar-operators",
+		"topic": "sugar",
+		"title": "연산자: 중위 호출 · :: · +=",
+		"code": "val xs = List(2, 3)\n1 + 2 // => 3\n1.+(2) // => 3\n1 :: xs // => List(1, 2, 3)\nxs.::(1) // => List(1, 2, 3)\nvar x = 1\nx += 1\nx = x + 1\n-x // => -3\nx.unary_- // => -3",
+		"text": "연산자는 메서드 이름일 뿐이라 `a + b`는 `a.+(b)`다. `:`로 끝나는 연산자는 오른쪽 피연산자의 메서드이고, `x += 1`은 `+=` 메서드가 없는 var이면 `x = x + 1`이 된다."
+	}
+]

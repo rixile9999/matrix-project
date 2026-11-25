@@ -1,0 +1,27 @@
+{
+	"id": "d-07-email-extractor",
+	"order": 2004,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-unapply",
+		"match-case-class",
+		"string-split"
+	],
+	"title": "Email 추출자 만들기",
+	"limitSec": 150,
+	"targets": [
+		"unapply",
+		"추출자 객체",
+		"Option 튜플 반환"
+	],
+	"avoid": [],
+	"statement": "`Tests.scala`는 문자열에 `case Email(user, domain) =>` 패턴을 쓴다. `Email`은 case class가 아니라 객체다. `\"ann@example.com\"`처럼 `@`가 정확히 하나이고 양쪽이 비어 있지 않은 문자열이면 `(user, domain)`을 돌려주고, 아니면 매칭에 실패하도록 `unapply`를 완성하라.",
+	"starter": "object Email:\n  def unapply(s: String): Option[(String, String)] = ???\n",
+	"hints": [
+		"패턴 `Email(a, b)`는 `Email.unapply(값)`을 호출한다. 값이 둘이면 `Option[(A, B)]`를 돌려주고, 실패하면 `None`이다.",
+		"짝수일 때만 매칭되는 `object Half { def unapply(n: Int): Option[Int] = if n % 2 == 0 then Some(n / 2) else None }`는 `case Half(h) =>`로 쓴다."
+	],
+	"notes": "`case Name(p1, p2)`는 `Name.unapply(scrutinee)`를 부른 뒤 결과가 `Some((a, b))`이면 `p1`, `p2`에 묶는다. `None`이면 다음 `case`로 넘어간다. case class는 이 `unapply`를 컴파일러가 만들어 줄 뿐이고, 직접 쓰면 어떤 타입에도 패턴을 줄 수 있다."
+}

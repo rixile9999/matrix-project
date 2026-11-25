@@ -50,3 +50,16 @@ describe('select', () => {
 		expect(hits).toBeGreaterThan(65);
 	});
 });
+
+import { findAvoided } from './lang.ts';
+import { test as tA, expect as eA } from 'vitest';
+tA('findAvoided handles words, multi-word entries and symbols', () => {
+	eA(findAvoided('for x <- xs yield x', ['for'])).toEqual(['for']);
+	eA(findAvoided('xs.foreach(f); val format = 1 // for', ['for'])).toEqual([]);
+	eA(findAvoided('case   class A(x: Int)', ['case class'])).toEqual(['case class']);
+	eA(findAvoided('x match { case A(y) => y }; class B', ['case class'])).toEqual([]);
+	eA(findAvoided('xs.map(x=>x+1)', ['=>'])).toEqual(['=>']);
+	eA(findAvoided('val s = "a => b"', ['=>'])).toEqual([]);
+	eA(findAvoided('1 :: Nil', ['::'])).toEqual(['::']);
+	eA(findAvoided('a.b.var', ['var'])).toEqual([]);
+});

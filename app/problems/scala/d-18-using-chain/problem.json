@@ -1,0 +1,30 @@
+{
+	"id": "d-18-using-chain",
+	"order": 2007,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "complete",
+	"refs": [
+		"sugar-using",
+		"context-bound",
+		"summon",
+		"given-instance"
+	],
+	"title": "given 사슬을 손으로 잇기",
+	"limitSec": 420,
+	"targets": [
+		"context bound → using",
+		"summon 제거",
+		"파생 given 연쇄"
+	],
+	"avoid": [
+		"summon"
+	],
+	"statement": "`Show[A]` 타입 클래스에는 `Int` 인스턴스와 `List`용 파생 인스턴스가 있다. 세 곳을 채워라. (1) `listShow`: 원소를 `Show`로 바꿔 `, `로 잇고 `[` `]`로 감싼다 (`[1, 2]`). (2) `render`: `[A: Show]` 대신 명시적 `(using s: Show[A])`를 받고 `summon` 없이 `a`를 문자열로 바꾼다. (3) `nested`: `Show[List[List[Int]]]`를 컴파일러에 맡기지 말고 `listShow`와 `intShow`를 `using`으로 직접 이어서 만든다.",
+	"starter": "trait Show[A]:\n  def show(a: A): String\n\ngiven intShow: Show[Int] with\n  def show(a: Int): String = a.toString\n\ngiven listShow[A](using s: Show[A]): Show[List[A]] with\n  def show(xs: List[A]): String = ???\n\ndef render[A](a: A)(using s: Show[A]): String =\n  ???\n\nval nested: Show[List[List[Int]]] =\n  ???\n",
+	"hints": [
+		"`(using s: Show[A])`로 받은 `s`를 바로 `s.show(a)`처럼 쓴다. 사슬은 `listShow(using 안쪽 인스턴스)`로 한 겹씩 감싼다.",
+		"`Show[List[Int]]`를 손으로 만든다면: `listShow(using intShow)`"
+	],
+	"notes": "`[A: Show]`는 `(using Show[A])` 절로, `summon[Show[A]]`는 그 인자를 꺼내는 일로 바뀐다. `Show[List[List[Int]]]`가 필요하면 컴파일러는 `listShow(using listShow(using intShow))`를 스스로 조립한다. `given [A](using Show[A])`는 인스턴스를 만드는 함수라서 이렇게 겹쳐 쓸 수 있다."
+}

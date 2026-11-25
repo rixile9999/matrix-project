@@ -1,0 +1,29 @@
+{
+	"id": "d-03-safe-divide",
+	"order": 2003,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-for",
+		"option-for"
+	],
+	"title": "안전한 나눗셈 (for로)",
+	"limitSec": 150,
+	"targets": [
+		"flatMap · withFilter · map → for"
+	],
+	"avoid": [
+		".flatMap",
+		".map",
+		".withFilter",
+		".filter"
+	],
+	"statement": "두 문자열 `a`, `b`를 정수로 읽어 `a / b`를 `Option[Int]`로 돌려준다. 어느 쪽이든 정수가 아니거나 `b`가 0이면 `None`이다. 아래 메서드 사슬 구현은 맞게 동작한다. `.flatMap`, `.map`, `.withFilter`, `.filter`를 쓰지 않고 `for`로 다시 써라.",
+	"starter": "def safeDivide(a: String, b: String): Option[Int] =\n  a.toIntOption.flatMap(x =>\n    b.toIntOption.withFilter(y => y != 0).map(y => x / y))\n",
+	"hints": [
+		"`flatMap`과 `map`이 이어진 사슬은 생성기 `<-`로, `withFilter`는 `if` 가드로 쓴다.",
+		"`as.flatMap(a => bs.withFilter(b => b > a).map(b => b - a))`는 `for a <- as; b <- bs if b > a yield b - a`이다."
+	],
+	"notes": "`for`는 `Option`처럼 `map`, `flatMap`, `withFilter`를 가진 타입이면 무엇에든 쓸 수 있다. 사슬의 `flatMap(x => …)`는 `x <- …` 생성기가, 마지막 `map`은 `yield`가, `withFilter`는 `if` 가드가 된다. 중간에 `None`이 나오면 이후 단계는 실행되지 않는다."
+}

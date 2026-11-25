@@ -1,0 +1,36 @@
+{
+	"id": "d-22-receipt-by-hand",
+	"order": 2002,
+	"level": 3,
+	"topic": "sugar",
+	"kind": "complete",
+	"refs": [
+		"sugar-case-class",
+		"sugar-operators",
+		"sugar-unapply",
+		"sugar-for",
+		"sugar-for-foreach",
+		"sugar-lambda",
+		"sugar-using"
+	],
+	"title": "영수증 계산기: 문법이 기대하는 메서드를 직접 채우기",
+	"limitSec": 1200,
+	"targets": [
+		"case class가 만들어 주던 것",
+		"연산자와 오른쪽 결합 ::",
+		"unapply",
+		"withFilter·flatMap·map·foreach",
+		"Function1 객체",
+		"using 절"
+	],
+	"avoid": [
+		"case class"
+	],
+	"statement": "장바구니 영수증 계산기를 만든다. 타입은 모두 직접 쓴 `class`이고 `case class`는 쓰지 않는다. 컴파일러가 대신 만들어 주던 것을 starter의 `???` 자리에 직접 채워 넣는다. Tests는 각 단계에서 해당 문법을 이 타입들에 그대로 쓴다.\n\n1단계: `Money`는 `cents` 값이 같으면 `==`이고, 그래서 `Set`과 `Map`의 키로도 쓸 수 있어야 한다. `toString`은 `Money(150)` 모양이다.\n2단계: `Money`는 `a + b`, `m * 3`, `-m`을 지원한다. `Cart`의 `l :: cart`는 `l`을 맨 앞에 붙인 새 `Cart`다. 그래서 `a :: b :: Cart.empty`의 `lines`는 `a`, `b` 순서다.\n3단계: `Money(c)`와 `Line(name, qty, unit)` 패턴이 통해야 한다. 필드 순서는 생성자와 같다.\n4단계: `Picks[A]`로 `for x <- p if … yield …`, 생성기 둘, 중간 `val`, `yield` 없는 `for`가 돌아야 한다. 가드는 걸러 낼 뿐 `Picks`를 돌려준다.\n5단계: `Discount(pct)`는 `Money => Money`다. `Discount(10)(m)`은 `m.cents * (100 - 10) / 100`이다(정수 나눗셈).\n6단계: `withTax(m)`은 `m.cents + m.cents * rate / 100`을 돌려주는데, `rate`는 `TaxRate`로 받는다. 호출하는 쪽이 `given TaxRate`를 두면 인자를 쓰지 않아도 되도록 `withTax`의 시그니처를 직접 고친다. `total(cart, off)`는 각 줄의 `qty * unit`을 더해 `off`를 적용한 다음 세금을 붙인다. 이 함수 안에서는 `for`, `+=`, 패턴을 직접 써 본다.",
+	"starter": "// 1단계: 값 타입\nclass Money(val cents: Int):\n  override def equals(o: Any): Boolean = ???\n  override def hashCode: Int = ???\n  override def toString: String = ???\n  // 2단계: 연산자\n  def +(o: Money): Money = ???\n  def *(n: Int): Money = ???\n  def unary_- : Money = ???\n\nobject Money:\n  // 3단계: 패턴 매칭\n  def unapply(m: Money): Option[Int] = ???\n\nclass Line(val name: String, val qty: Int, val unit: Money)\n\nobject Line:\n  def unapply(l: Line): Option[(String, Int, Money)] = ???\n\nclass Cart(val lines: List[Line]):\n  // 2단계: 오른쪽 결합 연산자\n  def ::(l: Line): Cart = ???\n\nobject Cart:\n  val empty: Cart = Cart(Nil)\n\n// 4단계: for 컴프리헨션\nclass Picks[A](val items: List[A]):\n  def map[B](f: A => B): Picks[B] = ???\n  def flatMap[B](f: A => Picks[B]): Picks[B] = ???\n  def withFilter(p: A => Boolean): Picks[A] = ???\n  def foreach(f: A => Unit): Unit = ???\n\n// 5단계: 함수 객체\nclass Discount(val pct: Int) extends (Money => Money):\n  def apply(m: Money): Money = ???\n\n// 6단계: using\nclass TaxRate(val pct: Int)\n\ndef withTax(m: Money): Money = ???\n\ndef total(cart: Cart, off: Money => Money): Money = ???\n",
+	"hints": [
+		"`==`은 `equals`, 해시 컬렉션은 `hashCode`, `a + b`는 `a.+(b)`, `-a`는 `a.unary_-`, `l :: c`는 `c.::(l)`, 패턴은 `unapply`, `for`는 `withFilter`·`flatMap`·`map`·`foreach`, 함수 객체는 `apply`, 인자 자동 채움은 `using` 절로 받은 값을 쓴다.",
+		"같은 순서로 `Pt(x, y)`에 적용하면: `def +(o: Pt) = Pt(x + o.x, y + o.y)`, `object Pt { def unapply(p: Pt) = Some((p.x, p.y)) }`, `class Twice extends (Int => Int) { def apply(n: Int) = n * 2 }`, `def show(n: Int)(using w: Width): String = n.toString.padTo(w.n, ' ')`."
+	],
+	"notes": "`case class`는 `equals`·`hashCode`·`toString`, 동반 객체의 `apply`·`unapply`를 만들어 준다. 연산자는 이름이 기호인 메서드이고, `:`로 끝나는 연산자는 오른쪽 피연산자의 메서드이며 `a += b`는 `a = a + b`가 된다. `for`는 가드가 `withFilter`, 다음 생성기가 `flatMap`, 마지막이 `map`(`yield`가 없으면 `foreach`)으로 풀리고, 패턴은 `unapply`를 부르는데, 생성기 안의 반증 가능한 패턴은 `for case Line(…) <- xs`처럼 `case`를 붙여야 하고 그러면 `withFilter`로 걸러 낸다. `f(x)`는 `f.apply(x)`라서 `apply`가 있는 객체는 함수 자리에 쓸 수 있고, `using` 인자는 `given`이 있으면 컴파일러가 채운다."
+}

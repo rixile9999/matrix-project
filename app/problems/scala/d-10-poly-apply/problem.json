@@ -1,0 +1,26 @@
+{
+	"id": "d-10-poly-apply",
+	"order": 2005,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-apply-update",
+		"companion",
+		"foldright"
+	],
+	"title": "다항식을 함수처럼 호출",
+	"limitSec": 150,
+	"targets": [
+		"apply",
+		"f(x) 호출 문법"
+	],
+	"avoid": [],
+	"statement": "`Poly(List(1, 2, 3))`은 `1 + 2x + 3x²`이다(`coeffs(i)`가 `x^i`의 계수). `Tests.scala`는 `p(2)`처럼 객체를 함수처럼 호출한다. `p(x)`가 다항식의 값을 돌려주도록 `apply`를 완성하라. 계수가 없으면 0이다.",
+	"starter": "// coeffs(i)는 x^i의 계수: Poly(List(1, 2, 3))은 1 + 2x + 3x²\nclass Poly(val coeffs: List[Int]):\n  def apply(x: Int): Int = ???\n",
+	"hints": [
+		"`p(x)`는 `p.apply(x)`로 바뀐다. 메서드 이름이 `apply`이기만 하면 어떤 클래스든 이렇게 호출할 수 있다.",
+		"`class Adder(n: Int) { def apply(x: Int) = x + n }`이면 `Adder(3)(4)`는 `7`이다."
+	],
+	"notes": "`obj(args)`는 `obj`가 메서드가 아닌 값이면 `obj.apply(args)`로 바뀐다. `List(1, 2)`가 동작하는 것도 `List` 동반 객체의 `apply` 덕분이다. 호너 방식(`c0 + x * (c1 + x * (…))`)은 `foldRight`로 쓰면 짧다."
+}

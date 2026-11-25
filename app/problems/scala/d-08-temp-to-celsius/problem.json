@@ -1,0 +1,30 @@
+{
+	"id": "d-08-temp-to-celsius",
+	"order": 2003,
+	"level": 2,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-unapply",
+		"option-map",
+		"option-get"
+	],
+	"title": "match 없이 unapply 직접 호출",
+	"limitSec": 400,
+	"targets": [
+		"unapply",
+		"match 탈설탕",
+		"Option orElse · map"
+	],
+	"avoid": [
+		"match",
+		"case"
+	],
+	"statement": "`Temp`는 case class가 아닌 보통 클래스이고, `Celsius`와 `Fahrenheit` 추출자가 있다. `toCelsius`는 `match`로 두 추출자를 차례로 시도한다. 같은 동작을 `match`와 `case` 없이, `unapply`를 직접 호출해서 다시 써라. (화씨는 `(f - 32) * 5 / 9`, 정수 나눗셈)",
+	"starter": "class Temp(val deg: Int, val unit: Char)\n\nobject Celsius:\n  def unapply(t: Temp): Option[Int] = if t.unit == 'C' then Some(t.deg) else None\n\nobject Fahrenheit:\n  def unapply(t: Temp): Option[Int] = if t.unit == 'F' then Some(t.deg) else None\n\ndef toCelsius(t: Temp): Option[Int] = t match\n  case Celsius(c)    => Some(c)\n  case Fahrenheit(f) => Some((f - 32) * 5 / 9)\n  case _             => None\n",
+	"hints": [
+		"`case Celsius(c) => …`는 `Celsius.unapply(t)`가 `Some(c)`일 때의 갈래다. 결과가 `Option`이므로 `map`과 `orElse`로 이을 수 있다.",
+		"`Even.unapply(n)`가 `Option[Int]`일 때 `n match { case Even(h) => h * 2; case _ => 0 }`은 `Even.unapply(n).map(_ * 2).getOrElse(0)`과 같다."
+	],
+	"notes": "추출자 패턴 하나는 `unapply` 호출과 `Option` 검사 하나다. 여러 `case`는 `orElse`로 이은 `Option` 체인과 같고, 마지막 `case _`는 `None`이나 `getOrElse`가 된다. 패턴 쪽이 읽기 쉬우니 실제로는 `match`를 쓰고, 이 문제는 컴파일러가 하는 일을 손으로 해 보는 연습이다."
+}

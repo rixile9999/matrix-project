@@ -1,0 +1,26 @@
+{
+	"id": "d-12-equals-hashcode",
+	"order": 2007,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-case-class",
+		"case-class"
+	],
+	"title": "좌표 비교: equals와 hashCode",
+	"limitSec": 150,
+	"targets": [
+		"equals",
+		"hashCode",
+		"case class가 만들어 주는 것"
+	],
+	"avoid": [],
+	"statement": "`case class` 없이 만든 `Point`는 `==`가 참조 비교라서 `Point(1, 2) == Point(1, 2)`가 거짓이고 `Set`에도 중복으로 들어간다(원소가 몇 개 안 될 때는 `Set`이 `==`로만 비교해서 티가 안 나니 테스트는 열 개를 쓴다). 같은 `x`, `y`면 같은 점이 되도록 `equals`와 `hashCode`를 채워라. `Set`과 `Map` 키로도 쓸 수 있어야 한다.",
+	"starter": "class Point(val x: Int, val y: Int):\n  override def equals(other: Any): Boolean = ???\n  override def hashCode: Int = ???\n",
+	"hints": [
+		"`equals`는 `other match`로 `Point`인지 확인해 필드를 비교한다. `hashCode`는 `equals`가 같다고 하는 두 점이 항상 같은 값을 내야 한다.",
+		"`Name(first, last)`라면: `case n: Name => first == n.first && last == n.last`, `hashCode`는 `(first, last).hashCode`."
+	],
+	"notes": "`case class`는 필드를 기준으로 `equals`와 `hashCode`를 만들어 준다. 직접 쓸 때는 둘을 항상 함께 맞춰야 한다. `equals`만 고치면 `==`는 되지만 해시 기반인 `Set`과 `Map`에서 같은 점을 못 찾는다. 튜플의 `hashCode`는 원소 값으로 정해지므로 `(x, y).hashCode`가 간단한 구현이다."
+}

@@ -1,0 +1,28 @@
+{
+	"id": "d-16-closure-class",
+	"order": 2009,
+	"level": 1,
+	"topic": "sugar",
+	"kind": "refactor",
+	"refs": [
+		"sugar-lambda",
+		"lambda"
+	],
+	"title": "클로저를 클래스로 (카운터)",
+	"limitSec": 180,
+	"targets": [
+		"클로저가 잡는 변수 = 필드",
+		"Function0",
+		"apply"
+	],
+	"avoid": [
+		"=>"
+	],
+	"statement": "`makeCounter(step)`은 호출할 때마다 `step`씩 늘어난 값을 돌려주는 함수를 만든다. 이 함수는 변수 `n`을 붙잡는 클로저다. `=>` 없이, `Function0[Int]`를 확장한 클래스 `Counter`를 쓰고 `n`을 그 필드로 옮겨라. `makeCounter`는 반환 타입을 `Function0[Int]`로 쓴다.",
+	"starter": "def makeCounter(step: Int): () => Int =\n  var n = 0\n  () => { n += step; n }\n",
+	"hints": [
+		"`class Counter(step: Int) extends Function0[Int]`로 만들고, `n`은 클래스 안 `var` 필드, 람다 본문은 `def apply(): Int`로 옮긴다.",
+		"`def total(): () => Int`가 `var s = 0; () => { s += 1; s }`라면: `class T extends Function0[Int]:` 아래 `private var s = 0`, `def apply(): Int = { s += 1; s }`."
+	],
+	"notes": "클로저가 잡은 `var`는 컴파일러가 객체의 필드로 옮긴다. 함수 값 자체가 `apply`를 가진 객체라서 같은 일을 클래스로 직접 쓸 수 있다. `makeCounter`를 부를 때마다 새 객체가 생기므로 카운터끼리 상태를 공유하지 않는다."
+}

@@ -31,13 +31,14 @@ for (const p of listProblems(lang).filter((p) => p.id.startsWith(prefix))) {
 		if (!/^\d+\.\d+$/.test(p.book.exercise ?? '')) problems.push('book.exercise must look like "3.7"');
 		if (!p.intent || p.intent.length < 30) problems.push('book problems need an intent (출제 취지)');
 	}
-	if (p.kind === 'write' || p.kind === 'complete') { if (!p.starter.includes('???')) problems.push('starter has no ???'); }
 	const sol = await judge(lang, p, loadSolution(lang, p.id));
 	if (sol.status !== 'passed') problems.push(`solution ${sol.status}: ${sol.output || JSON.stringify(sol.cases.filter((c) => c.status !== 'ok'))}`);
 	if (sol.cases.length < (p.level === 1 ? 3 : 4)) problems.push(`only ${sol.cases.length} test cases`);
 	if (sol.avoided.length) problems.push(`solution uses avoided: ${sol.avoided}`);
 	const st = await judge(lang, p, p.starter);
 	if (st.status === 'passed') problems.push('starter passes as given');
+	// write/complete: the gap is a ??? body, or a missing member whose compile error is the lesson
+	if ((p.kind === 'write' || p.kind === 'complete') && !p.starter.includes('???') && st.status !== 'compile_error') problems.push('starter has no ??? and compiles');
 	if (p.kind === 'fix' && st.status === 'compile_error') problems.push('fix starter must compile (the bug is a wrong result, not a compile error)');
 	if (p.kind === 'refactor' && !(st.cases.length > 0 && st.cases.every((c) => c.status === 'ok') && st.avoided.length > 0)) problems.push('refactor starter must pass all tests while using an avoided keyword');
 	console.log(`${problems.length ? 'FAIL' : 'ok  '} ${p.id} (${sol.cases.length} cases)${problems.map((x) => '\n     - ' + x).join('')}`);

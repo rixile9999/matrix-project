@@ -1,0 +1,27 @@
+{
+	"id": "d-06-parser-for",
+	"order": 2001,
+	"level": 3,
+	"topic": "sugar",
+	"kind": "write",
+	"refs": [
+		"sugar-for",
+		"option-for",
+		"flatmap"
+	],
+	"title": "작은 Parser를 for로 엮기",
+	"limitSec": 1200,
+	"targets": [
+		"map · flatMap · withFilter 직접 구현",
+		"for가 요구하는 메서드",
+		"남은 입력을 넘기는 파서 조합"
+	],
+	"avoid": [],
+	"statement": "문자열 앞에서 값을 읽어 내는 작은 파서 `Parser[A]`를 만든다. `run(s)`는 성공하면 `Some((읽은 값, 남은 문자열))`, 실패하면 `None`이다. `pure`와 `item`(한 글자 읽기)은 이미 있다. `Tests.scala`는 이것들을 `for`로 엮어 두 글자, 두 자리 수, `12,34` 같은 쌍을 읽는다. 세 메서드를 채워 단계별로 통과시킨다.\n\n1단계: `map(f)`는 읽은 값에만 `f`를 적용하고 남은 문자열은 그대로 둔다. 실패는 실패 그대로다.\n\n2단계: `flatMap(f)`는 이 파서로 `a`를 읽고, `f(a)`가 돌려준 파서를 남은 문자열에 이어서 실행한다. 어느 쪽이든 실패하면 전체가 실패한다.\n\n3단계: 테스트의 `for … yield`가 `map`과 `flatMap`만으로 동작하는지 확인한다.\n\n4단계: `withFilter(p)`는 읽은 값이 `p`를 만족할 때만 성공하고 아니면 `None`이다. 테스트의 `if` 가드가 이것을 쓴다.",
+	"starter": "case class Parser[A](run: String => Option[(A, String)]):\n  def map[B](f: A => B): Parser[B] =\n    ???\n\n  def flatMap[B](f: A => Parser[B]): Parser[B] =\n    ???\n\n  def withFilter(p: A => Boolean): Parser[A] =\n    ???\n\ndef pure[A](a: A): Parser[A] = Parser(s => Some((a, s)))\n\nval item: Parser[Char] =\n  Parser(s => s.headOption.map(c => (c, s.drop(1))))\n",
+	"hints": [
+		"`run(s)`가 돌려주는 `Option[(A, String)]`에 `map`, `flatMap`, `filter`를 쓴다. 새 `Parser`는 `Parser(s => …)`로 만든다.",
+		"`Counter[A]`가 `run: Int => (A, Int)`라면 `map(f)`는 `Counter(n => { val (a, n2) = run(n); (f(a), n2) })`, `flatMap(f)`는 `… f(a).run(n2)`이다. 상태를 다음 단계로 넘긴다."
+	],
+	"notes": "`map`은 값만 바꾸고 남은 입력은 그대로 넘긴다. `flatMap`은 앞 파서가 남긴 입력을 `f(a)`가 만든 파서에 넘겨 이어 붙인다. 이 두 메서드만 있으면 생성기가 여러 개인 `for … yield`를 쓸 수 있고, `if` 가드는 `withFilter`가 추가로 필요하다. `for`는 파서가 무엇인지 모르고 메서드 이름만 본다."
+}

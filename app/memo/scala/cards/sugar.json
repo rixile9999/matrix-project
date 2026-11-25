@@ -1,0 +1,467 @@
+[
+	{
+		"id": "sugar-last-generator-map",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "마지막 생성기는 map",
+		"summary": "여러 생성기의 마지막만 `map`이고 앞쪽은 전부 `flatMap`이다.",
+		"prompt": "`for x <- xs; y <- ys yield x * y`를 풀어 쓴다. 안쪽 호출 자리에 들어갈 메서드는?",
+		"promptCode": "xs.flatMap(x => ys.____(y => x * y))",
+		"points": [
+			"`map`: 마지막 생성기가 `yield`를 받는다. `flatMap`은 컬렉션을 돌려주는 함수를 요구해서 `Int`를 돌려주면 타입이 맞지 않는다",
+			"앞쪽 생성기는 모두 `flatMap`이고 뒤 생성기는 그 람다 안에 들어가 앞 변수를 쓴다"
+		],
+		"answerCode": "val inner = xs.flatMap(x => ys.map(y => x * y))",
+		"verify": "val xs = List(1, 2)\nval ys = List(10, 20)\nval inner = xs.flatMap(x => ys.map(y => x * y)) // => List(10, 20, 20, 40)\nval a = for x <- xs; y <- ys yield x * y\nval b = xs.flatMap(x => ys.map(y => x * y))\na == b // => true",
+		"unlock": [
+			"d-02-seat-labels"
+		]
+	},
+	{
+		"id": "sugar-for-required-methods",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "for가 요구하는 메서드",
+		"summary": "생성기 수와 가드가 `map`·`flatMap`·`withFilter` 요구를 정한다.",
+		"prompt": "`for a <- m1; b <- m2 if a < b yield a + b`가 `Maybe`에 컴파일되려면 어떤 메서드가 필요하고, 각각 어느 줄 때문인가?",
+		"points": [
+			"`flatMap`: 마지막이 아닌 생성기 `a <- m1` 때문이다. 함수는 `Maybe`를 돌려준다",
+			"`map`: 마지막 생성기 `b <- m2`와 `yield` 때문이다. 함수는 값을 돌려준다",
+			"`withFilter`: `if a < b` 가드 때문이다. 가드를 빼면 이 메서드는 필요 없다",
+			"`for`는 타입을 모르고 이름과 모양만 본다"
+		],
+		"unlock": [
+			"d-05-maybe-for"
+		]
+	},
+	{
+		"id": "sugar-guard-breaks-compile",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "가드를 넣었더니 컴파일 오류",
+		"summary": "가드는 `withFilter`를 요구한다. `Either`에는 없다.",
+		"prompt": "`for x <- either yield x`는 되는데 `if x > 0` 가드를 붙이면 `Either`에서 컴파일이 깨진다. 왜인가?",
+		"points": [
+			"가드는 `either.withFilter(x => x > 0)` 호출로 바뀌는데 `Either`에는 `withFilter`가 없다",
+			"`Left`로 바꿔야 할지 알 수 없어서 `withFilter`를 만들지 않았다. 필터링은 값이 없는 쪽이 있어야 말이 된다",
+			"고치려면 `withFilter`를 직접 정의하거나 가드를 `for` 밖으로 빼서 `flatMap` 안에서 `Left`로 바꾼다"
+		],
+		"unlock": [
+			"d-03-safe-divide",
+			"d-05-maybe-for"
+		]
+	},
+	{
+		"id": "sugar-for-binding-tuple",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "`y = e` 바인딩의 변환",
+		"summary": "값 바인딩은 `map`으로 `(x, y)` 튜플을 만들어 뒤로 넘긴다.",
+		"prompt": "`for x <- xs; y = x * 2 if y > 3 yield x + y`를 `for` 없이 쓰면 가드와 바인딩은 각각 무엇이 되나?",
+		"points": [
+			"바인딩 `y = x * 2`는 `map(x => (x, x * 2))`다. 이후 단계에서도 `x`와 `y`를 쓰려고 튜플에 함께 담는다",
+			"가드는 그 튜플 위의 `withFilter`다. 가드가 바인딩 앞에 있으면 튜플을 만들기 전에 거른다",
+			"마지막 `yield`는 튜플을 풀어 `map`에서 `x + y`를 계산한다"
+		],
+		"answerCode": "val b = xs.map(x => (x, x * 2)).withFilter((x, y) => y > 3).map((x, y) => x + y)",
+		"verify": "val xs = List(1, 2, 3)\nval a = for x <- xs; y = x * 2 if y > 3 yield x + y // => List(6, 9)\nval b = xs.map(x => (x, x * 2)).withFilter((x, y) => y > 3).map((x, y) => x + y)\nb // => List(6, 9)",
+		"unlock": [
+			"d-04-cheap-pairs"
+		]
+	},
+	{
+		"id": "sugar-for-do-foreach",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "yield 없는 for는 foreach",
+		"summary": "`for … do`는 `foreach`만 있으면 되고 결과는 `Unit`이다.",
+		"prompt": "`foreach`만 정의한 타입 `Box`에 `for x <- box do println(x)`는 컴파일되나? `yield`로 바꾸면? 이유와 결과 타입은?",
+		"points": [
+			"`do`는 `box.foreach(x => println(x))`로 바뀌므로 `foreach`만 있으면 컴파일된다",
+			"`yield`로 바꾸면 `map`이 필요해서 `value map is not a member` 오류가 난다",
+			"`foreach`는 `Unit`을 돌려주므로 `for ... do`는 값이 아니라 부수효과를 위한 것이다"
+		],
+		"unlock": [
+			"d-01-tax-prices",
+			"d-03-safe-divide"
+		]
+	},
+	{
+		"id": "sugar-flatmap-lazy-second",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "첫 생성기가 None이면 둘째는 실행되지 않는다",
+		"summary": "뒤쪽 생성기의 식은 앞 생성기의 람다 안에 있어 지연된다.",
+		"prompt": "`first: Option[Int] = None`일 때 `for a <- first; b <- { println(\"hi\"); Some(1) } yield a + b`는 `hi`를 출력하나? 왜?",
+		"points": [
+			"출력하지 않는다. 둘째 생성기의 식은 `flatMap`에 넘긴 람다 안으로 들어가기 때문이다",
+			"`None.flatMap(f)`는 `f`를 호출하지 않고 `None`을 돌려주므로 람다 안의 식은 평가되지 않는다",
+			"그래서 `for`로 이은 `Option` 단계들은 처음 실패에서 멈추고 뒤 단계의 부수효과도 일어나지 않는다"
+		],
+		"answerCode": "val alt = first.flatMap(a => { calls += 1; Some(1) }.map(b => a + b))",
+		"verify": "var calls = 0\nval first: Option[Int] = None\nval r = for a <- first; b <- { calls += 1; Some(1) } yield a + b\nr // => None\ncalls // => 0\nval alt = first.flatMap(a => { calls += 1; Some(1) }.map(b => a + b))\nalt // => None\ncalls // => 0",
+		"unlock": [
+			"d-03-safe-divide"
+		]
+	},
+	{
+		"id": "sugar-extractor-call",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "case Email(u, d)가 하는 일",
+		"summary": "패턴은 `unapply` 호출과 `Option` 검사다. case class가 아니어도 된다.",
+		"prompt": "`s match { case Email(u, d) => … ; case _ => … }`에서 컴파일러는 무엇을 호출하고, 매칭 성공과 실패를 어떻게 구분하나?",
+		"points": [
+			"`Email.unapply(s)`를 호출한다. `Email`은 case class가 아니라 `unapply`를 가진 객체면 된다",
+			"결과가 `Some((a, b))`이면 `u`, `d`에 묶고 그 `case`의 몸통을 실행한다",
+			"결과가 `None`이면 그 `case`는 건너뛰고 다음 `case`를 시도한다. 예외는 쓰지 않는다"
+		],
+		"unlock": [
+			"d-07-email-extractor"
+		]
+	},
+	{
+		"id": "sugar-extractor-by-hand",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "match 없이 쓴 추출자 사슬",
+		"summary": "여러 `case`는 `unapply` 호출의 `orElse` 사슬이고 `case _`는 `getOrElse`다.",
+		"prompt": "`case Celsius(c) => c; case Fahrenheit(f) => (f - 32) * 5 / 9; case _ => 0`을 `match` 없이 `unapply`만으로 풀면 어떤 모양인가?",
+		"points": [
+			"`case` 하나는 `Celsius.unapply(t)` 호출 하나의 `Option` 결과다",
+			"여러 `case`는 `Option`을 `orElse`로 이은 사슬이다. 앞에서 `Some`이 나오면 뒤는 시도하지 않는다",
+			"각 `case`의 몸통은 `.map(...)`으로 붙고, 마지막 `case _`는 `getOrElse`가 된다"
+		],
+		"unlock": [
+			"d-08-temp-to-celsius"
+		]
+	},
+	{
+		"id": "sugar-boolean-extractor",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "Quoted() 패턴과 Boolean unapply",
+		"summary": "값을 꺼내지 않는 검사용 패턴은 `Boolean`을 돌려주는 `unapply`다.",
+		"prompt": "`case Quoted() =>`처럼 인자 없는 패턴으로 쓰려면 `Quoted.unapply`는 어떤 타입을 돌려줘야 하고 무엇이 참이면 매칭되나?",
+		"points": [
+			"`Boolean`을 돌려준다. `true`이면 매칭되고 `false`이면 다음 `case`로 간다",
+			"꺼낼 값이 없으므로 `Option`으로 감쌀 필요가 없고, 패턴도 `Quoted()`처럼 괄호 안이 비어 있다",
+			"`Some(())`을 돌려주는 것보다 단순하고, 이름이 붙은 검사로 `case`를 읽기 쉽다"
+		],
+		"unlock": [
+			"d-09-words-unapplyseq"
+		]
+	},
+	{
+		"id": "sugar-unapplyseq-why",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "unapplySeq가 필요한 이유",
+		"summary": "항목 수가 정해지지 않은 패턴은 `unapply` 하나로 만들 수 없다.",
+		"prompt": "`Words.unapply`가 `Option[List[String]]`을 돌려주면 `case Words(first, rest*)`나 `case Words(a, b)`는 왜 안 되고, 무엇을 바꿔야 하나?",
+		"points": [
+			"`Option[List[String]]`이면 패턴 항목이 하나(`List` 전체)라서 `Words(a, b)`는 인자 수 오류로 컴파일되지 않는다",
+			"`unapplySeq(s): Option[Seq[String]]`로 바꾸면 컴파일러가 `seq`의 원소로 항목을 맞춘다",
+			"앞쪽 항목은 `seq`의 앞에서부터 맞추고 `rest*`는 나머지를 받는다. `Words(w)`는 길이가 정확히 1일 때만 맞는다"
+		],
+		"unlock": [
+			"d-09-words-unapplyseq"
+		]
+	},
+	{
+		"id": "sugar-apply-not-function",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "apply만 있다고 함수는 아니다",
+		"summary": "`p(2)`는 `p.apply(2)`이지만 `Function1`은 아니다.",
+		"prompt": "`apply(x: Int)`만 정의한 클래스의 값 `p`에 대해 `p(2)`는 되는데 `List(1, 2).map(p)`는 컴파일 오류다. 왜이고 어떻게 고치나?",
+		"points": [
+			"`p(2)`는 `p.apply(2)`로 바뀌는 문법일 뿐이다. `p`의 타입이 `Int => Int`가 되지는 않는다",
+			"`map`은 함수 타입을 요구하는데 `p`는 `Function1`이 아니라서 타입이 맞지 않는다",
+			"`extends (Int => Int)`로 선언하거나 `map(p(_))`처럼 람다로 감싸면 된다"
+		],
+		"answerCode": "class Poly extends (Int => Int):\n  def apply(x: Int) = x * 2",
+		"verify": "class Poly extends (Int => Int):\n  def apply(x: Int) = x * 2\nval p = Poly()\nList(1, 2).map(p) // => List(2, 4)\nList(1, 2).map(p(_)) // => List(2, 4)",
+		"unlock": [
+			"d-10-poly-apply",
+			"d-15-function-object"
+		]
+	},
+	{
+		"id": "sugar-update-line",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "g(1, 2) = 5 의 변환",
+		"summary": "값은 항상 마지막 인자다.",
+		"prompt": "`g(1, 2) = 5`는 어떤 호출로 바뀌나? 빈칸을 채워라.",
+		"promptCode": "g.____(1, 2, 5)",
+		"points": [
+			"`update`: `g(1, 2) = 5`는 `g.update(1, 2, 5)`다",
+			"인덱스 인자들이 앞에 오고 대입하는 값이 마지막 인자로 들어간다. 읽기는 `apply`다"
+		],
+		"answerCode": "g.update(1, 2, 5)",
+		"verify": "class Grid:\n  val cells = Array.fill(9)(0)\n  def apply(r: Int, c: Int) = cells(r * 3 + c)\n  def update(r: Int, c: Int, v: Int): Unit = cells(r * 3 + c) = v\nval g = Grid()\ng(1, 2) = 5\ng.update(1, 2, 5)\ng(1, 2) // => 5",
+		"unlock": [
+			"d-11-grid-update"
+		]
+	},
+	{
+		"id": "sugar-compound-index",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "s(i) += n 에 필요한 것",
+		"summary": "`apply`와 `update`가 둘 다 있어야 한다.",
+		"prompt": "`Scores`에 `update`만 있으면 `s(1) = 5`는 되는데 `s(1) += 5`는 안 된다. 왜이고 `s(1) += 5`는 무엇으로 바뀌나?",
+		"points": [
+			"`s(1) += 5`는 `s.update(1, s.apply(1) + 5)`로 바뀐다. 현재 값을 읽는 `apply`가 필요하다",
+			"`s`는 `val`이어도 된다. 바뀌는 것은 `s`가 아니라 `s` 안의 값이고, `s(1) = 5`는 `update`만 있으면 된다",
+			"`Scores`에 `+=`는 필요 없다. `+` 연산은 `apply`가 돌려준 `Int`가 한다"
+		],
+		"unlock": [
+			"d-21-vec2-ops"
+		]
+	},
+	{
+		"id": "sugar-equals-hashcode-set",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "equals만 고치면 Set에서 깨진다",
+		"summary": "작은 Set은 `==`로 비교해서 티가 안 난다. 5개부터 해시를 쓴다.",
+		"prompt": "`equals`만 정의한 `Point`를 `Set`에 10개 넣고 `contains(Point(7))`을 하면 어떻게 되나? 원소 4개일 때는 왜 정상으로 보이나?",
+		"points": [
+			"`false`가 나올 수 있다. `Set`은 `hashCode`로 칸을 찾고 기본 `hashCode`는 객체마다 달라서 같은 값도 다른 칸에 있다",
+			"원소 4개 이하의 `Set`은 해시 없이 `==`로만 비교해서 `equals`만으로 맞게 동작한다",
+			"5개부터 해시 기반이라 깨진다. 그래서 `equals`와 `hashCode`는 항상 함께 정의한다"
+		],
+		"verify": "class P(val x: Int):\n  override def equals(o: Any) = o match\n    case p: P => p.x == x\n    case _ => false\nval four = (1 to 4).map(i => P(i)).toSet\nfour.contains(P(3)) // => true\nval ten = (1 to 10).map(i => P(i)).toSet\nten.contains(P(7)) // => false",
+		"unlock": [
+			"d-12-equals-hashcode"
+		]
+	},
+	{
+		"id": "sugar-hashcode-only",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "hashCode만 있고 equals가 없으면",
+		"summary": "같은 칸을 찾아도 `==`가 거짓이면 같은 원소가 아니다.",
+		"prompt": "`hashCode`는 `x`로 정의하고 `equals`는 정의하지 않은 `Point`를 `Set`에 열 개 넣었다. `contains(Point(7))`은 무엇이고 왜인가?",
+		"points": [
+			"`false`다. 해시는 같아서 같은 칸을 찾아가지만 그 안에서 `equals`로 비교하고, 기본 `equals`는 참조 비교다",
+			"해시는 후보를 좁히는 용도이고 같다는 판정은 `equals`가 한다",
+			"같은 객체는 같은 해시를 가져야 한다는 규칙만 지키면 되고, 해시가 같다고 같은 객체는 아니다"
+		],
+		"verify": "class P(val x: Int):\n  override def hashCode = x\nval ten = (1 to 10).map(i => P(i)).toSet\nten.contains(P(7)) // => false",
+		"unlock": [
+			"d-12-equals-hashcode"
+		]
+	},
+	{
+		"id": "sugar-case-class-generates",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "case class가 만드는 것의 위치",
+		"summary": "클래스 안에 다섯, 동반 객체에 둘이 생긴다.",
+		"prompt": "`case class Money(n: Int, cur: String)`에서 컴파일러가 만드는 것을 클래스 안에 생기는 것과 동반 객체에 생기는 것으로 나눠 말하라.",
+		"points": [
+			"클래스 안에는 `val` 필드, `equals`, `hashCode`, `toString`, `copy`가 생긴다",
+			"동반 객체에는 `apply`(`Money(5, \"KRW\")`)와 `unapply`(패턴 `case Money(n, c)`)가 생긴다",
+			"그래서 `case class`를 쓰지 않으면 이 일곱 가지를 직접 써야 한다. 단 `apply`는 Scala 3에서 `new` 없는 생성으로 대체된다"
+		],
+		"unlock": [
+			"d-13-case-class-by-hand"
+		]
+	},
+	{
+		"id": "sugar-plain-class-no-new",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "new 없이 만든 일반 클래스",
+		"summary": "`new` 생략은 되지만 `==`·출력·패턴은 case class 같지 않다.",
+		"prompt": "Scala 3에서 `class Money(val n: Int)`에 `Money(5)`는 컴파일된다. 그러면 `Money(5) == Money(5)`, `println(Money(5))`, `case Money(n)`은 각각 어떻게 되나?",
+		"points": [
+			"`new` 없는 생성은 Scala 3의 범용 `apply`(creator application) 덕분이라 `apply`를 따로 안 써도 된다",
+			"`==`는 거짓이고 `println`은 `Money@해시`처럼 나온다. `equals`·`toString`은 `case class`가 만들어 주던 것이다",
+			"`case Money(n)`은 `unapply`가 없어 컴파일되지 않는다. 동반 객체에 직접 정의해야 한다"
+		],
+		"verify": "class Money(val n: Int)\nval m = Money(5)\nm.n // => 5\nMoney(5) == Money(5) // => false",
+		"unlock": [
+			"d-13-case-class-by-hand"
+		]
+	},
+	{
+		"id": "sugar-copy-defaults-line",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "copy의 기본값 인자",
+		"summary": "`copy`는 기본값이 현재 필드인 이름 붙인 인자다.",
+		"prompt": "불변 `Account`에 직접 쓰는 `copy`다. `balance`를 바꿔도 `frozen`은 유지되게 하려면 `frozen`의 기본값 자리에 무엇이 필요한가?",
+		"promptCode": "def copy(balance: Long = this.balance, frozen: Boolean = ____) = Account(balance, frozen)",
+		"points": [
+			"`this.frozen`: 바꾸지 않은 필드는 현재 값이 기본값이다",
+			"그래서 `a.copy(balance = 5)`처럼 바꿀 필드만 적고, 원본 `a`는 그대로다"
+		],
+		"answerCode": "def copy(balance: Long = this.balance, frozen: Boolean = this.frozen) = Account(balance, frozen)",
+		"verify": "class Account(val balance: Long, val frozen: Boolean):\n  def copy(balance: Long = this.balance, frozen: Boolean = this.frozen) = Account(balance, frozen)\nval a = Account(10, true)\nval b = a.copy(balance = 5)\nb.frozen // => true\nb.balance // => 5\na.balance // => 10",
+		"unlock": [
+			"d-14-account-copy"
+		]
+	},
+	{
+		"id": "sugar-lambda-is-object",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "람다가 되는 객체",
+		"summary": "람다는 `Function1`을 구현한 객체이고 본문이 `apply`다.",
+		"prompt": "`x => x * 2 + 1`을 `=>` 없이 쓰려면 어떤 객체를 만들어야 하나? 그리고 `f(3)`과 `def`로 만든 메서드를 `map`에 넘기는 일은 이것과 어떻게 이어지나?",
+		"points": [
+			"`Function1[Int, Int]`를 구현하는 익명 객체이고 람다 본문이 `apply(x)`의 몸통이 된다",
+			"`f(3)`은 `f.apply(3)`이다. 함수는 호출할 수 있는 객체일 뿐이다",
+			"`def m`은 객체가 아니라서 `map(m)`에 넘길 때 컴파일러가 `x => m(x)` 함수 객체로 감싼다"
+		],
+		"answerCode": "val f = new Function1[Int, Int]:\n  def apply(x: Int) = x * 2 + 1",
+		"verify": "val f = new Function1[Int, Int]:\n  def apply(x: Int) = x * 2 + 1\ndef m(x: Int) = x * 2 + 1\nList(1, 2).map(f) // => List(3, 5)\nList(1, 2).map(m) // => List(3, 5)\nf(3) // => 7",
+		"unlock": [
+			"d-15-function-object"
+		]
+	},
+	{
+		"id": "sugar-closure-var-field",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "클로저가 잡은 var는 어디로 가나",
+		"summary": "객체의 필드(박스)가 되고 바깥과 공유된다.",
+		"prompt": "`var n = 0; val f = () => { n += 1; n }`에서 `f()`를 부르면 바깥의 `n`은? 이를 `Function0` 클래스로 풀면 `n`은 어디에 있나?",
+		"points": [
+			"바깥 `n`도 1이 된다. `f`는 `n`의 복사본이 아니라 같은 변수를 쓴다",
+			"클래스로 풀면 `n`은 객체의 필드가 된다. 컴파일러는 잡힌 `var`를 힙의 박스 객체로 옮겨 바깥과 `f`가 함께 쓴다",
+			"`makeCounter`를 부를 때마다 새 `n`과 새 함수 객체가 생겨서 카운터끼리 상태를 공유하지 않는다"
+		],
+		"verify": "var n = 0\nval f = () => { n += 1; n }\nf() // => 1\nn // => 1\ndef makeCounter(step: Int) =\n  var k = 0\n  () => { k += step; k }\nval c1 = makeCounter(2)\nval c2 = makeCounter(2)\nc1() // => 2\nc1() // => 4\nc2() // => 2",
+		"unlock": [
+			"d-16-closure-class"
+		]
+	},
+	{
+		"id": "sugar-explicit-using",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "using을 직접 넘기면 탐색을 건너뛴다",
+		"summary": "`f(x)(using 값)`은 스코프의 `given` 탐색을 하지 않는다.",
+		"prompt": "`biggest[A](xs)(using Ordering[A])`로 최솟값을 얻으려면 어떻게 호출하고, 그 호출은 `given` 탐색과 무엇이 다른가?",
+		"points": [
+			"`biggest(xs)(using ord.reverse)`처럼 뒤집은 순서를 직접 넘긴다. 최댓값 함수 하나로 최솟값을 얻는다",
+			"`(using 값)`으로 넘기면 컴파일러가 스코프를 찾지 않아서, 어떤 `given`이 있든 넘긴 값이 쓰인다",
+			"생략한 호출은 같은 `using` 자리를 컴파일러가 찾은 `given`으로 채운 것이다"
+		],
+		"answerCode": "def smallest[A](xs: List[A])(using ord: Ordering[A]) = biggest(xs)(using ord.reverse)",
+		"verify": "def biggest[A](xs: List[A])(using ord: Ordering[A]): Option[A] = xs.reduceOption(ord.max)\ndef smallest[A](xs: List[A])(using ord: Ordering[A]) = biggest(xs)(using ord.reverse)\nsmallest(List(3, 1, 2)) // => Some(1)\nbiggest(List(3, 1, 2)) // => Some(3)",
+		"unlock": [
+			"d-17-explicit-using"
+		]
+	},
+	{
+		"id": "sugar-context-bound-expands",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "[A: Show]가 풀린 모양",
+		"summary": "컨텍스트 바운드는 이름 없는 `using` 매개변수다.",
+		"prompt": "`def render[A: Show](a: A)`는 컴파일러가 어떤 시그니처로 바꾸나? 본문에서 `summon[Show[A]]`는 무엇을 꺼내는 일인가?",
+		"points": [
+			"`(using Show[A])` 절이 `(a: A)` 뒤에 붙는다. 호출하는 쪽이 `given`을 찾아 채운다",
+			"`summon[Show[A]]`는 그 이름 없는 `using` 인자를 꺼내는 일이다. 이름을 붙이면 `summon` 없이 쓴다",
+			"`[A: Show]`와 `(using s: Show[A])`는 인자 이름 외에 같은 것이다"
+		],
+		"verify": "trait Show[A]:\n  def show(a: A): String\ngiven intShow: Show[Int] = _.toString\ndef r1[A: Show](a: A) = summon[Show[A]].show(a)\ndef r2[A](a: A)(using s: Show[A]) = s.show(a)\nr1(3) // => 3\nr2(3) // => 3",
+		"unlock": [
+			"d-18-using-chain"
+		]
+	},
+	{
+		"id": "sugar-nested-given-line",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "given 사슬을 손으로 잇기",
+		"summary": "`Show[List[List[Int]]]`는 `listShow`를 두 번 겹친 것이다.",
+		"prompt": "`Show[List[List[Int]]]`를 컴파일러가 조립한 값을 직접 쓴다. 빈칸을 채워라.",
+		"promptCode": "val nested: Show[List[List[Int]]] = ____",
+		"points": [
+			"`listShow(using listShow(using intShow))`다. 바깥 `listShow`가 요구하는 `Show[List[Int]]`를 안쪽 `listShow`가 만든다",
+			"`given [A](using Show[A])`는 인스턴스를 만드는 함수라서 이렇게 겹쳐진다. 컴파일러가 같은 조립을 한다"
+		],
+		"answerCode": "val nested: Show[List[List[Int]]] = listShow(using listShow(using intShow))",
+		"verify": "trait Show[A]:\n  def show(a: A): String\ngiven intShow: Show[Int] = _.toString\ngiven listShow[A](using s: Show[A]): Show[List[A]] = xs => xs.map(s.show).mkString(\"[\", \", \", \"]\")\nval nested: Show[List[List[Int]]] = listShow(using listShow(using intShow))\nnested.show(List(List(1), List(2, 3))) // => [[1], [2, 3]]",
+		"unlock": [
+			"d-18-using-chain"
+		]
+	},
+	{
+		"id": "sugar-nearest-given-wins",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "가까운 given이 동반 객체를 가린다",
+		"summary": "스코프의 `given`을 먼저 보고, 없을 때만 동반 객체를 본다.",
+		"prompt": "`Ver`의 `Ordering`이 동반 객체에 있는데, 같은 파일 위쪽에 `given Ordering[Ver]` (글자순)이 있다. `versions.max`는 어느 쪽을 쓰나? 왜 위험한가?",
+		"points": [
+			"스코프의 `given`을 먼저 찾고 동반 객체는 그다음이다. 그래서 가까운 글자순 인스턴스가 쓰인다",
+			"후보가 서로 다른 단계에서 나오므로 모호성 오류가 나지 않고 조용히 엉뚱한 순서가 된다",
+			"확인은 `summon`으로 하고, 고치려면 스코프의 `given`을 없애거나 `(using Ver.numeric)`로 직접 넘긴다"
+		],
+		"verify": "case class Ver(a: Int, b: Int)\nobject Ver:\n  given byNumber: Ordering[Ver] = Ordering.by(v => (v.a, v.b))\ngiven byText: Ordering[Ver] = Ordering.by(v => s\"${v.a}.${v.b}\")\nval vs = List(Ver(1, 9), Ver(1, 10))\nvs.max // => Ver(1,9)\nvs.max(using Ver.numeric) // => Ver(1,10)",
+		"unlock": [
+			"d-19-wrong-given"
+		]
+	},
+	{
+		"id": "sugar-right-assoc-line",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "1 +: 2 +: Empty 의 풀이",
+		"summary": "`:`로 끝나는 연산자는 오른쪽 피연산자의 메서드다.",
+		"prompt": "`1 +: 2 +: Empty`를 점 표기로 쓴다. 빈칸은 무엇인가?",
+		"promptCode": "val xs = ____",
+		"points": [
+			"`Empty.+:(2).+:(1)`: 수신자는 오른쪽 피연산자이고 왼쪽 피연산자는 인자다",
+			"그래서 `+:`는 `Int`가 아니라 `MyList`의 멤버로 정의한다. `1 +: xs`는 `xs.+:(1)`이다"
+		],
+		"answerCode": "val xs = Empty.+:(2).+:(1)",
+		"verify": "sealed trait MyList:\n  def +:(x: Int): MyList = Cons(x, this)\ncase object Empty extends MyList\ncase class Cons(h: Int, t: MyList) extends MyList\nval xs = Empty.+:(2).+:(1)\nxs // => Cons(1,Cons(2,Empty))\n(1 +: 2 +: Empty) == xs // => true",
+		"unlock": [
+			"d-20-right-assoc-cons"
+		]
+	},
+	{
+		"id": "sugar-compound-assign-cases",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "a += b 가 컴파일되는 두 경우",
+		"summary": "`+=` 메서드가 있거나, 없으면 `a`가 var이고 `+`가 있어야 한다.",
+		"prompt": "`a += b`가 컴파일되는 두 가지 경우를 말하라. `val a = 1; a += 1`은 왜 안 되나?",
+		"points": [
+			"`a`에 `+=` 메서드가 있으면 `a.+=(b)`를 부른다. 예를 들어 `val`인 `ListBuffer`가 그렇다",
+			"`+=`가 없고 `a`가 `var`이며 `+`가 있으면 `a = a + b`로 바뀐다",
+			"`val a = 1`은 `Int`에 `+=`도 없고 `a`에 다시 대입할 수도 없어서 둘 다 실패한다"
+		],
+		"verify": "val buf = collection.mutable.ListBuffer(1)\nbuf += 2\nbuf.toList // => List(1, 2)\nvar n = 1\nn += 1\nn // => 2",
+		"unlock": [
+			"d-21-vec2-ops"
+		]
+	},
+	{
+		"id": "sugar-unary-line",
+		"kind": "concept",
+		"topic": "sugar",
+		"title": "-p 의 변환",
+		"summary": "단항 연산자는 `unary_` 이름의 메서드다.",
+		"prompt": "`-p`는 어떤 메서드 호출로 바뀌나? 빈칸을 채워라.",
+		"promptCode": "p.____",
+		"points": [
+			"`unary_-`: `-p`는 `p.unary_-`다",
+			"단항 `-`, `+`, `!`, `~`는 `unary_` 접두 이름의 메서드로 정의한다"
+		],
+		"answerCode": "p.unary_-",
+		"verify": "case class Vec2(x: Int, y: Int):\n  def unary_- = Vec2(-x, -y)\nval p = Vec2(1, 2)\n-p // => Vec2(-1,-2)\np.unary_- // => Vec2(-1,-2)",
+		"unlock": [
+			"d-21-vec2-ops"
+		]
+	}
+]
