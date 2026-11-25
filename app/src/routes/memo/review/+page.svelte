@@ -2,7 +2,7 @@
 	import MemoClock from '#lib/MemoClock.svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
 	import { renderInline } from '#lib/inline.ts';
-	import { gradeFromChecklist } from '#lib/core/memo.ts';
+	import { capOvertime, gradeFromChecklist } from '#lib/core/memo.ts';
 	import { VERDICT } from '#lib/core/memo-sched.ts';
 	import { mmss } from '#lib/rank.ts';
 	import type { MemoAnswerResponse, MemoReviewData, MemoRevealResponse } from '#lib/types.ts';
@@ -23,7 +23,8 @@
 
 	const card = $derived(data.cards[i]);
 	const n = $derived(ticks.filter(Boolean).length);
-	const grade = $derived(reveal ? gradeFromChecklist(n, reveal.points.length) : 1);
+	const over = $derived(stoppedAt !== null && card ? stoppedAt - startedAt > card.limitSec * 1000 : false);
+	const grade = $derived(reveal ? capOvertime(gradeFromChecklist(n, reveal.points.length), over) : 1);
 	const label = (kind: string, p: string) => {
 		const at = p.indexOf(':');
 		return kind === 'steps' && at > 0 && at < 20 ? `<b>${renderInline(p.slice(0, at))}</b>${renderInline(p.slice(at))}` : renderInline(p);
@@ -40,7 +41,7 @@
 		error = '';
 		try {
 			stoppedAt = Date.now();
-			reveal = await post<MemoRevealResponse>('/memo/review/reveal', { id: card.id });
+			reveal = await post<MemoRevealResponse>('/memo/review/reveal', { id: card.id, elapsedMs: stoppedAt - startedAt });
 			ticks = reveal.points.map(() => false);
 		} catch (e) {
 			stoppedAt = null;
@@ -112,7 +113,7 @@
 		{/if}
 		<div class="m-spacer"></div>
 		{#if reveal}
-			<div class="m-verdict" role="status">{reveal.points.length}개 중 {n}개 · <b>{VERDICT[grade]}</b> · 다음 복습 {reveal.next[n]}</div>
+			<div class="m-verdict" role="status">{reveal.points.length}개 중 {n}개 · <b>{VERDICT[grade]}</b>{#if over && n >= reveal.points.length} (시간 초과){/if} · 다음 복습 {reveal.next[n]}</div>
 		{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
 		{#if reveal}

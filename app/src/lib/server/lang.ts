@@ -257,11 +257,22 @@ function givenCode(id: string): string | null {
 const insertSession = (problemId: string) =>
 	Number(db.prepare('INSERT INTO lang_sessions(lang, problem_id, started_at) VALUES(?,?,?)').run(LANG, problemId, now()).lastInsertRowid);
 
-/** Starts a session; an unfinished one for the same problem is resumed instead of duplicated. */
+const IDLE_SEC = 600;
+/** An open session is abandoned once its limit has passed and nothing (run, lookup) happened for IDLE_SEC. */
+function abandoned(s: SessionRow, limitSec: number): boolean {
+	const last = (table: string) => (db.prepare(`SELECT MAX(at) AS at FROM ${table} WHERE session_id = ?`).get(s.id) as { at: number | null }).at ?? 0;
+	const active = Math.max(s.started_at, last('lang_runs'), last('lang_lookups'));
+	return now() > s.started_at + limitSec && now() - active > IDLE_SEC;
+}
+
+/**
+ * Starts a session; an unfinished one for the same problem is resumed instead of duplicated, so leaving and
+ * coming back does not reset the clock. An abandoned one stays in the log (open, superseded) and a fresh one starts.
+ */
 export function startSession(problemId: string): void {
-	requireProblem(problemId);
+	const p = requireProblem(problemId);
 	const s = latestSession(problemId);
-	if (!s || s.ended_at !== null) insertSession(problemId);
+	if (!s || s.ended_at !== null || abandoned(s, p.limitSec)) insertSession(problemId);
 }
 
 export function restartSession(problemId: string): void {

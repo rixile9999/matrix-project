@@ -5,7 +5,7 @@ import { judge, loadBooks } from './judge.ts';
 import { findProblem } from './lang.ts';
 import { listCheatEntries } from './cheatsheet.ts';
 import { memoFiles, readMemoFile } from './memo-content.ts';
-import { CARD_KINDS, CHECK_KINDS, gradeFromChecklist, type Check, type MemoCard, type Pattern } from '#lib/core/memo.ts';
+import { CARD_KINDS, CHECK_KINDS, capOvertime, gradeFromChecklist, type Check, type MemoCard, type Pattern } from '#lib/core/memo.ts';
 import { TOPICS, type BookMeta, type CheatEntry, type JudgeResult } from '#lib/core/lang.ts';
 import {
 	LIMIT_SEC, VERDICT, WEEK_GOAL, buildMemories, daysThisWeek, dueAfter, estimateMinutes, failedTwice, humanInterval, itemKey, noteStatus, permutation, pickSession,
@@ -204,18 +204,19 @@ function openCard(id: unknown): { w: World; c: AnyCard } | null {
 	return c && cardOpen(w, c) ? { w, c } : null;
 }
 
-export function revealCard(id: unknown): MemoRevealResponse | null {
+export function revealCard(id: unknown, elapsedMs?: unknown): MemoRevealResponse | null {
 	const f = openCard(id);
 	if (!f) return null;
 	const { w, c } = f;
 	const prev = previewDue(w.memories.get(itemKey('card', c.id)) ?? null, w.at);
 	const total = c.points.length;
+	const over = clampMs(elapsedMs) > limitOf(c.kind) * 1000;
 	return {
 		points: c.points,
 		answerCode: c.answerCode,
 		patternTitle: (c.kind === 'recognize' || c.kind === 'steps') && c.pattern ? (patterns()[c.pattern]?.title ?? null) : null,
 		entry: c.entry,
-		next: Array.from({ length: total + 1 }, (_, n) => humanInterval(prev[gradeFromChecklist(n, total)], w.at))
+		next: Array.from({ length: total + 1 }, (_, n) => humanInterval(prev[capOvertime(gradeFromChecklist(n, total), over)], w.at))
 	};
 }
 
@@ -234,9 +235,10 @@ export function answerCard(id: unknown, ticked: unknown, elapsedMs: unknown): Me
 	if (!f) return null;
 	const total = f.c.points.length;
 	if (!Array.isArray(ticked) || !ticked.every((i) => idx(i, total)) || new Set(ticked).size !== ticked.length) throw new Error('체크한 항목이 올바르지 않습니다.');
-	const rating = gradeFromChecklist(ticked.length, total);
 	const ms = clampMs(elapsedMs);
-	record('card', f.c.id, rating, ms, { ticked: [...(ticked as number[])].sort((a, b) => a - b), total, limitSec: limitOf(f.c.kind), overtime: ms > limitOf(f.c.kind) * 1000 });
+	const overtime = ms > limitOf(f.c.kind) * 1000;
+	const rating = capOvertime(gradeFromChecklist(ticked.length, total), overtime);
+	record('card', f.c.id, rating, ms, { ticked: [...(ticked as number[])].sort((a, b) => a - b), total, limitSec: limitOf(f.c.kind), overtime });
 	const m = memoryOf('card', f.c.id)!;
 	return { rating, word: VERDICT[rating], next: humanInterval(m.card.due, now()) };
 }
@@ -290,7 +292,8 @@ const answeredRecently = (id: string) => !!db.prepare("SELECT 1 FROM memo_review
 
 function recordCheck(c: Check, first: boolean, correct: boolean, ms: number, detail: object): boolean {
 	if (!first) return false;
-	record('check', c.id, correct ? 3 : 1, ms, { ...detail, limitSec: limitOf(c.kind), overtime: ms > limitOf(c.kind) * 1000 });
+	const overtime = ms > limitOf(c.kind) * 1000;
+	record('check', c.id, capOvertime(correct ? 3 : 1, overtime), ms, { ...detail, limitSec: limitOf(c.kind), overtime });
 	return true;
 }
 

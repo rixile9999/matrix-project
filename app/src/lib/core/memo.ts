@@ -72,3 +72,6 @@ export const CHECK_KINDS: Record<Check['kind'], string> = { order: '순서 배�
 /** Checklist result -> review grade (FSRS rating): nothing recalled = again, part = hard, all = good. */
 export const gradeFromChecklist = (checked: number, total: number): 1 | 2 | 3 =>
 	checked <= 0 ? 1 : checked >= total ? 3 : 2;
+
+/** The time limit's consequence: a right answer that came after the limit counts as shaky (hard), not remembered, so it returns sooner. */
+export const capOvertime = (rating: 1 | 2 | 3, overtime: boolean): 1 | 2 | 3 => (overtime && rating === 3 ? 2 : rating);

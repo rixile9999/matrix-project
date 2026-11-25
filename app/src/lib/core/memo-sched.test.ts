@@ -105,3 +105,12 @@ describe('permutation', () => {
 		expect(permutation(0, 'x')).toEqual([]);
 	});
 });
+
+import { capOvertime } from './memo.ts';
+import { test as t2, expect as e2 } from 'vitest';
+t2('overtime caps a full recall at shaky and leaves the rest', () => {
+	e2(capOvertime(3, true)).toBe(2);
+	e2(capOvertime(3, false)).toBe(3);
+	e2(capOvertime(2, true)).toBe(2);
+	e2(capOvertime(1, true)).toBe(1);
+});

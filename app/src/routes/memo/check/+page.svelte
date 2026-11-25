@@ -18,11 +18,13 @@
 	let running = $state(false);
 	let error = $state('');
 	let right = $state<boolean[]>([]); // first-submission verdicts
+	let lateRight = $state(false); // the recorded answer was right but over the limit
 	let done = $state(false);
 	let doneAt = $state(0);
 
 	const c = $derived(data.checks[i]);
 	const last = $derived(i + 1 >= data.checks.length);
+	const late = $derived(stoppedAt !== null && c ? stoppedAt - startedAt > c.limitSec * 1000 : false);
 	const pool = $derived(c ? c.lines.map((text, k) => ({ text, k })).filter((l) => !picked.includes(l.k)) : []);
 
 	async function post<T>(url: string, body: object): Promise<T> {
@@ -43,6 +45,7 @@
 			if (first) {
 				firstDone = true;
 				right = [...right, r.correct];
+				lateRight = r.correct && r.recorded && late;
 			}
 			if (c.kind === 'order' && r.correct) solved = true;
 		} catch (e) {
@@ -84,6 +87,7 @@
 		res = null;
 		tapped = null;
 		firstDone = false;
+		lateRight = false;
 		solved = false;
 		error = '';
 	}
@@ -160,6 +164,7 @@
 				<div class="m-msg {tapped === res.correctIndex ? 'ok' : 'bad'}" role="status">{tapped === res.correctIndex ? '맞습니다. ' : '아닙니다. '}{@html renderInline(res.whys[tapped] ?? '')}</div>
 				{#if tapped !== res.correctIndex}<div class="m-msg">정답: {c.options[res.correctIndex ?? 0]}</div>{/if}
 			{/if}
+			{#if lateRight}<div class="m-msg" role="status">제한 시간을 넘겨서 '흔들림'으로 기록했습니다. 더 일찍 다시 나옵니다.</div>{/if}
 		{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
 
