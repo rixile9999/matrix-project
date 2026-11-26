@@ -63,6 +63,7 @@
 			<a href="/spar" class:on={path.startsWith('/spar')} aria-current={path.startsWith('/spar') ? 'page' : undefined}>{t('스파링', 'Sparring')}</a>
 			<a href="/debrief" class:on={path.startsWith('/debrief')} aria-current={path.startsWith('/debrief') ? 'page' : undefined}>{t('복기', 'Debrief')}</a>
 			<a href="/garden" class:on={path.startsWith('/garden')} aria-current={path.startsWith('/garden') ? 'page' : undefined}>{t('정원', 'Garden')}</a>
+			<a href="/learning-map" class:on={path === '/learning-map'} aria-current={path === '/learning-map' ? 'page' : undefined}>{t('학습 구조', 'Learning model')}</a>
 		</nav>
 		<div class="bar-tools">
 			<LanguageSwitch />
@@ -96,6 +97,7 @@
 {/if}
 
 <style>
+	#platform-nav { max-width: 100%; }
 	.desk-menu { display: none; }
 	.focus-language { display: flex; justify-content: flex-end; padding: .4rem 1rem; }
 </style>
