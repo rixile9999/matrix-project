@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import { onDestroy, untrack } from 'svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
@@ -14,6 +15,7 @@
 	import { LEVELS, TOPICS, type JudgeResult } from '#lib/core/lang.ts';
 	import { groupStages } from '#lib/core/study.ts';
 	import type { LangHintResponse, LangKind, LangLookupResponse, LangRunResponse, LangSessionData } from '#lib/types.ts';
+	import { t, label } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: LangSessionData } = $props();
 
@@ -61,6 +63,17 @@
 	let givenOpen = $state(false);
 	let sent = new Set<string>(); // entry ids already reported as looked up in this session
 	let lastId = -1;
+	let lastLocale: string | undefined;
+	$effect(() => {
+		const locale = page.data.locale;
+		if (locale !== lastLocale) {
+			lastLocale = locale;
+			runResult = undefined;
+			hintsLocal = [];
+			intentLocal = null;
+			error = '';
+		}
+	});
 	$effect(() => {
 		const id = s.id;
 		if (id === lastId) return;
@@ -94,6 +107,7 @@
 		wall = runStart;
 		if (!timer) timer = setInterval(() => (wall = Date.now()), 500);
 		const id = s.id;
+		const locale = page.data.locale;
 		try {
 			const res = await fetch(`/lang/${p.id}/run`, {
 				method: 'POST',
@@ -102,7 +116,11 @@
 			});
 			const j = (await res.json()) as LangRunResponse;
 			if (id !== s.id) return;
-			error = j.error ?? (res.ok ? '' : `실행 실패 (${res.status})`);
+			if (locale !== page.data.locale) {
+				await invalidateAll();
+				return;
+			}
+			error = j.error ?? (res.ok ? '' : t(`실행 실패 (${res.status})`, `Run failed (${res.status})`));
 			if (j.result && !j.error) runResult = j.result;
 			if (j.finished) await invalidateAll();
 		} catch (e) {
@@ -116,13 +134,20 @@
 	async function hint() {
 		if (hinting || hints.length >= 2) return;
 		hinting = true;
+		const id = s.id;
+		const locale = page.data.locale;
 		try {
 			const res = await fetch(`/lang/${p.id}/hint`, { method: 'POST' });
 			const j = (await res.json()) as Partial<LangHintResponse>;
+			if (id !== s.id) return;
+			if (locale !== page.data.locale) {
+				await invalidateAll();
+				return;
+			}
 			if (j.hints) hintsLocal = j.hints;
 			if (j.refs) refsLocal = j.refs;
 			if (j.intent) intentLocal = j.intent;
-			error = j.error ?? (res.ok ? '' : `힌트 실패 (${res.status})`);
+			error = j.error ?? (res.ok ? '' : t(`힌트 실패 (${res.status})`, `Hint failed (${res.status})`));
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -224,13 +249,13 @@
 		}
 	}
 
-	const KIND: Record<LangKind, string> = { write: '', fix: '버그 수정', refactor: '리팩터링', complete: '완성' };
+	const kindLabel = (kind: LangKind) => kind === 'write' ? '' : kind === 'fix' ? t('버그 수정', 'Fix bug') : kind === 'refactor' ? t('리팩터링', 'Refactor') : t('완성', 'Complete');
 	const reason = $derived(result && result.status === 'failed' && result.cases.length > 0 && result.cases.every((c) => c.status === 'ok') && result.output ? result.output : '');
 	const stages = $derived(result ? groupStages(result.cases) : []);
-	const STATUS = { passed: '통과', failed: '실패', compile_error: '컴파일 오류', timeout: '시간 초과: 실행이 너무 오래 걸렸습니다' } as const;
+	const statusLabel = (status: JudgeResult['status']) => status === 'passed' ? t('통과', 'Passed') : status === 'failed' ? t('실패', 'Failed') : status === 'compile_error' ? t('컴파일 오류', 'Compile error') : t('시간 초과: 실행이 너무 오래 걸렸습니다', 'Time expired: execution took too long');
 	const MARK = { ok: '✓', fail: '✗', error: '!' } as const;
 	const outcomeText = $derived(
-		!fin ? '' : fin.outcome === 'passed' ? `통과 · ${mmss(fin.elapsedSec)}${fin.overtime ? ' (제한시간 초과)' : ''}` : '답을 확인함'
+		!fin ? '' : fin.outcome === 'passed' ? `${t('통과', 'Passed')} · ${mmss(fin.elapsedSec)}${fin.overtime ? ` (${t('제한시간 초과', 'over time')})` : ''}` : t('답을 확인함', 'Solution viewed')
 	);
 </script>
 
@@ -241,17 +266,17 @@
 <div class="lang-split" class:with-cheat={panelOpen}>
 	<div class="lang-col">
 		<div>
-			<a class="note" href="/lang">← 목록</a>
+			<a class="note" href="/lang">← {t('목록', 'List')}</a>
 			{#if p.book}
-				<nav class="lang-crumb" aria-label="책 위치">
+				<nav class="lang-crumb" aria-label={t('책 위치', 'Book location')}>
 					<a href="/lang/book/{p.book.id}">{p.book.title}</a> ›
-					<a href="/lang/book/{p.book.id}">{p.book.chapter}장{p.book.chapterTitle ? ` ${p.book.chapterTitle}` : ''}</a> ›
-					<span>연습 {p.book.exercise}</span>
+					<a href="/lang/book/{p.book.id}">{t(`${p.book.chapter}장`, `Chapter ${p.book.chapter}`)}{p.book.chapterTitle ? ` ${p.book.chapterTitle}` : ''}</a> ›
+					<span>{t(`연습 ${p.book.exercise}`, `Exercise ${p.book.exercise}`)}</span>
 				</nav>
 			{/if}
 			<div class="lang-meta">
-				<span class="label">{LEVELS[p.level]} · {TOPICS[p.topic]}</span>
-				{#if KIND[p.kind]}<span class="kind">{KIND[p.kind]}</span>{/if}
+				<span class="label">{label(LEVELS[p.level])} · {label(TOPICS[p.topic])}</span>
+				{#if kindLabel(p.kind)}<span class="kind">{kindLabel(p.kind)}</span>{/if}
 			</div>
 			<div class="lang-title">
 				<h2>{p.book ? p.book.exercise : String(p.order).padStart(2, '0')}. {p.title}</h2>
@@ -261,13 +286,13 @@
 					<TimeGlyph remainingSec={remaining} limitSec={p.limitSec} size={26} />
 				{/if}
 			</div>
-			{#if !fin}<span class="note">제한 {mmss(p.limitSec)}{over ? ' · 시간이 지났지만 계속 풀 수 있습니다' : ''}</span>{/if}
+			{#if !fin}<span class="note">{t(`제한 ${mmss(p.limitSec)}`, `Limit ${mmss(p.limitSec)}`)}{over ? ` · ${t('시간이 지났지만 계속 풀 수 있습니다', 'you may continue after the limit')}` : ''}</span>{/if}
 		</div>
 
 		{#if p.kind === 'fix'}
-			<p class="note lang-kindnote">코드에 버그가 있습니다. 고쳐서 테스트를 통과시키세요.</p>
+			<p class="note lang-kindnote">{t('코드에 버그가 있습니다. 고쳐서 테스트를 통과시키세요.', 'The code has a bug. Fix it to pass the tests.')}</p>
 		{:else if p.kind === 'refactor'}
-			<p class="note lang-kindnote">동작은 맞습니다. {@html renderInline(p.avoid.map((w) => `\`${w}\``).join('·'))} 없이 다시 쓰세요.</p>
+			<p class="note lang-kindnote">{t('동작은 맞습니다.', 'The behavior is correct.')} {@html renderInline(p.avoid.map((w) => `\`${w}\``).join('·'))} {t('없이 다시 쓰세요.', 'Rewrite it without these.')}</p>
 		{/if}
 
 		<p class="lang-stmt">{@html renderInline(p.statement)}</p>
@@ -275,18 +300,18 @@
 		{#if !fin}
 			{#if hints.length}
 				<div class="lang-col" style="gap:8px">
-					{#each hints as h, i (i)}<div class="lang-hint"><span class="label">힌트 {i + 1}</span><br />{@html renderInline(h)}</div>{/each}
+					{#each hints as h, i (i)}<div class="lang-hint"><span class="label">{t(`힌트 ${i + 1}`, `Hint ${i + 1}`)}</span><br />{@html renderInline(h)}</div>{/each}
 					{#if related.length}
-						<div class="lang-refs"><span class="label">관련 문법</span>{#each related as e (e.id)}<button class="chip" type="button" onclick={() => openRef(e.id)}>{e.title}</button>{/each}</div>
+						<div class="lang-refs"><span class="label">{t('관련 문법', 'Related syntax')}</span>{#each related as e (e.id)}<button class="chip" type="button" onclick={() => openRef(e.id)}>{e.title}</button>{/each}</div>
 					{/if}
-					{#if intent}<div class="lang-hint lang-intent"><span class="label">출제 취지</span><br />{@html renderInline(intent)}</div>{/if}
+					{#if intent}<div class="lang-hint lang-intent"><span class="label">{t('출제 취지', 'Problem intent')}</span><br />{@html renderInline(intent)}</div>{/if}
 				</div>
 			{/if}
 		{/if}
 
 		{#if result}
 			<div class="lang-col" style="gap:8px" aria-live="polite">
-				<span class="lang-sum" class:ok={result.status === 'passed'} class:no={result.status !== 'passed'}>{STATUS[result.status]}</span>
+				<span class="lang-sum" class:ok={result.status === 'passed'} class:no={result.status !== 'passed'}>{statusLabel(result.status)}</span>
 				{#each stages as g, gi (gi)}
 					{#if g.stage !== null}
 						<div class="stage" class:ok={g.ok === g.cases.length} class:no={g.ok < g.cases.length}>{g.stage} {g.ok}/{g.cases.length}</div>
@@ -301,10 +326,10 @@
 					</div>
 				{/each}
 				{#if reason}
-					<span class="label">실패 이유</span>
+					<span class="label">{t('실패 이유', 'Failure reason')}</span>
 					<p class="err" style="margin:0">{@html renderInline(reason)}</p>
 				{:else if result.output}
-					<span class="label">{result.status === 'compile_error' ? '컴파일러 출력' : '프로그램 출력'}</span>
+					<span class="label">{result.status === 'compile_error' ? t('컴파일러 출력', 'Compiler output') : t('프로그램 출력', 'Program output')}</span>
 					<pre class="lang-out">{result.output}</pre>
 				{/if}
 			</div>
@@ -315,37 +340,37 @@
 			<div class="lang-done">
 				<span class="lang-sum" class:ok={fin.outcome === 'passed'}>{outcomeText}</span>
 				{#if fin.targets.length}<div class="tags">{#each fin.targets as t (t)}<span class="tag">{t}</span>{/each}</div>{/if}
-				{#if intent}<div class="lang-hint lang-intent big"><span class="label">출제 취지</span><br />{@html renderInline(intent)}</div>{/if}
+				{#if intent}<div class="lang-hint lang-intent big"><span class="label">{t('출제 취지', 'Problem intent')}</span><br />{@html renderInline(intent)}</div>{/if}
 				{#if fin.notes}<p class="insight" style="max-width:none;margin:0">{@html renderInline(fin.notes)}</p>{/if}
 				{#if fin.avoided.length}
-					<p class="note" style="margin:0">{@html renderInline(fin.avoided.map((w) => `\`${w}\``).join(', '))} 사용함. 모범 답안은 쓰지 않습니다.</p>
+					<p class="note" style="margin:0">{@html renderInline(fin.avoided.map((w) => `\`${w}\``).join(', '))} {t('사용함. 모범 답안은 쓰지 않습니다.', 'used. The reference solution does not use them.')}</p>
 				{/if}
 				{#if related.length}
 					<div class="lang-col" style="gap:8px">
-						<span class="label">관련 문법</span>
+						<span class="label">{t('관련 문법', 'Related syntax')}</span>
 						{#each related as e (e.id)}
 							<div class="cs-entry"><div class="cs-title">{e.title}</div><CheatBody entry={e} /></div>
 						{/each}
 					</div>
 				{/if}
-				<p class="note" style="margin:0">찾아본 문법: {looked.length ? looked.join(', ') : '없음'}</p>
+				<p class="note" style="margin:0">{t('찾아본 문법:', 'Looked up:')} {looked.length ? looked.join(', ') : t('없음', 'none')}</p>
 				{#if data.debrief}
-					<div class="lang-debrief">{#key data.debrief.id}<SessionCard card={data.debrief} askSelf heading="이번 세션 · Debrief" />{/key}</div>
+					<div class="lang-debrief">{#key data.debrief.id}<SessionCard card={data.debrief} askSelf heading={t('이번 세션 · Debrief', 'This session · Debrief')} />{/key}</div>
 				{/if}
 				{#if hints.length}
-					<details><summary class="note">힌트 다시 보기</summary>
+					<details><summary class="note">{t('힌트 다시 보기', 'Review hints')}</summary>
 						{#each hints as h, i (i)}<div class="lang-hint" style="margin-top:6px">{@html renderInline(h)}</div>{/each}
 					</details>
 				{/if}
 				<div class="lang-bar">
-					<form method="POST" action="?/restart" use:enhance><button class="btn">다시 풀기</button></form>
+					<form method="POST" action="?/restart" use:enhance><button class="btn">{t('다시 풀기', 'Try again')}</button></form>
 					{#if data.nextId}
 						<form method="POST" action="/lang?/start" use:enhance>
 							<input type="hidden" name="problemId" value={data.nextId} />
-							<button class="btn ghost">다음 문제</button>
+							<button class="btn ghost">{t('다음 문제', 'Next problem')}</button>
 						</form>
 					{/if}
-					{#if p.book}<a class="btn ghost" href="/lang/book/{p.book.id}">책으로</a>{:else}<a class="btn ghost" href="/lang">목록</a>{/if}
+					{#if p.book}<a class="btn ghost" href="/lang/book/{p.book.id}">{t('책으로', 'Book')}</a>{:else}<a class="btn ghost" href="/lang">{t('목록', 'List')}</a>{/if}
 				</div>
 			</div>
 		{/if}
@@ -354,63 +379,63 @@
 	<div class="lang-col">
 		{#if p.given}
 			<details class="lang-box lang-given" bind:open={givenOpen}>
-				<summary>주어진 코드 · {givenLines}줄 — 이미 정의되어 있어 그대로 쓸 수 있습니다</summary>
+				<summary>{t(`주어진 코드 · ${givenLines}줄 — 이미 정의되어 있어 그대로 쓸 수 있습니다`, `Given code · ${givenLines} lines — already defined and ready to use`)}</summary>
 				{#if givenOpen}
-					<div class="lang-ed short">{#key p.id}<CodeEditor doc={p.given} readonly label="주어진 코드" />{/key}</div>
+					<div class="lang-ed short">{#key p.id}<CodeEditor doc={p.given} readonly label={t('주어진 코드', 'Given code')} />{/key}</div>
 				{/if}
 			</details>
 		{/if}
 		{#key s.id}
 			<div class="lang-box lang-ed">
-				<CodeEditor doc={s.code} readonly={!!fin} label="Scala 코드" onchange={(c) => (code = c)} onrun={run} />
+				<CodeEditor doc={s.code} readonly={!!fin} label={t('Scala 코드', 'Scala code')} onchange={(c) => (code = c)} onrun={run} />
 			</div>
 		{/key}
 		{#if !fin}
 			<div class="lang-bar">
-				<button class="btn" type="button" onclick={run} disabled={running}>{running ? '실행 중…' : '실행'}</button>
+				<button class="btn" type="button" onclick={run} disabled={running}>{running ? t('실행 중…', 'Running…') : t('실행', 'Run')}</button>
 				<span class="note">⌘/Ctrl + Enter</span>
 				<span class="grow"></span>
-				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>치트시트</button>
-				<button class="btn ghost" type="button" onclick={openCoach} aria-expanded={panelOpen && tab === 'coach'}>{COACH_NAME}{#if !fin && !over}<svg class="co-lock" viewBox="0 0 16 16" width="12" height="12" aria-label="잠김" role="img"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6" /></svg>{/if}</button>
-				<button class="btn ghost" type="button" onclick={hint} disabled={hinting || hints.length >= 2}>힌트 보기 ({hints.length}/2)</button>
+				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>{t('치트시트', 'Cheatsheet')}</button>
+				<button class="btn ghost" type="button" onclick={openCoach} aria-expanded={panelOpen && tab === 'coach'}>{COACH_NAME}{#if !fin && !over}<svg class="co-lock" viewBox="0 0 16 16" width="12" height="12" aria-label={t('잠김', 'Locked')} role="img"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6" /></svg>{/if}</button>
+				<button class="btn ghost" type="button" onclick={hint} disabled={hinting || hints.length >= 2}>{t('힌트 보기', 'Show hints')} ({hints.length}/2)</button>
 				{#if !confirming}
-					<button class="btn ghost" type="button" onclick={() => (confirming = true)}>답 보기</button>
+					<button class="btn ghost" type="button" onclick={() => (confirming = true)}>{t('답 보기', 'View solution')}</button>
 				{/if}
 			</div>
 			{#if running}
-				<span class="status" aria-live="polite"><span class="pulse"></span>{slow ? '컴파일하고 있습니다. 처음 실행은 최대 1분 걸립니다.' : '실행 중…'}</span>
+					<span class="status" aria-live="polite"><span class="pulse"></span>{slow ? t('컴파일하고 있습니다. 처음 실행은 최대 1분 걸립니다.', 'Compiling. The first run can take up to a minute.') : t('실행 중…', 'Running…')}</span>
 			{/if}
 			{#if confirming}
 				<div class="confirm" style="justify-content:flex-start">
-					<span>답을 보면 풀이로 기록되지 않습니다.</span>
-					<form method="POST" action="?/reveal" use:enhance><button class="btn danger small">답 보기</button></form>
-					<button class="btn ghost small" type="button" onclick={() => (confirming = false)}>계속 풀기</button>
+					<span>{t('답을 보면 풀이로 기록되지 않습니다.', 'Viewing the solution is not recorded as a solve.')}</span>
+					<form method="POST" action="?/reveal" use:enhance><button class="btn danger small">{t('답 보기', 'View solution')}</button></form>
+					<button class="btn ghost small" type="button" onclick={() => (confirming = false)}>{t('계속 풀기', 'Keep solving')}</button>
 				</div>
 			{/if}
 		{:else}
 			<div class="lang-bar">
-				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>치트시트</button>
+				<button class="btn ghost" type="button" onclick={openPanel} aria-expanded={panelOpen && tab === 'cheat'}>{t('치트시트', 'Cheatsheet')}</button>
 				<button class="btn ghost" type="button" onclick={openCoach} aria-expanded={panelOpen && tab === 'coach'}>{COACH_NAME}</button>
 			</div>
 			<div class="lang-box lang-sol">
-				<div class="lang-cap">모범 답안</div>
+				<div class="lang-cap">{t('모범 답안', 'Reference solution')}</div>
 				<div class="lang-ed short">
-					{#key s.id}<CodeEditor doc={fin.solution} readonly label="모범 답안" />{/key}
+					{#key s.id}<CodeEditor doc={fin.solution} readonly label={t('모범 답안', 'Reference solution')} />{/key}
 				</div>
 			</div>
 		{/if}
 	</div>
 
-	<button class="cheat-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label="패널 닫기" onclick={() => (panelOpen = false)}></button>
-	<aside class="cheat-panel" class:open={panelOpen} class:tab-coach={tab === 'coach'} aria-label={tab === 'coach' ? COACH_NAME : '치트시트'} aria-hidden={!panelOpen}>
+	<button class="cheat-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label={t('패널 닫기', 'Close panel')} onclick={() => (panelOpen = false)}></button>
+	<aside class="cheat-panel" class:open={panelOpen} class:tab-coach={tab === 'coach'} aria-label={tab === 'coach' ? COACH_NAME : t('치트시트', 'Cheatsheet')} aria-hidden={!panelOpen}>
 		<div class="cheat-bar">
 			<div class="cheat-tabs" role="tablist">
-				<button class="cheat-tab" type="button" role="tab" aria-selected={tab === 'cheat'} onclick={() => (tab = 'cheat')}>치트시트</button>
+				<button class="cheat-tab" type="button" role="tab" aria-selected={tab === 'cheat'} onclick={() => (tab = 'cheat')}>{t('치트시트', 'Cheatsheet')}</button>
 				<button class="cheat-tab" type="button" role="tab" aria-selected={tab === 'coach'} onclick={() => (tab = 'coach')}>{COACH_NAME}</button>
 			</div>
 			{#if tab === 'cheat'}<span class="note cheat-key">⌘/Ctrl + K</span>{/if}
 			<span class="grow"></span>
-			<button class="btn ghost small" type="button" onclick={() => (panelOpen = false)}>닫기</button>
+			<button class="btn ghost small" type="button" onclick={() => (panelOpen = false)}>{t('닫기', 'Close')}</button>
 		</div>
 		<div class="cheat-scroll" hidden={tab !== 'cheat'}>
 			<CheatSheet bind:this={sheet} entries={data.cheat} {reveal} onopen={lookup} />

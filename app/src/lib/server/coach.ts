@@ -1,3 +1,4 @@
+import { tr, label } from './locale.ts';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {runScala, askCoach, connectedCoaches} from './worker.ts';
@@ -92,7 +93,7 @@ export async function threadView(kind: unknown, id: unknown): Promise<CoachThrea
 	return {
 		access: c.access,
 		opensAt: c.opensAt,
-		gets: c.material()?.gets ?? [],
+		gets: c.material()?.gets.map(label) ?? [],
 		backends: (await connectedCoaches()).map((b) => ({ id: b, label: BACKENDS[b] })),
 		messages: thread(c)
 	};
@@ -111,25 +112,25 @@ export async function startAsk(body: Record<string, unknown>, signal?: AbortSign
 	const backendId = body.backend;
 	const question = typeof body.question === 'string' ? body.question.trim() : '';
 	const code = body.code;
-	if (!ctx || typeof ctx !== 'object') return { status: 400, error: '질문할 대상이 올바르지 않습니다.' };
-	if (typeof backendId !== 'string' || !Object.hasOwn(BACKENDS, backendId)) return { status: 400, error: '알 수 없는 백엔드입니다.' };
-	if (!question) return { status: 400, error: '질문을 입력하세요.' };
-	if (question.length > QUESTION_MAX) return { status: 400, error: `질문이 너무 깁니다. (최대 ${QUESTION_MAX.toLocaleString('en-US')}자)` };
-	if (code !== undefined && (typeof code !== 'string' || code.length > CODE_MAX)) return { status: 400, error: '코드가 올바르지 않거나 너무 깁니다.' };
-	if (ctx.kind !== 'lang' && ctx.kind !== 'memo') return { status: 400, error: '질문할 대상이 올바르지 않습니다.' };
+	if (!ctx || typeof ctx !== 'object') return { status: 400, error: tr('질문할 대상이 올바르지 않습니다.', 'Invalid coaching context.') };
+	if (typeof backendId !== 'string' || !Object.hasOwn(BACKENDS, backendId)) return { status: 400, error: tr('알 수 없는 백엔드입니다.', 'Unknown provider.') };
+	if (!question) return { status: 400, error: tr('질문을 입력하세요.', 'Enter a question.') };
+	if (question.length > QUESTION_MAX) return { status: 400, error: tr(`질문이 너무 깁니다. (최대 ${QUESTION_MAX.toLocaleString('en-US')}자)`, `Question exceeds ${QUESTION_MAX.toLocaleString('en-US')} characters.`) };
+	if (code !== undefined && (typeof code !== 'string' || code.length > CODE_MAX)) return { status: 400, error: tr('코드가 올바르지 않거나 너무 깁니다.', 'Invalid code or length limit exceeded.') };
+	if (ctx.kind !== 'lang' && ctx.kind !== 'memo') return { status: 400, error: tr('질문할 대상이 올바르지 않습니다.', 'Invalid coaching context.') };
 
 	const c = resolveContext(ctx.kind, ctx.id);
-	if (!c) return { status: 404, error: '질문할 대상을 찾을 수 없습니다.' };
-	if (c.access === 'locked') return { status: 403, error: '지금은 질문할 수 없습니다. 제한시간이 지나거나 세션이 끝나면 열립니다.' };
+	if (!c) return { status: 404, error: tr('질문할 대상을 찾을 수 없습니다.', 'Coaching context not found.') };
+	if (c.access === 'locked') return { status: 403, error: tr('지금은 질문할 수 없습니다. 제한시간이 지나거나 세션이 끝나면 열립니다.', 'Questions open when the timer expires or the session ends.') };
 	const access = c.access;
-	if (!(await connectedCoaches()).includes(backendId as BackendId)) return {status:503,error:'코치 연결 설정에서 이 제공자를 먼저 연결하세요.'};
+	if (!(await connectedCoaches()).includes(backendId as BackendId)) return {status:503,error:tr('코치 연결 설정에서 이 제공자를 먼저 연결하세요.', 'Connect this provider in Coach settings first.')};
 	const key = accountId();
-	if (running.has(key)) return { status: 409, error: '이미 답을 기다리는 질문이 있습니다.' };
+	if (running.has(key)) return { status: 409, error: tr('이미 답을 기다리는 질문이 있습니다.', 'A question is already awaiting an answer.') };
 
 
 	const material = c.material(c.kind === 'lang' ? (code as string | undefined) : undefined)!;
 	const history: HistoryMessage[] = thread(c).filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text }));
-	const system = systemPrompt(c.kind, access);
+	const system = systemPrompt(c.kind, access, tr('ko', 'en'));
 	const prompt = buildPrompt(material.text, history, question);
 
 	running.add(key);
@@ -220,7 +221,7 @@ export async function verifyTrace(setup: string, steps: Step[]): Promise<CoachVe
 			'Cheat.scala': readFileSync(resolve('cheatsheet/_harness/Cheat.scala'),'utf8'),
 			'T.scala':src.t, 'Main.scala':src.main
 		});
-		if (r.timedOut) return fail('시간 안에 끝나지 않았습니다. ');
+		if (r.timedOut) return fail(tr('시간 안에 끝나지 않았습니다. ', 'Time limit exceeded.'));
 		const errors = scalaErrors(r.stderr, dir);
 		if (errors) {
 			// compile error: which steps do the error positions fall in?
@@ -238,7 +239,7 @@ export async function verifyTrace(setup: string, steps: Step[]): Promise<CoachVe
 			continue;
 		}
 		const setupErr = r.stdout.split('\n').find((l) => l.startsWith('##ERR|-1|'));
-		if (setupErr) return fail('setup 실행 중 예외: ' + setupErr.split('|').slice(2).join('|'));
+		if (setupErr) return fail(tr('setup 실행 중 예외: ', 'Exception in setup: ') + setupErr.split('|').slice(2).join('|'));
 		for (const line of r.stdout.split('\n')) {
 			if (line.startsWith('##SHOW|t|')) {
 				const [, , n, ...rest] = line.split('|');
@@ -262,10 +263,10 @@ export async function verifyMessage(messageId: unknown, block: unknown): Promise
 	const traces = parseAnswer(row.text).flatMap((s) => (s.type === 'trace' ? [s.block] : []));
 	const t = traces[block as number];
 	if (!t) return null;
-	const key = `${accountId()}:${messageId}:${block}`;
+	const key = `${accountId()}:${messageId}:${block}:${tr('ko', 'en')}`;
 	const hit = verified.get(key);
 	if (hit) return hit;
 	const out = await verifyTrace(t.setup, t.steps);
-	if (!(out.error ?? '').includes('시간 안에')) verified.set(key, out);
+	if (!out.error?.startsWith(tr('시간 안에', 'Time limit exceeded.'))) verified.set(key, out);
 	return out;
 }

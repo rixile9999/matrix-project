@@ -1,3 +1,4 @@
+import { tr } from '#lib/server/locale.ts';
 import { WorkerUnavailable } from '#lib/server/worker.ts';
 import { error, json } from '@sveltejs/kit';
 import { readJson } from '#lib/server/memo.ts';
@@ -9,6 +10,6 @@ export const POST = async ({ request }) => {
 		if (e instanceof WorkerUnavailable) error(503,e.message);
 		throw e;
 	});
-	if (!r) return json({ error: '검증할 trace 블록을 찾을 수 없습니다.' }, { status: 404 });
+	if (!r) return json({ error: tr('검증할 trace 블록을 찾을 수 없습니다.', 'Trace block not found.') }, { status: 404 });
 	return json(r);
 };

@@ -1,4 +1,4 @@
-import * as m from '#lib/server/memo.ts';
-import type { MemoReviewData } from '#lib/types.ts';
+import { reviewSession } from '#lib/server/memo.ts';
+import { bothLanguages } from '#lib/server/locale.ts';
 
-export const load = async (): Promise<MemoReviewData> => ({ cards: m.reviewSession() });
+export const load = () => ({ queue: bothLanguages(reviewSession) });

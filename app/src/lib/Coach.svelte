@@ -1,14 +1,16 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { tick, untrack } from 'svelte';
 	import { COACH_NAME, type BackendId, type CoachContext } from '#lib/core/coach.ts';
 	import type { CoachMessage, CoachThreadResponse } from '#lib/types.ts';
 	import Answer from '#lib/coach/Answer.svelte';
 	import { readEvents } from '#lib/coach/stream.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let {
 		context,
 		getCode,
-		placeholder = '질문 입력',
+		placeholder = t('질문 입력', 'Ask a question'),
 		refreshKey = 0
 	}: {
 		context: CoachContext;
@@ -84,6 +86,7 @@
 	$effect(() => {
 		const { kind, id } = context;
 		void refreshKey;
+		void page.data.locale;
 		untrack(() => {
 			live = null;
 			notice = '';
@@ -148,11 +151,11 @@
 			});
 			if (!res.ok) {
 				if (res.status === 403) {
-					fail('지금은 묻을 수 없습니다. 제한 시간이 끝나면 열립니다.');
+					fail(t('지금은 묻을 수 없습니다. 제한 시간이 끝나면 열립니다.', 'You cannot ask yet. It opens when the time limit ends.'));
 					load(context.kind, context.id, true);
-				} else if (res.status === 409) fail('아직 앞의 질문에 답하는 중입니다. 잠시 뒤에 다시 묻어 보세요.');
-				else if (res.status === 404) fail('이 항목에는 물을 수 없습니다.');
-				else fail(`질문을 보내지 못했습니다 (${res.status}).`);
+				} else if (res.status === 409) fail(t('아직 앞의 질문에 답하는 중입니다. 잠시 뒤에 다시 묻어 보세요.', 'The previous question is still being answered. Try again shortly.'));
+				else if (res.status === 404) fail(t('이 항목에는 물을 수 없습니다.', 'You cannot ask about this item.'));
+				else fail(`${t('질문을 보내지 못했습니다', 'Could not send the question')} (${res.status}).`);
 				return;
 			}
 			let finished = false;
@@ -166,13 +169,13 @@
 				}
 			}
 			if (!finished) {
-				notice = '답이 중간에 끊겼습니다. 기록을 다시 불러옵니다.';
+				notice = t('답이 중간에 끊겼습니다. 기록을 다시 불러옵니다.', 'The answer stopped midway. Reloading the record.');
 				live = null;
 				await load(context.kind, context.id, true);
 				messages = thread?.messages ?? messages;
 			}
 		} catch {
-			fail('연결에 실패했습니다. 잠시 뒤 다시 시도하세요.');
+			fail(t('연결에 실패했습니다. 잠시 뒤 다시 시도하세요.', 'Connection failed. Try again shortly.'));
 		} finally {
 			live = null;
 			busy = false;
@@ -207,36 +210,36 @@
 		return list[(list.findIndex((b) => b.id === m.backend) + 1) % list.length].label;
 	};
 	const QUICK = $derived(
-		context.kind === 'lang' ? ['단계별로 보여 줘', '모범답안과 비교', '비슷한 문제는?'] : ['단계별로 보여 줘']
+		context.kind === 'lang' ? [t('단계별로 보여 줘', 'Show step by step'), t('모범답안과 비교', 'Compare with the model answer'), t('비슷한 문제는?', 'Anything similar?')] : [t('단계별로 보여 줘', 'Show step by step')]
 	);
-	const secs = (ms: number | null) => (ms === null ? '' : `${(ms / 1000).toFixed(1)}초`);
+	const secs = (ms: number | null) => (ms === null ? '' : `${(ms / 1000).toFixed(1)}${t('초', 's')}`);
 </script>
 
 <div class="co">
 	{#if loading && !thread}
-		<p class="co-empty">불러오는 중…</p>
+		<p class="co-empty">{t('불러오는 중…', 'Loading…')}</p>
 	{:else if missing}
-		<div class="co-locked"><b>{COACH_NAME}</b>이 항목에는 질문을 받지 않습니다.</div>
+		<div class="co-locked"><b>{COACH_NAME}</b>{t('이 항목에는 질문을 받지 않습니다.', ' does not accept questions for this item.')}</div>
 	{:else if loadError || !thread}
 		<div class="co-locked">
-			<b>불러오지 못했습니다</b>
-			<button class="co-again" type="button" onclick={() => load(context.kind, context.id)}>다시 시도</button>
+			<b>{t('불러오지 못했습니다', 'Could not load')}</b>
+			<button class="co-again" type="button" onclick={() => load(context.kind, context.id)}>{t('다시 시도', 'Try again')}</button>
 		</div>
 	{:else if thread.access === 'locked'}
 		<div class="co-locked">
 			<b>{COACH_NAME} offline</b>
-			{#if context.kind === 'lang'}제한 시간이 끝나거나 문제를 마치면 열립니다. 그동안은 치트시트와 힌트를 쓸 수 있습니다.{:else}지금은 열 수 없습니다.{/if}
+			{#if context.kind === 'lang'}{t('제한 시간이 끝나거나 문제를 마치면 열립니다. 그동안은 치트시트와 힌트를 쓸 수 있습니다.', 'It opens when the time limit ends or you finish the problem. Until then, use the cheat sheet and hints.')}{:else}{t('지금은 열 수 없습니다.', 'It is not available yet.')}{/if}
 		</div>
 	{:else}
 		<div class="co-top">
-			<p class="note">질문과 현재 풀이 자료를 선택한 모델 제공자에게 보냅니다.</p>
-			<a href="/settings/coach">코치 연결 설정</a>
-			<div class="co-chips" role="group" aria-label="{COACH_NAME} 선택">
+			<p class="note">{t('질문과 현재 풀이 자료를 선택한 모델 제공자에게 보냅니다.', 'Your question and current work are sent to the selected model provider.')}</p>
+			<a href="/settings/coach">{t('코치 연결 설정', 'Coach settings')}</a>
+			<div class="co-chips" role="group" aria-label={`${COACH_NAME} ${t('선택', 'selection')}`}>
 				{#each thread.backends as b (b.id)}
 					<button class="co-chip" type="button" aria-pressed={backend === b.id} onclick={() => chooseBackend(b.id)}>{b.label}</button>
 				{/each}
 			</div>
-			<div class="co-gets">{COACH_NAME}에게 넘어가는 정보: {thread.gets.join(', ')}. 질문은 기록됩니다.</div>
+			<div class="co-gets">{t('전달 정보', 'Sent information')}: {thread.gets.join(', ')}. {t('질문은 기록됩니다.', 'Questions are recorded.')}</div>
 		</div>
 		<div class="co-msgs" bind:this={box} onscroll={onScroll}>
 			{#each messages as m, k (m.id < 0 ? `t${k}` : m.id)}
@@ -246,12 +249,12 @@
 					<div class="co-bot" class:bad={m.error}>
 						<div class="co-who"><span>{backendLabel(m.backend)}</span><span>{secs(m.ms)}</span></div>
 						{#if m.error}
-							<p class="co-errtext">{backendLabel(m.backend)}가 답하지 못했습니다. {m.text}</p>
+							<p class="co-errtext">{backendLabel(m.backend)} {t('가 답하지 못했습니다.', 'could not answer.')} {m.text}</p>
 						{:else}
 							<Answer text={m.text} messageId={m.id} />
 						{/if}
 						{#if nextLabel(m)}
-							<button class="co-again" type="button" disabled={busy} onclick={() => reask(k)}>다른 {COACH_NAME}({nextLabel(m)})에게 다시 묻기</button>
+							<button class="co-again" type="button" disabled={busy} onclick={() => reask(k)}>{t('다른', 'Ask another')} {COACH_NAME} ({nextLabel(m)})</button>
 						{/if}
 					</div>
 				{/if}
@@ -259,11 +262,11 @@
 			{#if live !== null}
 				<div class="co-bot" aria-live="polite">
 					<div class="co-who"><span>{liveBackend}</span><span></span></div>
-					{#if live}<Answer text={live} streaming />{:else}<p class="co-drawing"><span class="pulse"></span>답을 기다리고 있습니다…</p>{/if}
+					{#if live}<Answer text={live} streaming />{:else}<p class="co-drawing"><span class="pulse"></span>{t('답을 기다리고 있습니다…', 'Waiting for an answer…')}</p>{/if}
 				</div>
 			{/if}
 			{#if messages.length === 0 && live === null}
-				<p class="co-empty">아직 질문이 없습니다.</p>
+				<p class="co-empty">{t('아직 질문이 없습니다.', 'No questions yet.')}</p>
 			{/if}
 		</div>
 		<div class="co-bottom">
@@ -273,10 +276,10 @@
 					{#each QUICK as q (q)}<button type="button" disabled={busy} onclick={() => ask(q)}>{q}</button>{/each}
 				</div>
 			{/if}
-			{#if !backend}<p class="note">연결된 코치가 없습니다. 코치 연결 설정을 확인하세요.</p>{:else}
+			{#if !backend}<p class="note">{t('연결된 코치가 없습니다. 코치 연결 설정을 확인하세요.', 'No coach is connected. Check coach settings.')}</p>{:else}
 			<div class="co-ask">
-				<textarea bind:this={input} bind:value={draft} rows="1" {placeholder} aria-label="질문" onkeydown={keydown}></textarea>
-				<button type="button" disabled={busy || !draft.trim()} onclick={send}>묻기</button>
+				<textarea bind:this={input} bind:value={draft} rows="1" {placeholder} aria-label={t('질문', 'Question')} onkeydown={keydown}></textarea>
+				<button type="button" disabled={busy || !draft.trim()} onclick={send}>{t('묻기', 'Ask')}</button>
 			</div>{/if}
 		</div>
 	{/if}

@@ -1,3 +1,4 @@
+import { readPack } from './content-language.ts';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { TOPICS, type CheatEntry, type TopicId } from '#lib/core/lang.ts';
@@ -18,7 +19,7 @@ export function listCheatEntries(lang: string): CheatEntry[] {
 	for (const topic of Object.keys(TOPICS) as TopicId[]) {
 		const f = join(dir, `${topic}.json`);
 		if (!existsSync(f)) continue;
-		const entries = JSON.parse(readFileSync(f, 'utf8')) as CheatEntry[];
+		const entries = readPack(readFileSync(f, 'utf8')) as CheatEntry[];
 		const pos = new Map((index[topic] ?? []).map(([id], i) => [id, i]));
 		out.push(...entries.sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999)));
 	}

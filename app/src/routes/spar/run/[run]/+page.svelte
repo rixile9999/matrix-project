@@ -8,6 +8,7 @@
 	import { fmtMs } from '#lib/core/spar.ts';
 	import { fmtDateLong, fmtSpan } from '#lib/spar/format.ts';
 	import type { SparRecallAnswerRow, SparRunData } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: SparRunData } = $props();
 	const d = $derived(data.detail);
@@ -28,50 +29,50 @@
 	const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
 
 	function vs(ms: number): { b: string; tail: string } {
-		return { b: fmtSpan(ms), tail: ms < 0 ? '빠름' : ms > 0 ? '느림' : '같음' };
+		return { b: fmtSpan(ms), tail: ms < 0 ? t('빠름', 'faster') : ms > 0 ? t('느림', 'slower') : t('같음', 'same') };
 	}
 	const optText = (a: SparRecallAnswerRow) => (a.kind === 'bug' ? a.lines : a.options);
 </script>
 
-<svelte:head><title>{d.kind === 'sprint' ? 'Sprint' : 'Recall'} 결과 · Matrix</title></svelte:head>
+<svelte:head><title>{d.kind === 'sprint' ? 'Sprint' : 'Recall'} {t('결과', 'result')} · Matrix</title></svelte:head>
 
 <main class="a-page mid">
 	<div class="a-top">
 		<span>{d.kind === 'sprint' ? 'Sprint' : 'Recall'} · {fmtDateLong(d.startedAt)}</span>
-		<span class:a-warm={d.isBest}>{d.isBest ? '최고 기록' : ''}</span>
+		<span class:a-warm={d.isBest}>{d.isBest ? t('최고 기록', 'Best') : ''}</span>
 	</div>
 
 	{#if d.kind === 'sprint'}
 		{#if d.status === 'abandoned'}
-			<div class="a-big sm">중단</div>
-			<p class="a-sub">{d.problems.filter((p) => p.outcome).length}개까지 진행했습니다. 이 기록은 최고 기록에 들어가지 않습니다.</p>
+			<div class="a-big sm">{t('중단', 'Abandoned')}</div>
+					<p class="a-sub">{d.problems.filter((p) => p.outcome).length} {t('개까지 진행했습니다. 이 기록은 최고 기록에 들어가지 않습니다.', 'completed. This does not count as a best.')}</p>
 		{:else}
 			<div class="a-big" class:a-warm={d.isBest}>{d.totalMs !== null ? fmtMs(d.totalMs) : '—'}</div>
 			<p class="a-sub">
 				{#if d.skipped > 0}
-					건너뛴 문제가 {d.skipped}개 있어 최고 기록으로 치지 않습니다.
+					{t('건너뛴 문제가', 'You skipped')} {d.skipped} {t('개 있어 최고 기록으로 치지 않습니다.', 'problems, so this is not a best.')}
 				{:else if d.previousBest && d.deltaMs !== null}
-					{@const v = vs(d.deltaMs)}지난 최고 {fmtMs(d.previousBest.totalMs)}보다 <b>{v.b} {v.tail}</b>
+					{@const v = vs(d.deltaMs)}{t('지난 최고', 'Previous best')} {fmtMs(d.previousBest.totalMs)} {t('보다', '·')} <b>{v.b} {v.tail}</b>
 				{:else}
-					첫 기록입니다.
+					{t('첫 기록입니다.', 'This is your first record.')}
 				{/if}
 			</p>
 		{/if}
 
 		<div class="a-veil">
 		<table class="a-tbl">
-			<thead><tr><th>문제</th><th class="r">이번</th><th class="r">비교</th><th class="r">실행</th></tr></thead>
+			<thead><tr><th>{t('문제', 'Problem')}</th><th class="r">{t('이번', 'This')}</th><th class="r">{t('비교', 'Best')}</th><th class="r">{t('실행', 'Runs')}</th></tr></thead>
 			<tbody>
 				{#each d.problems as p (p.problemId)}
 					<tr>
 						<td>
 							{p.title}
-							<span class="sub">{p.topicLabel}{p.outcome === 'skipped' ? ' · 건너뜀' : p.outcome === null ? ' · 도달하지 못함' : ''}{p.overLimit ? ' · 기준 시간 초과' : ''}</span>
-							{#if p.lookups.length}<span class="sub">찾아본 문법: {p.lookups.map((l) => l.title).join(', ')}</span>{/if}
+							<span class="sub">{p.topicLabel}{p.outcome === 'skipped' ? ` · ${t('건너뜀', 'Skipped')}` : p.outcome === null ? ` · ${t('도달하지 못함', 'Not reached')}` : ''}{p.overLimit ? ` · ${t('기준 시간 초과', 'Over the limit')}` : ''}</span>
+							{#if p.lookups.length}<span class="sub">{t('찾아본 문법', 'Looked up')}: {p.lookups.map((l) => l.title).join(', ')}</span>{/if}
 							{#if p.outcome}
 								<form method="POST" action="/lang?/start" style="margin-top:2px">
 									<input type="hidden" name="problemId" value={p.problemId} />
-									<button class="a-btn quiet" style="padding:6px 0;min-height:32px;font-size:12.5px">다시 풀기</button>
+									<button class="a-btn quiet" style="padding:6px 0;min-height:32px;font-size:12.5px">{t('다시 풀기', 'Try again')}</button>
 								</form>
 							{/if}
 						</td>
@@ -84,48 +85,48 @@
 		</table>
 
 		<div class="a-rows">
-			<div class="a-kv"><span>찾아본 문법</span><b>{d.lookupCount}번</b></div>
+			<div class="a-kv"><span>{t('찾아본 문법', 'Looked up')}</span><b>{d.lookupCount}</b></div>
 			{#if d.slowest}
 				{@const s = d.slowest}
-				<div class="a-kv"><span>가장 느려진 곳</span><span style="text-align:right">{s.title} · {s.basis === 'best' ? '비교 기록보다' : '기준 시간보다'} <b class="a-warm">{fmtSpan(s.deltaMs)} 느림</b></span></div>
+				<div class="a-kv"><span>{t('가장 느려진 곳', 'Slowest')}</span><span style="text-align:right">{s.title} · {s.basis === 'best' ? t('비교 기록보다', 'than best') : t('기준 시간보다', 'than limit')} <b class="a-warm">{fmtSpan(s.deltaMs)} {t('느림', 'slower')}</b></span></div>
 			{/if}
 			{#if d.fastest}
 				{@const f = d.fastest}
-				<div class="a-kv"><span>가장 빨라진 곳</span><span style="text-align:right">{f.title} · {f.basis === 'best' ? '비교 기록보다' : '기준 시간보다'} <b>{fmtSpan(f.deltaMs)} 빠름</b></span></div>
+				<div class="a-kv"><span>{t('가장 빨라진 곳', 'Fastest')}</span><span style="text-align:right">{f.title} · {f.basis === 'best' ? t('비교 기록보다', 'than best') : t('기준 시간보다', 'than limit')} <b>{fmtSpan(f.deltaMs)} {t('빠름', 'faster')}</b></span></div>
 			{/if}
 		</div>
 		</div>
 	{:else}
 		{#if d.status === 'abandoned' && d.answered === 0}
-			<div class="a-big sm">중단</div>
-			<p class="a-sub">답한 점검이 없습니다.</p>
+			<div class="a-big sm">{t('중단', 'Abandoned')}</div>
+			<p class="a-sub">{t('답한 점검이 없습니다.', 'No checks answered.')}</p>
 		{:else}
 			<div class="a-big" class:a-warm={d.isBest}>{d.correct}<span class="a-dim" style="font-size:.45em"> / {d.answered}</span></div>
 			<p class="a-sub">
-				{#if d.status === 'abandoned'}중단한 기록입니다. 답한 {d.answered}개 중 {d.correct}개를 맞혔습니다.
-				{:else}정확도 <b>{pct(d.accuracy)}</b>{/if}
+				{#if d.status === 'abandoned'}{t('중단한 기록입니다. 답한', 'Abandoned. You got')} {d.answered} {t('개 중', 'of')} {d.correct} {t('개를 맞혔습니다.', 'correct.')}
+				{:else}{t('정확도', 'Accuracy')} <b>{pct(d.accuracy)}</b>{/if}
 				{#if d.status === 'finished'}
 					{#if d.previousBest}
-						· 지난 최고 {d.previousBest.correct}개 ({pct(d.previousBest.accuracy)}){d.correct > d.previousBest.correct ? '보다 ' : ''}{#if d.correct > d.previousBest.correct}<b>{d.correct - d.previousBest.correct}개 더</b>{:else if d.correct < d.previousBest.correct}보다 {d.previousBest.correct - d.correct}개 적음{:else}와 같음{/if}
+						· {t('지난 최고', 'Previous best')} {d.previousBest.correct} ({pct(d.previousBest.accuracy)}){d.correct > d.previousBest.correct ? ` ${t('보다', 'more')}` : ''}{#if d.correct > d.previousBest.correct}<b>{d.correct - d.previousBest.correct} {t('개 더', 'more')}</b>{:else if d.correct < d.previousBest.correct}{t('보다', 'fewer than')} {d.previousBest.correct - d.correct}{:else}{t('와 같음', 'same')}{/if}
 					{:else}
-						· 첫 기록입니다.
+						· {t('첫 기록입니다.', 'This is your first record.')}
 					{/if}
 				{/if}
 			</p>
 		{/if}
 
 		{#if missed.length}
-			<h2 class="a-h2">틀린 점검 {missed.length}개</h2>
+			<h2 class="a-h2">{t('틀린 점검', 'Missed checks')} {missed.length}</h2>
 			{#each missed as a (a.checkId)}
 				{@render answerCard(a)}
 			{/each}
 		{:else if d.answered > 0}
-			<p class="a-p">틀린 점검이 없습니다.</p>
+			<p class="a-p">{t('틀린 점검이 없습니다.', 'No missed checks.')}</p>
 		{/if}
 
 		{#if rights.length}
 			<details class="a-fold">
-				<summary>맞힌 점검 {rights.length}개 보기</summary>
+				<summary>{t('맞힌 점검 보기', 'Show passed checks')} ({rights.length})</summary>
 				{#each rights as a (a.checkId)}
 					{@render answerCard(a)}
 				{/each}
@@ -134,15 +135,15 @@
 	{/if}
 
 	<div class="a-row" style="margin-top:8px">
-		<form method="POST" action={d.kind === 'sprint' ? '/spar?/startSprint' : '/spar?/startRecall'}><button class="a-btn">다시 하기</button></form>
-		<a class="a-btn ghost" href="/spar">Sparring 홈</a>
-		<a class="a-btn quiet" href="/spar/records">기록</a>
+		<form method="POST" action={d.kind === 'sprint' ? '/spar?/startSprint' : '/spar?/startRecall'}><button class="a-btn">{t('다시 하기', 'Try again')}</button></form>
+		<a class="a-btn ghost" href="/spar">{t('Sparring 홈', 'Sparring home')}</a>
+		<a class="a-btn quiet" href="/spar/records">{t('기록', 'Records')}</a>
 	</div>
 </main>
 
 {#snippet answerCard(a: SparRecallAnswerRow)}
 	<div class="a-miss">
-		<span class="a-small">{a.kindLabel} · {fmtMs(a.ms)}{a.recorded ? '' : ' · 한 시간 안에 이미 답해 복습 기록은 남기지 않았습니다'}</span>
+		<span class="a-small">{a.kindLabel} · {fmtMs(a.ms)}{a.recorded ? '' : ` · ${t('한 시간 안에 이미 답해 복습 기록은 남기지 않았습니다', 'Already answered within an hour; not counted as review')}`}</span>
 		<p class="a-p">{@html renderInline(a.prompt)}</p>
 		{#if a.code}<div class="a-glass" style="background:rgba(8,9,13,.9)"><pre class="a-code">{a.code}</pre></div>{/if}
 		<div class="a-opts">
@@ -153,7 +154,7 @@
 					</div>
 					{#if k === a.correctIndex || k === a.choice}
 						<p class="a-small" style="margin:4px 0 0 4px">
-							{k === a.choice ? '내 답' : ''}{k === a.choice && k === a.correctIndex ? ' · ' : ''}{k === a.correctIndex ? (a.kind === 'bug' ? '버그가 있는 줄' : '정답') : ''}
+							{k === a.choice ? t('내 답', 'My answer') : ''}{k === a.choice && k === a.correctIndex ? ' · ' : ''}{k === a.correctIndex ? (a.kind === 'bug' ? t('버그가 있는 줄', 'Buggy line') : t('정답', 'Correct')) : ''}
 						</p>
 					{/if}
 					{#if a.kind !== 'bug' && a.whys[k] && (k === a.correctIndex || k === a.choice)}<p class="a-why" style="margin-top:6px">{@html renderInline(a.whys[k])}</p>{/if}
@@ -162,7 +163,7 @@
 		</div>
 		{#if a.kind === 'bug'}
 			{#if a.why}<p class="a-why">{@html renderInline(a.why)}</p>{/if}
-			{#if a.fixed}<div class="a-glass" style="background:rgba(8,9,13,.9)"><span>고친 줄</span><pre class="a-code">{a.fixed}</pre></div>{/if}
+			{#if a.fixed}<div class="a-glass" style="background:rgba(8,9,13,.9)"><span>{t('고친 줄', 'Fixed line')}</span><pre class="a-code">{a.fixed}</pre></div>{/if}
 		{/if}
 	</div>
 {/snippet}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// One session on its own clock: runs (✕ failed, ● passed), lookups (◆), hints (▲), and the stretches the page saw
 	// (other tab: hatched, no input: dotted). The longest silence is labelled. Marks show their detail on hover, focus or tap.
 	import type { Strip } from '#lib/types.ts';
@@ -8,7 +9,7 @@
 	const W = 800, Y = 46, PAD = 14;
 	const X = $derived((t: number) => PAD + (Math.min(t, strip.length) / Math.max(1, strip.length)) * (W - 2 * PAD));
 	const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, '0')}`;
-	const minSec = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}분${Math.round(s % 60) ? ` ${Math.round(s % 60)}초` : ''}` : `${Math.round(s)}초`);
+	const minSec = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}${t('분', 'm')}${Math.round(s % 60) ? ` ${Math.round(s % 60)}${t('초', 's')}` : ''}` : `${Math.round(s)}${t('초', 's')}`);
 	const uid = $props.id();
 
 	type Tip = { x: number; head: string; body: string };
@@ -24,12 +25,12 @@
 		tipStyle = `left:${b.left - w.left + (t.x / W) * b.width}px;top:${b.top - w.top + ((Y - 14) / 96) * b.height}px`;
 	}
 	const label = (m: Strip['marks'][number]) =>
-		m.kind === 'run' ? { head: `${mmss(m.t)} · ${m.status === 'passed' ? '통과' : m.status === 'compile_error' ? '컴파일 오류' : m.status === 'failed' ? '실패' : '시간 초과'}`, body: m.status === 'passed' ? '' : m.head }
-			: m.kind === 'lookup' ? { head: `${mmss(m.t)} · 치트시트 조회`, body: '' } : { head: `${mmss(m.t)} · 힌트`, body: '' };
+		m.kind === 'run' ? { head: `${mmss(m.t)} · ${m.status === 'passed' ? t('통과', 'Passed') : m.status === 'compile_error' ? t('컴파일 오류', 'Compile error') : m.status === 'failed' ? t('실패', 'Failed') : t('시간 초과', 'Timed out')}`, body: m.status === 'passed' ? '' : m.head }
+			: m.kind === 'lookup' ? { head: `${mmss(m.t)} · ${t('치트시트 조회', 'Cheat sheet lookup')}`, body: '' } : { head: `${mmss(m.t)} · ${t('힌트', 'Hint')}`, body: '' };
 	const spoken = $derived(
-		strip.marks.map((m) => { const l = label(m); return l.head + (l.body ? ` ${l.body}` : ''); }).join(', ') || '실행 없음'
+		strip.marks.map((m) => { const l = label(m); return l.head + (l.body ? ` ${l.body}` : ''); }).join(', ') || t('실행 없음', 'No runs')
 	);
-	const silentText = $derived(strip.silent ? `${minSec(strip.silent.to - strip.silent.from)} · 실행 없음` : '');
+	const silentText = $derived(strip.silent ? `${minSec(strip.silent.to - strip.silent.from)} · ${t('실행 없음', 'No runs')}` : '');
 	const ticks = $derived.by(() => {
 		const step = strip.length > 1800 ? 600 : strip.length > 600 ? 300 : 120;
 		const out: number[] = [];
@@ -39,7 +40,7 @@
 </script>
 
 <div class="ss" bind:this={wrap}>
-	<svg bind:this={svg} viewBox="0 0 {W} 96" role="img" aria-label="세션 타임라인: {spoken}">
+	<svg bind:this={svg} viewBox="0 0 {W} 96" role="img" aria-label={`${t('세션 타임라인', 'Session timeline')}: ${spoken}`}>
 		<defs>
 			<pattern id="h-{uid}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
 				<line x1="0" y1="0" x2="0" y2="6" class="hatch" stroke-width="2" />
@@ -50,8 +51,8 @@
 		{#if strip.limitSec < strip.length}
 			<line x1={X(strip.limitSec)} y1={Y - 12} x2={X(strip.limitSec)} y2={Y + 12} class="limit" />
 		{/if}
-		{#each strip.away as a, i (i)}<rect x={X(a.from)} y={Y - 13} width={Math.max(2, X(a.to) - X(a.from))} height="26" rx="4" fill="url(#h-{uid})" class="away"><title>다른 탭 {mmss(a.from)}–{mmss(a.to)}</title></rect>{/each}
-		{#each strip.idle as a, i (i)}<rect x={X(a.from)} y={Y - 11} width={Math.max(2, X(a.to) - X(a.from))} height="22" rx="4" class="idle"><title>입력 없음 {mmss(a.from)}–{mmss(a.to)}</title></rect>{/each}
+		{#each strip.away as a, i (i)}<rect x={X(a.from)} y={Y - 13} width={Math.max(2, X(a.to) - X(a.from))} height="26" rx="4" fill="url(#h-{uid})" class="away"><title>{t('다른 탭', 'Other tab')} {mmss(a.from)}–{mmss(a.to)}</title></rect>{/each}
+		{#each strip.idle as a, i (i)}<rect x={X(a.from)} y={Y - 11} width={Math.max(2, X(a.to) - X(a.from))} height="22" rx="4" class="idle"><title>{t('입력 없음', 'No input')} {mmss(a.from)}–{mmss(a.to)}</title></rect>{/each}
 		{#if strip.silent && !strip.recorded}
 			<rect x={X(strip.silent.from) + 10} y={Y - 13} width={Math.max(0, X(strip.silent.to) - X(strip.silent.from) - 20)} height="26" rx="4" fill="url(#h-{uid})" />
 		{/if}
@@ -78,7 +79,7 @@
 		<g class="axis">
 			<text x={PAD} y="90">0:00</text>
 			{#each ticks as t (t)}<text x={X(t)} y="90" text-anchor="middle">{mmss(t)}</text>{/each}
-			<text x={W - PAD} y="90" text-anchor="end">{strip.limitSec >= strip.length ? `${mmss(strip.limitSec)} 제한` : mmss(strip.length)}</text>
+			<text x={W - PAD} y="90" text-anchor="end">{strip.limitSec >= strip.length ? `${mmss(strip.limitSec)} ${t('제한', 'limit')}` : mmss(strip.length)}</text>
 		</g>
 	</svg>
 	{#if tip}<div class="tip" style={tipStyle}><b>{tip.head}</b>{#if tip.body}<code>{tip.body}</code>{/if}</div>{/if}

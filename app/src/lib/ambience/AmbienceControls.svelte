@@ -1,8 +1,10 @@
 <script lang="ts">
 	// Compact control: sound, volume, motion, backdrop. Place it in a page corner.
 	import { onMount } from 'svelte';
+	import TrackSelect from './TrackSelect.svelte';
 	import { enable } from './audio';
 	import { saveSettings, settings } from './settings.svelte';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let mounted = $state(false); // settings come from localStorage, so render them only on the client
 	onMount(() => { mounted = true; });
@@ -19,24 +21,25 @@
 	}
 </script>
 
-<div class="amb-ctl" role="group" aria-label="배경과 소리">
+<div class="amb-ctl" role="group" aria-label={t('배경과 소리', 'Background and sound')}>
 	{#if mounted}
-		<button type="button" aria-pressed={settings.sound} onclick={toggleSound}>소리 {settings.sound ? '켬' : '끔'}</button>
+		<button type="button" aria-pressed={settings.sound} onclick={toggleSound}>{t('소리', 'Sound')} {settings.sound ? t('켬', 'On') : t('끔', 'Off')}</button>
+		<TrackSelect />
 		<input
-			type="range" min="0" max="100" step="1" aria-label="음량" disabled={!settings.sound}
+			 type="range" min="0" max="100" step="1" aria-label={t('음량', 'Volume')} disabled={!settings.sound}
 			value={Math.round(settings.volume * 100)}
 			oninput={(e) => { settings.volume = Number(e.currentTarget.value) / 100; saveSettings(); }}
 		/>
-		<button type="button" aria-pressed={settings.motion} onclick={toggleMotion}>움직임 {settings.motion ? '켬' : '끔'}</button>
+		<button type="button" aria-pressed={settings.motion} onclick={toggleMotion}>{t('움직임', 'Motion')} {settings.motion ? t('켬', 'On') : t('끔', 'Off')}</button>
 		<select
-			aria-label="배경" value={settings.backdrop}
+			aria-label={t('배경', 'Backdrop')} value={settings.backdrop}
 			onchange={(e) => { settings.backdrop = e.currentTarget.value as typeof settings.backdrop; saveSettings(); }}
 		>
-			<option value="random">랜덤</option>
-			<option value="none">실시간 그림</option>
-			<option value="earthrise">달 지평선</option>
-			<option value="blackhole">블랙홀</option>
-			<option value="earth">지구</option>
+			<option value="random">{t('랜덤', 'Random')}</option>
+			<option value="none">{t('실시간 그림', 'Live drawing')}</option>
+			<option value="earthrise">{t('달 지평선', 'Earthrise')}</option>
+			<option value="blackhole">{t('블랙홀', 'Black hole')}</option>
+			<option value="earth">{t('지구', 'Earth')}</option>
 		</select>
 	{/if}
 </div>

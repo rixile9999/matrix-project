@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// Remaining time as a waning moon instead of digits: full at the start, a thin crescent near the end,
 	// an empty warm ring once the limit has passed. Digits pull the eye every second; a phase can be read at a glance
 	// and otherwise left alone. Pressing the glyph shows the digits (remembered), for when the exact time matters.
@@ -27,7 +28,7 @@
 	const abs = $derived(Math.abs(Math.trunc(remainingSec)));
 	const text = $derived(`${over ? '+' : ''}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`);
 	const spoken = $derived(
-		over ? `제한 시간을 ${Math.floor(abs / 60)}분 ${abs % 60}초 넘겼습니다` : `남은 시간 ${Math.floor(abs / 60)}분 ${abs % 60}초`
+		over ? t(`제한 시간을 ${Math.floor(abs / 60)}분 ${abs % 60}초 넘겼습니다`, `Over the limit by ${Math.floor(abs / 60)}m ${abs % 60}s`) : t(`남은 시간 ${Math.floor(abs / 60)}분 ${abs % 60}초`, `${Math.floor(abs / 60)}m ${abs % 60}s remaining`)
 	);
 
 	// The lit part: the left half-disc, plus (gibbous) or minus (crescent) a half-ellipse whose width follows f.
@@ -40,7 +41,7 @@
 	});
 </script>
 
-<button class="tg" class:over type="button" onclick={toggle} aria-pressed={digits} title={digits ? '숫자 숨기기' : '숫자로 보기'}>
+	<button class="tg" class:over type="button" onclick={toggle} aria-pressed={digits} title={digits ? t('숫자 숨기기', 'Hide digits') : t('숫자로 보기', 'Show digits')}>
 	<svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
 		<circle cx="12" cy="12" r={R} class="rim" />
 		{#if lit}<path d={lit} class="lit" />{/if}

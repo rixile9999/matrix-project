@@ -1,3 +1,5 @@
+import { readPack } from './content-language.ts';
+import { english, tr } from './locale.ts';
 // Debrief, server side: reads the log into core/debrief.ts shapes, builds the page data, records marks / self reports / deck / own lines /
 // experiment choices, and writes coaching on request. Everything shown is recomputed from the records; only what the learner did is stored.
 import { existsSync, readFileSync } from 'node:fs';
@@ -10,11 +12,12 @@ import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import type { JudgeResult } from '#lib/core/lang.ts';
 import type { TraceCheck } from '#lib/core/memo.ts';
 import {
-	COACH_SYSTEM, EXPERIMENTS, IDLE_AFTER_SEC, activeDays, coachingFacts, coachingPrompt, dayView, examplesOf, experimentResult, focusFacts, isExperiment,
+	COACH_SYSTEM, COACH_SYSTEM_EN, EXPERIMENTS, IDLE_AFTER_SEC, activeDays, coachingFacts, coachingPrompt, dayView, examplesOf, experimentCopy, experimentResult, focusFacts, isExperiment,
 	observe, parseCoaching, patternStats, sessionStrip, unknownRepeats,
 	type CoachFact, type DebriefLog, type Hit, type DebriefPattern, type DMark, type DRun, type DSession, type DSelf, type ExperimentId, type MarkKind, type PatternStat, type SelfState
 } from '#lib/core/debrief.ts';
 import type { DebriefData, DebriefNote, DebriefOk, DebriefReading, DebriefReadingResponse, DebriefSessionCard } from '#lib/types.ts';
+import type { Locale } from '#lib/locale.ts';
 
 const LANG = 'scala';
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -26,7 +29,7 @@ const CATALOG = resolve(process.env.DEBRIEF_DIR ?? 'debrief', LANG, 'patterns.js
 export function catalog(): DebriefPattern[] {
 	try {
 		if (!existsSync(CATALOG)) return [];
-		const v = JSON.parse(readFileSync(CATALOG, 'utf8')) as unknown;
+		const v = readPack(readFileSync(CATALOG, 'utf8')) as unknown;
 		return Array.isArray(v) ? (v as DebriefPattern[]).filter((p) => p && typeof p.id === 'string' && (p.on === 'compile' || p.on === 'failed')) : [];
 	} catch {
 		return [];
@@ -76,12 +79,12 @@ const latestSelf = (log: DebriefLog, sessionId: number): SelfState | null => {
 	return last && last.state !== 'none' ? last.state : null;
 };
 
-function card(log: DebriefLog, s: DSession, stats: PatternStat[], hitsByRun: Map<number, Hit[]>, cat: DebriefPattern[]): DebriefSessionCard {
-	const strip = sessionStrip(s, log);
+function card(log: DebriefLog, s: DSession, stats: PatternStat[], hitsByRun: Map<number, Hit[]>, cat: DebriefPattern[], locale: Locale): DebriefSessionCard {
+	const strip = sessionStrip(s, log, locale);
 	const hits = log.runs.filter((r) => r.sessionId === s.id).flatMap((r) => hitsByRun.get(r.id) ?? []);
 	return {
 		id: s.id, problemId: s.problemId, title: s.title, startedAt: s.startedAt, outcome: s.outcome, elapsedSec: strip.elapsed, limitSec: s.limitSec,
-		strip, observations: observe(s, strip, log.runs, log.lookups, hits, stats, cat), self: latestSelf(log, s.id)
+		strip, observations: observe(s, strip, log.runs, log.lookups, hits, stats, cat, locale), self: latestSelf(log, s.id)
 	};
 }
 
@@ -92,7 +95,7 @@ export function sessionCard(sessionId: number): DebriefSessionCard | null {
 	if (!s || s.endedAt === null) return null;
 	const cat = catalog();
 	const { stats, hitsByRun } = patternStats(log, cat);
-	return card(log, s, stats, hitsByRun, cat);
+	return card(log, s, stats, hitsByRun, cat, english() ? 'en' : 'ko');
 }
 
 const passedIds = () =>
@@ -150,20 +153,26 @@ function toReading(r: ReadingRow): DebriefReading | null {
 		return null;
 	}
 }
-const latestReading = () => {
-	const r = db().prepare('SELECT * FROM debrief_readings ORDER BY id DESC LIMIT 1').get() as ReadingRow | undefined;
+const latestReading = (locale: Locale) => {
+	const r = db().prepare(`SELECT * FROM debrief_readings
+		WHERE CASE WHEN json_valid(body) THEN COALESCE(json_extract(body, '$.locale'), 'ko') END = ?
+		ORDER BY id DESC LIMIT 1`).get(locale) as ReadingRow | undefined;
 	return r ? toReading(r) : null;
 };
 const latestChoice = () => {
 	const r = db().prepare('SELECT at, choice FROM debrief_choices ORDER BY id DESC LIMIT 1').get() as { at: number; choice: string } | undefined;
 	return r && isExperiment(r.choice) ? { id: r.choice, at: r.at } : null;
 };
-const experimentList = () => (Object.keys(EXPERIMENTS) as ExperimentId[]).map((id) => ({ id, title: EXPERIMENTS[id].title, detail: EXPERIMENTS[id].detail }));
+const experimentList = (locale: Locale) => (Object.keys(EXPERIMENTS) as ExperimentId[]).map((id) => {
+	const { title, detail } = experimentCopy(id, locale);
+	return { id, title, detail };
+});
 
 const RECENT = 4;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function debriefData(date: string | null): DebriefData {
+	const locale = english() ? 'en' : 'ko';
 	const log = loadLog();
 	const cat = catalog();
 	const now = nowSec();
@@ -171,21 +180,23 @@ export function debriefData(date: string | null): DebriefData {
 	const ns = notes(stats, cat);
 	const days = activeDays(log);
 	const pick = date && DATE.test(date) && days.includes(date) ? date : (days[0] ?? null);
-	const recent = log.sessions.filter((s) => s.endedAt !== null).sort((a, b) => b.endedAt! - a.endedAt! || b.id - a.id).slice(0, RECENT).map((s) => card(log, s, stats, hitsByRun, cat));
+	const recent = log.sessions.filter((s) => s.endedAt !== null).sort((a, b) => b.endedAt! - a.endedAt! || b.id - a.id).slice(0, RECENT).map((s) => card(log, s, stats, hitsByRun, cat, locale));
 	const ch = latestChoice();
+	const experiments = experimentList(locale);
+	const choice = ch && experiments.find((item) => item.id === ch.id);
 	return {
 		notes: ns,
 		unknown: unknownRepeats(log, cat).slice(0, 6),
 		recent,
 		days,
 		day: pick ? dayView(log, pick) : null,
-		focus: focusFacts(log, now),
-		reading: latestReading(),
-		factCount: coachingFacts(log, stats, cat, now).length,
+		focus: focusFacts(log, now, locale),
+		reading: latestReading(locale),
+		factCount: coachingFacts(log, stats, cat, now, locale).length,
 		backends: (Object.keys(BACKENDS) as BackendId[]).map((id) => ({ id, name: BACKENDS[id] })),
 		defaultBackend: DEFAULT_BACKEND,
-		experiments: experimentList(),
-		choice: ch ? { id: ch.id, title: EXPERIMENTS[ch.id].title, detail: EXPERIMENTS[ch.id].detail, at: ch.at, result: experimentResult(log, ch.id, ch.at, now) } : null,
+		experiments,
+		choice: ch && choice ? { ...choice, at: ch.at, result: experimentResult(log, ch.id, ch.at, now, locale) } : null,
 		warmup: warmupOf(ns)
 	};
 }
@@ -220,24 +231,24 @@ export function recordSelf(problemId: string, sessionId: unknown, state: unknown
 const knownPattern = (id: unknown): id is string => typeof id === 'string' && catalog().some((p) => p.id === id);
 
 export function addToDeck(pattern: unknown): DebriefOk {
-	if (!knownPattern(pattern)) return { error: '알 수 없는 노트입니다.' };
+	if (!knownPattern(pattern)) return { error: tr('알 수 없는 노트입니다.', 'Unknown note.') };
 	const st = patternStats(loadLog(), catalog()).stats.find((s) => s.id === pattern);
-	if (!st?.note) return { error: '아직 노트가 되지 않은 패턴입니다.' };
-	if (!debriefChecks().size) return { error: '이 노트의 문제를 찾을 수 없습니다.' };
+	if (!st?.note) return { error: tr('아직 노트가 되지 않은 패턴입니다.', 'This pattern does not have a note yet.') };
+	if (!debriefChecks().size) return { error: tr('이 노트의 문제를 찾을 수 없습니다.', 'The exercise for this note could not be found.') };
 	if (!deck().has(pattern)) db().prepare('INSERT INTO debrief_deck(pattern_id, at) VALUES(?,?)').run(pattern, nowSec());
 	return { ok: true };
 }
 
 export const MINE_MAX = 200;
 export function saveMine(pattern: unknown, text: unknown): DebriefOk {
-	if (!knownPattern(pattern)) return { error: '알 수 없는 노트입니다.' };
-	if (typeof text !== 'string' || text.length > MINE_MAX) return { error: `한 줄은 ${MINE_MAX}자까지입니다.` };
+	if (!knownPattern(pattern)) return { error: tr('알 수 없는 노트입니다.', 'Unknown note.') };
+	if (typeof text !== 'string' || text.length > MINE_MAX) return { error: tr(`한 줄은 ${MINE_MAX}자까지입니다.`, `Use at most ${MINE_MAX} characters.`) };
 	db().prepare('INSERT INTO debrief_mine(pattern_id, at, text) VALUES(?,?,?)').run(pattern, nowSec(), text.trim());
 	return { ok: true };
 }
 
 export function choose(choice: unknown): DebriefOk {
-	if (choice !== '' && !isExperiment(choice)) return { error: '알 수 없는 선택입니다.' };
+	if (choice !== '' && !isExperiment(choice)) return { error: tr('알 수 없는 선택입니다.', 'Unknown choice.') };
 	db().prepare('INSERT INTO debrief_choices(at, choice) VALUES(?,?)').run(nowSec(), choice);
 	return { ok: true };
 }
@@ -247,34 +258,35 @@ const ASK_TIMEOUT_MS = 150_000;
 
 /** Asks one backend for coaching from the current facts; stores only the validated sentences. Nothing is stored on failure. */
 export async function createReading(backendId: unknown): Promise<{ status: number; body: DebriefReadingResponse }> {
+	const locale = english() ? 'en' : 'ko';
 	const id = (typeof backendId === 'string' && backendId in BACKENDS ? backendId : DEFAULT_BACKEND) as BackendId;
 	const key = accountId();
-	if (busy.has(key)) return { status: 409, body: { error: '이미 코칭을 쓰는 중입니다. 잠시 기다려 주세요.' } };
+	if (busy.has(key)) return { status: 409, body: { error: tr('이미 코칭을 쓰는 중입니다. 잠시 기다려 주세요.', 'Your coach is writing. Please wait.') } };
 	const log = loadLog();
 	const cat = catalog();
 	const now = nowSec();
-	const facts: CoachFact[] = coachingFacts(log, patternStats(log, cat).stats, cat, now);
-	if (!facts.length) return { status: 409, body: { error: '읽을 기록이 아직 없습니다.' } };
+	const facts: CoachFact[] = coachingFacts(log, patternStats(log, cat).stats, cat, now, locale);
+	if (!facts.length) return { status: 409, body: { error: tr('읽을 기록이 아직 없습니다.', 'No records to review yet.') } };
 	busy.add(key);
 	try {
 		const ctl = new AbortController();
 		const timer = setTimeout(() => ctl.abort(), ASK_TIMEOUT_MS);
 		let text: string;
 		try {
-			text = await askCoach(id, coachingPrompt(facts), COACH_SYSTEM, () => {}, ctl.signal);
+			text = await askCoach(id, coachingPrompt(facts, locale), locale === 'en' ? COACH_SYSTEM_EN : COACH_SYSTEM, () => {}, ctl.signal);
 		} finally {
 			clearTimeout(timer);
 		}
-		const parsed = parseCoaching(text, facts);
-		if (!parsed || !parsed.sentences.length) return { status: 502, body: { error: '답을 받았지만 근거를 지킨 문장이 없었습니다. 다시 시도해 주세요.' } };
+		const parsed = parseCoaching(text, facts, locale);
+		if (!parsed || !parsed.sentences.length) return { status: 502, body: { error: tr('답을 받았지만 근거를 지킨 문장이 없었습니다. 다시 시도해 주세요.', 'The response contained no statements grounded in your records. Try again.') } };
 		const byId = new Map(facts.map((f) => [f.id, f]));
 		const sentences = parsed.sentences.map((s) => ({ text: s.text, facts: s.factIds.map((i) => byId.get(i)!) }));
 		const at = nowSec();
-		const row = db().prepare('INSERT INTO debrief_readings(created_at, backend, body) VALUES(?,?,?)').run(at, id, JSON.stringify({ sentences }));
+		const row = db().prepare('INSERT INTO debrief_readings(created_at, backend, body) VALUES(?,?,?)').run(at, id, JSON.stringify({ locale, sentences }));
 		return { status: 200, body: { reading: { id: Number(row.lastInsertRowid), createdAt: at, backend: id, backendName: backendName(id), sentences } } };
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		return { status: 502, body: { error: `코칭을 받지 못했습니다. ${msg}`.slice(0, 600) } };
+		return { status: 502, body: { error: tr(`코칭을 받지 못했습니다. ${msg}`, `Could not get coaching. ${msg}`).slice(0, 600) } };
 	} finally {
 		busy.delete(key);
 	}

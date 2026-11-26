@@ -1,5 +1,12 @@
 # Matrix Project — 교육 원칙
 
+## English and Korean
+
+- English is the default for first-time visitors. Provide equivalent Korean labels, instructions, exercises, hints, explanations, feedback, accessibility text and coach replies. Respect the learner’s selection on every route.
+- Use `t('한국어', 'English')` for interface text. Localize authored material at the point where the server releases it. Keep code, expected outputs, identifiers and learners’ own words intact.
+- Both languages share the same exercise IDs, timers, attempts and review history. Check an English → Korean → English switch during an active exercise when changing learning flows.
+- Keep the English [README](README.md) and [한국어 README](README.ko.md) in sync, including setup commands and links.
+
 문제·기능·콘텐츠를 만드는 에이전트는 아래 원칙을 따른다.
 원칙과 어긋나는 작업은 진행하기 전에 사용자에게 알린다.
 
@@ -30,7 +37,7 @@
 18. 검증되지 않은 콘텐츠는 넣지 않는다. 모범답안 통과, starter 실패, 치트시트 예제 값을 기계로 확인한다.
 19. 유형을 섞는다: 작성(write)·수정(fix)·리팩터(refactor)·완성(complete).
 20. 복합 문제는 단계별 테스트로 중간 진척을 보여준다.
-21. 설명·힌트·노트는 한국어로 짧게 쓴다.
+21. 설명·힌트·노트는 짧고 명확하게 쓴다. 기본 노출은 영어이며, 한국어 locale에는 한국어 대응 문구를 제공한다.
 
 ## E. 측정
 22. 레이팅은 외부 척도(Codeforces)에 고정한다. 내부에서만 통하는 점수를 만들지 않는다.
@@ -41,6 +48,13 @@
 25. 선택권을 준다. 다음 문제는 후보 2–3개로 제시하고 경로를 강제하지 않는다.
 26. 보상이 아니라 성장을 보여준다. 포인트·배지·스트릭을 쓰지 않는다.
 27. 비교 대상은 타인이 아니라 과거의 나다.
+
+## G. 화면의 글과 디자인
+28. 시크하게 쓴다. 설명은 최소한으로, 없어도 된다. 분위기와 느낌을 전하는 데 공을 들인다.
+29. 장황한 데이터 설명을 쓰지 않는다. 산출 방식, 건수, 근거, 각주, 면책 문구, "~를 보여 줍니다" 같은 안내문을 화면에 늘어놓지 않는다.
+30. 제목은 한두 단어, 부제는 짧은 한 줄 이하. 안내 문장보다 배치·여백·글꼴·움직임으로 전한다.
+31. 예외는 짧게 둔다. 외부 전송 고지, 오류 메시지, 문제 지문·힌트·노트(21번)는 필요한 만큼만 쓴다.
+32. 숫자와 근거는 기록에 그대로 남긴다(23번). 화면에 다 보여 줄 필요는 없다.
 
 ## 채택했지만 아직 구현되지 않은 것
 - 간격 반복(FSRS)

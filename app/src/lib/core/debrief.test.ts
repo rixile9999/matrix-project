@@ -113,9 +113,9 @@ describe('sessionStrip and observe', () => {
 		const st = sessionStrip(s, { runs, lookups: [], marks: [] });
 		const { stats, hitsByRun } = patternStats({ ...empty(), sessions: [s], runs }, catalog);
 		const obs = observe(s, st, runs, [], runs.flatMap((r) => hitsByRun.get(r.id) ?? []), stats, catalog);
-		expect(obs[0].text).toBe('실행 4번 (컴파일 오류 3, 통과 1). 그중 1번은 앞 실패 뒤 10초 안에 다시 실행했습니다.');
-		expect(obs.find((o) => o.key === 'pattern:placeholder')?.label).toBe('처음 보인 실수');
-		expect(obs.find((o) => o.key === 'silent')?.text).toBe('1:02부터 1분 50초 동안 실행과 조회가 없었습니다. 그 시간이 무엇이었는지는 기록에 없습니다.');
+		expect(obs[0].text).toBe('4번 · 오류 3 · 통과 1 · 10초 내 재실행 1');
+		expect(obs.find((o) => o.key === 'pattern:placeholder')?.label).toBe('처음');
+		expect(obs.find((o) => o.key === 'silent')?.text).toBe('1:02부터 1분 50초');
 	});
 	it('splits a silence into away and idle time when the page recorded them', () => {
 		const marks = [
@@ -126,13 +126,13 @@ describe('sessionStrip and observe', () => {
 		expect(st.away).toEqual([{ from: 70, to: 100 }]);
 		expect(st.idle).toEqual([{ from: 110, to: 150 }]);
 		const obs = observe(s, st, runs, [], [], [], catalog);
-		expect(obs.find((o) => o.key === 'silent')?.text).toContain('그중 30초는 다른 탭에 있었고, 40초는 입력이 없었습니다.');
+		expect(obs.find((o) => o.key === 'silent')?.text).toBe('1:02부터 1분 50초 · 이탈 30초 · 정지 40초');
 	});
 	it('notes a reveal without any lookup', () => {
 		const r = sess(30, '006-arithmetic-progression', t0, t0 + 3019, 'revealed', 2);
 		const obs = observe(r, sessionStrip(r, { runs: [], lookups: [], marks: [] }), [], [], [], [], catalog);
 		expect(obs.map((o) => o.key)).toEqual(['runs', 'silent', 'reveal']);
-		expect(obs[2].text).toBe('치트시트를 한 번도 열지 않고 답을 열었습니다 (힌트 2개 사용 후).');
+		expect(obs[2].text).toBe('치트시트 없이 · 힌트 2');
 	});
 });
 

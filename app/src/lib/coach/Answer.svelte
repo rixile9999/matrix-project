@@ -5,6 +5,7 @@
 	import Flow from './Flow.svelte';
 	import Compare from './Compare.svelte';
 	import SvgFrame from './SvgFrame.svelte';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	// messageId set = the answer is stored (trace blocks may be verified); streaming = text is still arriving.
 	let { text, messageId = null, streaming = false }: { text: string; messageId?: number | null; streaming?: boolean } = $props();
@@ -22,7 +23,7 @@
 			<div class="co-md">{@html renderMarkdown(s.text)}</div>
 		{:else if s.type === 'code'}
 			{#if pending(s.lang)}
-				<p class="co-drawing"><span class="pulse"></span>그림을 그리는 중…</p>
+				<p class="co-drawing"><span class="pulse"></span>{t('그림을 그리는 중…', 'Drawing…')}</p>
 			{:else}
 				<pre class="co-code">{s.code}</pre>
 			{/if}

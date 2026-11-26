@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TraceBlock } from '#lib/core/coach.ts';
 	import type { CoachVerifyResponse } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let { block, messageId = null, blockIndex }: { block: TraceBlock; messageId?: number | null; blockIndex: number } = $props();
 
@@ -42,9 +43,9 @@
 <div class="co-viz">
 	<div class="co-viz-head">
 		<span>{block.title}</span>
-		{#if status === 'checking'}<span class="co-quiet">실행해서 확인하는 중…</span>
-		{:else if status === 'done' && result?.ok}<span class="co-badge">실행 확인됨</span>
-		{:else if status === 'failed'}<span class="co-quiet">실행으로 확인하지 못했습니다</span>{/if}
+		{#if status === 'checking'}<span class="co-quiet">{t('실행해서 확인하는 중…', 'Checking by running…')}</span>
+		{:else if status === 'done' && result?.ok}<span class="co-badge">{t('실행 확인됨', 'Verified by running')}</span>
+		{:else if status === 'failed'}<span class="co-quiet">{t('실행으로 확인하지 못했습니다', 'Could not verify by running')}</span>{/if}
 	</div>
 	{#if block.cells?.length}
 		<div class="co-cells">
@@ -59,18 +60,18 @@
 		<span aria-hidden="true">→</span>
 		{#if wrong}
 			<code class="co-claimed">{step.value}</code>
-			<code class="co-actual">실제 값: {actual?.actual ?? '평가하지 못함'}</code>
+			<code class="co-actual">{t('실제 값', 'Actual value')}: {actual?.actual ?? t('평가하지 못함', 'Not evaluated')}</code>
 		{:else}
 			<code class="co-value">{step.value}</code>
 		{/if}
 	</div>
 	{#if status === 'done' && !result?.ok && badSteps.length}
-		<p class="co-warn">값이 다른 단계가 있습니다 ({badSteps.join(', ')}단계).</p>
+		<p class="co-warn">{t('값이 다른 단계가 있습니다', 'Some steps have different values')} ({badSteps.join(', ')}).</p>
 	{/if}
 	<div class="co-slide">
-		<button class="co-step-btn" type="button" aria-label="이전 단계" disabled={i <= 0} onclick={() => i--}>‹</button>
-		<input type="range" min="0" max={n - 1} step="1" bind:value={i} aria-label="단계" />
-		<button class="co-step-btn" type="button" aria-label="다음 단계" disabled={i >= n - 1} onclick={() => i++}>›</button>
+		<button class="co-step-btn" type="button" aria-label={t('이전 단계', 'Previous step')} disabled={i <= 0} onclick={() => i--}>‹</button>
+		<input type="range" min="0" max={n - 1} step="1" bind:value={i} aria-label={t('단계', 'Step')} />
+		<button class="co-step-btn" type="button" aria-label={t('다음 단계', 'Next step')} disabled={i >= n - 1} onclick={() => i++}>›</button>
 		<span class="co-count">{i + 1} / {n}</span>
 	</div>
 </div>

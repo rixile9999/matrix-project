@@ -1,3 +1,4 @@
+import { tr } from './locale.ts';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,13 +23,13 @@ export function withAccount<T>(id: string, fn: () => T): T {
 
 export function accountId() {
 	const account = context.getStore();
-	if (!account) throw new Error('로그인이 필요합니다.');
+	if (!account) throw new Error(tr('로그인이 필요합니다.', 'Please sign in.'));
 	return account.id;
 }
 
 export function db() {
 	const account = context.getStore();
-	if (!account) throw new Error('로그인이 필요합니다.');
+	if (!account) throw new Error(tr('로그인이 필요합니다.', 'Please sign in.'));
 	return account.database;
 }
 

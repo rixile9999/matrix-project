@@ -1,3 +1,5 @@
+import { readPack } from './content-language.ts';
+import { tr, label } from './locale.ts';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db } from './db.ts';
@@ -92,7 +94,7 @@ function patterns(): Record<string, Pattern> {
 	if (!existsSync(dir)) return out;
 	for (const f of readdirSync(dir).filter((f) => /^patterns(-[\w-]+)?\.json$/.test(f)).sort()) {
 		try {
-			const v: unknown = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+			const v: unknown = readPack(readFileSync(join(dir, f), 'utf8'));
 			if (!rec(v)) continue;
 			for (const [id, p] of Object.entries(v)) if (rec(p) && isStr(p.title) && isStr(p.when) && strs(p.steps)) out[id] = p as Pattern;
 		} catch {}
@@ -159,7 +161,7 @@ function world(): World {
 		const e = entries.get(id);
 		if (!e || taken.has(`syntax-${id}`)) continue;
 		cards.push({
-			id: `syntax-${id}`, kind: 'syntax', title: e.title, summary: '', prompt: `${e.title}: 쓰는 법과 결과를 떠올려 보라`, promptCode: null, points: ['떠올렸다'], answerCode: null,
+			id: `syntax-${id}`, kind: 'syntax', title: e.title, summary: '', prompt: tr(`${e.title}: 쓰는 법과 결과를 떠올려 보라`, `${e.title}: recall the syntax and result.`), promptCode: null, points: [tr('떠올렸다', 'Recalled it')], answerCode: null,
 			pattern: null, book: null, topic: e.topic, unlock: [], entry: e
 		});
 	}
@@ -183,16 +185,16 @@ function source(c: AnyCard, pats: Record<string, Pattern>): string | null {
 	if (c.book) {
 		const meta = books()[c.book.id];
 		const t = meta?.chapters?.[c.book.chapter];
-		return `책 ${c.book.chapter}장${isStr(t) && t ? ` ${t}` : ''}에서`;
+		return tr(`책 ${c.book.chapter}장${isStr(t) && t ? ` ${t}` : ''}에서`, `Chapter ${c.book.chapter}${isStr(t) && t ? ` · ${t}` : ''}`);
 	}
 	if (c.kind === 'recognize' || c.kind === 'syntax') return null; // the pattern is the answer
-	if (c.pattern && pats[c.pattern]) return `유형: ${pats[c.pattern].title}`;
-	if (c.topic && c.topic in TOPICS) return `주제: ${TOPICS[c.topic as keyof typeof TOPICS]}`;
+	if (c.pattern && pats[c.pattern]) return tr(`유형: ${pats[c.pattern].title}`, `Pattern: ${pats[c.pattern].title}`);
+	if (c.topic && c.topic in TOPICS) return tr(`주제: ${TOPICS[c.topic as keyof typeof TOPICS]}`, `Topic: ${label(TOPICS[c.topic as keyof typeof TOPICS])}`);
 	return null;
 }
 
 const cardView = (c: AnyCard, pats: Record<string, Pattern>): MemoCardView => ({
-	id: c.id, kind: c.kind, kindLabel: c.kind === 'syntax' ? '문법' : CARD_KINDS[c.kind], prompt: c.prompt, promptCode: c.promptCode, source: source(c, pats), limitSec: limitOf(c.kind)
+	id: c.id, kind: c.kind, kindLabel: c.kind === 'syntax' ? tr('문법', 'Syntax') : label(CARD_KINDS[c.kind]), prompt: c.prompt, promptCode: c.promptCode, source: source(c, pats), limitSec: limitOf(c.kind)
 });
 
 /** Today's session: due cards, then new ones, interleaved. */
@@ -217,7 +219,7 @@ export function coachCard(id: unknown): MemoFacts | null {
 	const c = f.c;
 	const pat = c.pattern ? patterns()[c.pattern] : undefined;
 	return {
-		kind: c.kind === 'syntax' ? '문법' : CARD_KINDS[c.kind], title: c.title, prompt: c.prompt, promptCode: c.promptCode, points: c.entry ? [] : c.points, answerCode: c.answerCode ?? c.entry?.code ?? null, summary: c.summary || c.entry?.text || '',
+		kind: c.kind === 'syntax' ? tr('문법', 'Syntax') : label(CARD_KINDS[c.kind]), title: c.title, prompt: c.prompt, promptCode: c.promptCode, points: c.entry ? [] : c.points, answerCode: c.answerCode ?? c.entry?.code ?? null, summary: c.summary || c.entry?.text || '',
 		pattern: pat ? { title: pat.title, when: pat.when, steps: pat.steps } : null
 	};
 }
@@ -234,7 +236,7 @@ export function revealCard(id: unknown, elapsedMs?: unknown): MemoRevealResponse
 		answerCode: c.answerCode,
 		patternTitle: (c.kind === 'recognize' || c.kind === 'steps') && c.pattern ? (patterns()[c.pattern]?.title ?? null) : null,
 		entry: c.entry,
-		next: Array.from({ length: total + 1 }, (_, n) => humanInterval(prev[capOvertime(gradeFromChecklist(n, total), over)], w.at))
+		next: Array.from({ length: total + 1 }, (_, n) => humanInterval(prev[capOvertime(gradeFromChecklist(n, total), over)], w.at, tr('ko', 'en')))
 	};
 }
 
@@ -252,17 +254,17 @@ export function answerCard(id: unknown, ticked: unknown, elapsedMs: unknown): Me
 	const f = openCard(id);
 	if (!f) return null;
 	const total = f.c.points.length;
-	if (!Array.isArray(ticked) || !ticked.every((i) => idx(i, total)) || new Set(ticked).size !== ticked.length) throw new Error('체크한 항목이 올바르지 않습니다.');
+	if (!Array.isArray(ticked) || !ticked.every((i) => idx(i, total)) || new Set(ticked).size !== ticked.length) throw new Error(tr('체크한 항목이 올바르지 않습니다.', 'Invalid checklist selection.'));
 	const ms = clampMs(elapsedMs);
 	const overtime = ms > limitOf(f.c.kind) * 1000;
 	const rating = capOvertime(gradeFromChecklist(ticked.length, total), overtime);
 	record('card', f.c.id, rating, ms, { ticked: [...(ticked as number[])].sort((a, b) => a - b), total, limitSec: limitOf(f.c.kind), overtime });
 	const m = memoryOf('card', f.c.id)!;
-	return { rating, word: VERDICT[rating], next: humanInterval(m.card.due, now()) };
+	return { rating, word: label(VERDICT[rating]), next: humanInterval(m.card.due, now(), tr('ko', 'en')) };
 }
 
 // ---------- checks ----------
-const checkKindLabel = (c: Check) => CHECK_KINDS[c.kind];
+const checkKindLabel = (c: Check) => label(CHECK_KINDS[c.kind]);
 const orderPool = (c: Check & { kind: 'order' }) => [...c.lines, ...c.distractors.map((d) => d.line)];
 
 function checkView(c: Check): MemoCheckView {
@@ -297,13 +299,13 @@ function openCheck(id: unknown): Check | null {
 const none = { message: null, why: null, correctIndex: null, whys: [] as string[], bugIndex: null, fixed: null };
 
 function firstFailure(r: JudgeResult): string {
-	if (r.status === 'timeout') return '시간 안에 끝나지 않았습니다.';
+	if (r.status === 'timeout') return tr('시간 안에 끝나지 않았습니다.', 'Time limit exceeded.');
 	if (r.status === 'compile_error') {
 		const lines = r.output.split('\n').filter((l) => l.trim());
-		return lines.find((l) => !/^User\.scala:\d+/.test(l.trim())) ?? lines[0] ?? '컴파일되지 않습니다.'; // the first line is often only the position
+		return lines.find((l) => !/^User\.scala:\d+/.test(l.trim())) ?? lines[0] ?? tr('컴파일되지 않습니다.', 'Compilation failed.'); // the first line is often only the position
 	}
 	const bad = r.cases.find((c) => c.status !== 'ok');
-	return bad ? `${bad.name}${bad.detail ? `: ${bad.detail}` : ''}` : '테스트를 통과하지 못했습니다.';
+	return bad ? `${bad.name}${bad.detail ? `: ${bad.detail}` : ''}` : tr('테스트를 통과하지 못했습니다.', 'Tests failed.');
 }
 
 const answeredRecently = (id: string) => !!db().prepare("SELECT 1 FROM memo_reviews WHERE item_type = 'check' AND item_id = ? AND at >= ?").get(id, nowSec() - 3600);
@@ -323,7 +325,7 @@ export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unkno
 	const ms = clampMs(elapsedMs);
 
 	if (c.kind === 'trace' || c.kind === 'approach') {
-		if (!idx(choice, 4)) throw new Error('보기를 고르세요.');
+		if (!idx(choice, 4)) throw new Error(tr('보기를 고르세요.', 'Select an option.'));
 		const perm = permutation(4, c.id);
 		const picked = perm[choice as number];
 		const correct = picked === c.answer;
@@ -331,7 +333,7 @@ export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unkno
 		return { ...none, correct, recorded, why: c.options[picked].why, correctIndex: perm.indexOf(c.answer), whys: perm.map((i) => c.options[i].why) };
 	}
 	if (c.kind === 'bug') {
-		if (!idx(choice, c.lines.length)) throw new Error('줄을 고르세요.');
+		if (!idx(choice, c.lines.length)) throw new Error(tr('줄을 고르세요.', 'Select a line.'));
 		const correct = choice === c.bugIndex;
 		const recorded = recordCheck(c, isFirst, correct, ms, { choice, bugIndex: c.bugIndex });
 		return { ...none, correct, recorded, why: c.why, bugIndex: c.bugIndex, fixed: c.fixed };
@@ -339,7 +341,7 @@ export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unkno
 
 	const pool = orderPool(c);
 	if (!Array.isArray(choice) || choice.length === 0 || choice.length > pool.length || !choice.every((i) => idx(i, pool.length)) || new Set(choice).size !== choice.length)
-		throw new Error('줄을 골라 순서대로 놓으세요.');
+		throw new Error(tr('줄을 골라 순서대로 놓으세요.', 'Select the lines in order.'));
 	const perm = permutation(pool.length, c.id);
 	const orig = (choice as number[]).map((d) => perm[d]);
 	const usedDistractors = orig.filter((o) => o >= c.lines.length).map((o) => o - c.lines.length);
@@ -475,16 +477,16 @@ export function notesView(): MemoNotesData {
 			const meta = bk[c.book.id];
 			const bi = bookIds.indexOf(c.book.id);
 			put(`book:${c.book.id}:${c.book.chapter}`, [0, bi < 0 ? 99 : bi, c.book.chapter], () => ({
-				heading: `${isStr(meta?.title) ? meta.title : '책'} ${c.book!.chapter}장`, sub: meta?.chapters?.[c.book!.chapter] ?? null, steps: []
+				heading: tr(`${isStr(meta?.title) ? meta.title : '책'} ${c.book!.chapter}장`, `${isStr(meta?.title) ? meta.title : 'Book'} · Chapter ${c.book!.chapter}`), sub: meta?.chapters?.[c.book!.chapter] ?? null, steps: []
 			}), c);
 		} else if (c.pattern && pats[c.pattern] && patternHasOpen(c.pattern)) {
 			const p = pats[c.pattern];
-			put(`pattern:${c.pattern}`, [1, Object.keys(pats).indexOf(c.pattern), 0], () => ({ heading: `유형 · ${p.title}`, sub: p.when, steps: p.steps }), c);
+			put(`pattern:${c.pattern}`, [1, Object.keys(pats).indexOf(c.pattern), 0], () => ({ heading: tr(`유형 · ${p.title}`, `Pattern · ${p.title}`), sub: p.when, steps: p.steps }), c);
 		} else if (c.pattern && pats[c.pattern]) {
-			put('pattern-locked', [2, 0, 0], () => ({ heading: '아직 열리지 않은 유형', sub: null, steps: [] }), c);
+			put('pattern-locked', [2, 0, 0], () => ({ heading: tr('아직 열리지 않은 유형', 'Locked patterns'), sub: null, steps: [] }), c);
 		} else {
 			const t = c.topic && c.topic in TOPICS ? c.topic : '';
-			put(`topic:${t}`, [3, t ? topics.indexOf(t) : 99, 0], () => ({ heading: t ? TOPICS[t as keyof typeof TOPICS] : '기타', sub: null, steps: [] }), c);
+			put(`topic:${t}`, [3, t ? topics.indexOf(t) : 99, 0], () => ({ heading: t ? label(TOPICS[t as keyof typeof TOPICS]) : tr('기타', 'Other'), sub: null, steps: [] }), c);
 		}
 	}
 	const list = [...groups.values()].sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.order[2] - b.order[2]);

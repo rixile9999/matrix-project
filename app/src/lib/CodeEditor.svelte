@@ -68,12 +68,11 @@
 						StreamLanguage.define(scala),
 						syntaxHighlighting(hl),
 						theme,
-						EditorView.contentAttributes.of({ 'aria-label': label }),
 						keymap.of([{ key: 'Mod-Enter', run: () => (onrun?.(), true) }, indentWithTab, ...defaultKeymap, ...historyKeymap]),
 						EditorView.updateListener.of((u) => {
 							if (u.docChanged) onchange?.(u.state.doc.toString());
 						}),
-						lock.of([EditorState.readOnly.of(initialReadonly), EditorView.editable.of(!initialReadonly)])
+						lock.of([EditorState.readOnly.of(initialReadonly), EditorView.editable.of(!initialReadonly), EditorView.contentAttributes.of({ 'aria-label': label })])
 					]
 				})
 			});
@@ -90,10 +89,11 @@
 		if (!view || !lock) return;
 		const { EditorState } = await import('@codemirror/state');
 		const { EditorView } = await import('@codemirror/view');
-		view.dispatch({ effects: lock.reconfigure([EditorState.readOnly.of(readonly), EditorView.editable.of(!readonly)]) });
+		view.dispatch({ effects: lock.reconfigure([EditorState.readOnly.of(readonly), EditorView.editable.of(!readonly), EditorView.contentAttributes.of({ 'aria-label': label })]) });
 	}
 	$effect(() => {
 		readonly;
+		label;
 		apply();
 	});
 </script>

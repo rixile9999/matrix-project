@@ -1,6 +1,6 @@
 # Background footage
 
-All three clips are NASA visualizations. NASA's Scientific Visualization Studio states that its content is in the public domain unless otherwise noted (https://svs.gsfc.nasa.gov/help/). They were scaled to 720p, dimmed, desaturated and stripped of audio for use behind text.
+All three clips are NASA visualizations. NASA's Scientific Visualization Studio states that its content is in the public domain unless otherwise noted (https://svs.gsfc.nasa.gov/help/). The files in this folder were scaled to 720p, dimmed, desaturated and stripped of audio for use behind text. The files in `full/` (view mode) keep the original colour and brightness at 1080p, re-encoded at 30 fps without audio.
 
 | File | Source | Credit |
 |---|---|---|

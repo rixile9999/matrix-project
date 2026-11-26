@@ -1,3 +1,4 @@
+import { readPack } from './content-language.ts';
 import { runScala } from './worker.ts';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -11,14 +12,14 @@ export function listProblems(lang: string): LangProblem[] {
 	if (!existsSync(dir)) return [];
 	return readdirSync(dir)
 		.filter((d) => existsSync(join(dir, d, 'problem.json')))
-		.map((d) => JSON.parse(readFileSync(join(dir, d, 'problem.json'), 'utf8')) as LangProblem)
+		.map((d) => readPack(readFileSync(join(dir, d, 'problem.json'), 'utf8')) as LangProblem)
 		.sort((a, b) => a.level - b.level || a.order - b.order);
 }
 
 export function loadProblem(lang: string, id: string): LangProblem | null {
 	if (!/^[\w-]+$/.test(id) || !/^[\w-]+$/.test(lang)) return null;
 	const f = join(problemDir(lang, id), 'problem.json');
-	return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as LangProblem) : null;
+	return existsSync(f) ? (readPack(readFileSync(f, 'utf8')) as LangProblem) : null;
 }
 
 export const loadSolution = (lang: string, id: string) => readFileSync(join(problemDir(lang, id), 'Solution.scala'), 'utf8');
@@ -31,7 +32,7 @@ export function loadGiven(lang: string, id: string): string | null {
 
 export function loadBooks(lang: string): Record<string, BookMeta> {
 	const f = join(PROBLEMS_DIR, lang, '_books.json');
-	return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
+	return existsSync(f) ? readPack(readFileSync(f, 'utf8')) : {};
 }
 
 export async function judge(lang: string, problem: LangProblem, code: string, owner?: string): Promise<JudgeResult> {

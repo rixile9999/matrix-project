@@ -1,3 +1,4 @@
+import { tr } from '#lib/server/locale.ts';
 import { fail, redirect } from '@sveltejs/kit';
 import * as s from '#lib/server/service.ts';
 import { dueTotal } from '#lib/server/memo.ts';
@@ -28,7 +29,7 @@ export const actions = {
 		const f = await request.formData();
 		const raw = String(f.get('initialRating') ?? '').trim();
 		const initial = raw === '' ? null : Number(raw);
-		if (initial !== null && !Number.isFinite(initial)) return fail(400, { error: '초기 레이팅이 올바르지 않습니다.' });
+		if (initial !== null && !Number.isFinite(initial)) return fail(400, { error: tr('초기 레이팅이 올바르지 않습니다.', 'Invalid initial rating.') });
 		try {
 			await s.setHandle(String(f.get('handle') ?? ''), initial);
 		} catch (e) {

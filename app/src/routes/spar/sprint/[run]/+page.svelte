@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { AmbienceControls, audio } from '#lib/ambience/index.ts';
 	import { stage } from '#lib/ambience/stage.svelte.ts';
@@ -12,6 +13,7 @@
 	import { fmtSpan } from '#lib/spar/format.ts';
 	import Judge from '#lib/spar/Judge.svelte';
 	import type { SparAbandonResponse, SparError, SparSprintData, SparSprintRunResponse, SparSprintSkipResponse } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: SparSprintData } = $props();
 
@@ -25,7 +27,12 @@
 		// a new load (navigation, reload) resets everything
 		const d = data;
 		untrack(() => {
-			if (d.run.id === seenRun && d.index === sp.index) return;
+			if (d.run.id === seenRun && d.index === sp.index) {
+				// A language change refreshes the problem and its feedback, retaining the draft.
+				sp = d;
+				runResult = d.lastResult ?? undefined;
+				return;
+			}
 			seenRun = d.run.id;
 			adopt(d);
 			runResult = undefined;
@@ -65,8 +72,8 @@
 
 	function paceText(ms: number): { pre: string; b: string } {
 		const s = Math.round(Math.abs(ms) / 1000);
-		if (s === 0) return { pre: '여기까지 최고 기록과', b: '같음' };
-		return { pre: '여기까지 최고 기록보다', b: `${fmtSpan(ms)} ${ms < 0 ? '빠름' : '느림'}` };
+		if (s === 0) return { pre: t('여기까지 최고 기록과', 'Same as your best so far'), b: t('같음', 'same') };
+		return { pre: t('여기까지 최고 기록보다', 'Compared with your best so far'), b: `${fmtSpan(ms)} ${ms < 0 ? t('빠름', 'faster') : t('느림', 'slower')}` };
 	}
 
 	async function post<T>(path: string, body?: object): Promise<{ ok: boolean; status: number; j: T & Partial<SparError> }> {
@@ -81,7 +88,7 @@
 	const toRun = (url: string, fresh = true) => goto(fresh ? `${url}?fresh=1` : url);
 	const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-	async function advance(next: SparSprintData) {
+	async function advance(next: SparSprintData, locale: string) {
 		if (next.status !== 'running') {
 			sp = next;
 			await toRun(next.runUrl ?? `/spar/run/${next.run.id}`);
@@ -89,7 +96,8 @@
 		}
 		leaving = true;
 		await wait(650);
-		adopt(next);
+		if (page.data.locale === locale) adopt(next);
+		else await invalidateAll();
 		await wait(30);
 		leaving = false;
 	}
@@ -99,15 +107,17 @@
 		running = true;
 		error = '';
 		confirmSkip = false;
+		const locale = page.data.locale;
 		try {
 			const { ok, status, j } = await post<SparSprintRunResponse>('run', { problemId: p.id, code });
 			if (!ok) return await fail(status, j);
 			runResult = j.result;
 			if (j.passed) {
 				audio.sfx('ok');
-				await advance(j.sprint);
+				await advance(j.sprint, locale);
 			} else {
-				sp = { ...sp, runs: j.sprint.runs };
+				if (page.data.locale === locale) sp = { ...sp, runs: j.sprint.runs };
+				else await invalidateAll();
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -117,7 +127,7 @@
 	}
 	async function fail(status: number, j: Partial<SparError>) {
 		if (j.over && j.runUrl) return void (await toRun(j.runUrl));
-		error = status === 409 ? '다른 화면에서 진행되어 이 문제가 아닙니다. 새로 불러옵니다.' : (j.error ?? `요청에 실패했습니다 (${status}).`);
+		error = status === 409 ? t('다른 화면에서 진행되어 이 문제가 아닙니다. 새로 불러옵니다.', 'This run changed elsewhere. Reloading.') : (j.error ?? `${t('요청에 실패했습니다', 'Request failed')} (${status}).`);
 		if (status === 409) setTimeout(() => location.reload(), 1200);
 	}
 
@@ -125,10 +135,11 @@
 		if (!p || busy || running) return;
 		if (!confirmSkip) { confirmSkip = true; return; }
 		busy = true;
+		const locale = page.data.locale;
 		try {
 			const { ok, status, j } = await post<SparSprintSkipResponse>('skip', { problemId: p.id });
 			if (!ok) return await fail(status, j);
-			await advance(j.sprint);
+			await advance(j.sprint, locale);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -167,7 +178,7 @@
 			if (panelOpen) sheet?.focusSearch();
 		} else if (e.key === 'Escape' && panelOpen) panelOpen = false;
 	}
-	const KIND = { write: '', fix: '고치기', refactor: '다시 쓰기', complete: '완성하기' } as const;
+	const KIND = $derived({ write: '', fix: t('고치기', 'Fix'), refactor: t('다시 쓰기', 'Refactor'), complete: t('완성하기', 'Complete') } as const);
 	const marks = $derived(Array.from({ length: sp.total }, (_, i) => (sp.done[i] ? (sp.done[i].outcome === 'skipped' ? 'skip' : 'done') : i === sp.index ? 'now' : '')));
 </script>
 
@@ -188,13 +199,13 @@
 		<div class="a-run a-trans" class:out={leaving}>
 			<div class="a-col">
 				<div class="a-glass pad">
-					<span>{p.topicLabel}{KIND[p.kind] ? ` · ${KIND[p.kind]}` : ''} · 기준 {fmtMs(p.limitSec * 1000)}</span>
+					<span>{p.topicLabel}{KIND[p.kind] ? ` · ${KIND[p.kind]}` : ''} · {t('기준', 'limit')} {fmtMs(p.limitSec * 1000)}</span>
 					<b>{p.title}</b>
 					<p class="a-p">{@html renderInline(p.statement)}</p>
 					{#if p.kind === 'refactor' && p.avoid.length}
-						<span>{@html renderInline(p.avoid.map((w) => `\`${w}\``).join(' · '))} 없이 다시 쓰세요.</span>
+						<span>{@html renderInline(p.avoid.map((w) => `\`${w}\``).join(' · '))} {t('없이 다시 쓰세요.', 'Rewrite without these.')}</span>
 					{/if}
-					{#if p.kind === 'fix'}<span>코드에 버그가 있습니다. 고쳐서 통과시키세요.</span>{/if}
+					{#if p.kind === 'fix'}<span>{t('코드에 버그가 있습니다. 고쳐서 통과시키세요.', 'There is a bug in the code. Fix it to pass.')}</span>{/if}
 				</div>
 				{#if runResult}
 					<div class="a-glass pad"><Judge result={runResult} /></div>
@@ -204,44 +215,44 @@
 
 			<div class="a-col">
 				{#key p.id}
-					<div class="a-glass edit"><div class="a-ed"><CodeEditor doc={sp.code} label="Scala 코드" onchange={(c) => (code = c)} onrun={run} /></div></div>
+					<div class="a-glass edit"><div class="a-ed"><CodeEditor doc={sp.code} label={t('Scala 코드', 'Scala code')} onchange={(c) => (code = c)} onrun={run} /></div></div>
 				{/key}
 				<div class="a-row" style="align-items:center">
-					<button class="a-btn" type="button" onclick={run} disabled={running || busy || leaving}>{running ? '실행 중…' : '실행'}</button>
+					<button class="a-btn" type="button" onclick={run} disabled={running || busy || leaving}>{running ? t('실행 중…', 'Running…') : t('실행', 'Run')}</button>
 					{#if !confirmSkip}
-						<button class="a-btn ghost" type="button" onclick={skip} disabled={running || busy || leaving}>건너뛰기</button>
+						<button class="a-btn ghost" type="button" onclick={skip} disabled={running || busy || leaving}>{t('건너뛰기', 'Skip')}</button>
 					{:else}
-						<span class="a-confirm">건너뛰면 이 기록은 최고 기록이 될 수 없습니다.
-							<button class="a-btn ghost small" type="button" onclick={skip} disabled={busy}>건너뜀</button>
-							<button class="a-btn quiet" type="button" onclick={() => (confirmSkip = false)}>계속 풀기</button>
+						<span class="a-confirm">{t('건너뛰면 이 기록은 최고 기록이 될 수 없습니다.', 'Skipping means this cannot be a best.')}
+							<button class="a-btn ghost small" type="button" onclick={skip} disabled={busy}>{t('건너뜀', 'Skipped')}</button>
+							<button class="a-btn quiet" type="button" onclick={() => (confirmSkip = false)}>{t('계속 풀기', 'Keep solving')}</button>
 						</span>
 					{/if}
 					<span class="a-small">⌘/Ctrl + Enter</span>
 					<span style="flex:1"></span>
-					<button class="a-btn quiet" type="button" onclick={() => { panelOpen = true; sheet?.focusSearch(); }} aria-expanded={panelOpen}>치트시트</button>
+					<button class="a-btn quiet" type="button" onclick={() => { panelOpen = true; sheet?.focusSearch(); }} aria-expanded={panelOpen}>{t('치트시트', 'Cheat sheet')}</button>
 				</div>
-				{#if running}<p class="a-small" aria-live="polite">실행하고 있습니다. 처음에는 컴파일에 시간이 걸릴 수 있습니다.</p>{/if}
+				{#if running}<p class="a-small" aria-live="polite">{t('실행하고 있습니다. 처음에는 컴파일에 시간이 걸릴 수 있습니다.', 'Running. The first compile may take a little longer.')}</p>{/if}
 			</div>
 		</div>
 	{/if}
 
 	<div class="a-corner">
 		{#if !confirmQuit}
-			<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = true)}>그만두기</button>
+			<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = true)}>{t('그만두기', 'Quit')}</button>
 		{:else}
-			<span class="a-confirm">이 도전을 중단으로 기록합니다.
-				<button class="a-btn ghost small" type="button" onclick={quit} disabled={busy}>중단</button>
-				<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = false)}>계속하기</button>
+			<span class="a-confirm">{t('이 도전을 중단으로 기록합니다.', 'Record this challenge as abandoned.')}
+				<button class="a-btn ghost small" type="button" onclick={quit} disabled={busy}>{t('중단', 'Abandon')}</button>
+				<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = false)}>{t('계속하기', 'Continue')}</button>
 			</span>
 		{/if}
 		<AmbienceControls />
 	</div>
 </main>
 
-<button class="a-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label="패널 닫기" onclick={() => (panelOpen = false)}></button>
-<aside class="arena a-drawer" class:open={panelOpen} aria-label="치트시트" aria-hidden={!panelOpen}>
+<button class="a-scrim" class:open={panelOpen} type="button" tabindex="-1" aria-label={t('패널 닫기', 'Close panel')} onclick={() => (panelOpen = false)}></button>
+<aside class="arena a-drawer" class:open={panelOpen} aria-label={t('치트시트', 'Cheat sheet')} aria-hidden={!panelOpen}>
 	<div class="a-page" style="padding:0;width:auto;animation:none;gap:0;flex:1;min-height:0">
-		<div class="a-dh"><span>치트시트 · ⌘/Ctrl + K</span><button class="a-btn quiet" type="button" onclick={() => (panelOpen = false)}>닫기</button></div>
+		<div class="a-dh"><span>{t('치트시트', 'Cheat sheet')} · ⌘/Ctrl + K</span><button class="a-btn quiet" type="button" onclick={() => (panelOpen = false)}>{t('닫기', 'Close')}</button></div>
 		<div class="a-ds"><CheatSheet bind:this={sheet} entries={sp.cheat} {reveal} onopen={lookup} /></div>
 	</div>
 </aside>

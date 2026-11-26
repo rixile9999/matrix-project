@@ -4,6 +4,10 @@
 //  - the traces of attention over a day and a week (facts, never a score),
 //  - the facts an Operator reading may cite, and the parser that checks the reading.
 // No I/O. All times are unix seconds; "local" is the process time zone.
+import type { Locale } from '../locale.ts';
+
+const copy = (locale: Locale) => (ko: string, en: string) => locale === 'en' ? en : ko;
+const count = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 // ---------- inputs ----------
 export type RunStatus = 'passed' | 'failed' | 'compile_error' | 'timeout';
@@ -20,6 +24,7 @@ export type SelfState = 'clear' | 'fair' | 'foggy';
 export type DSelf = { sessionId: number; at: number; state: SelfState | 'none' };
 
 export const SELF_LABEL: Record<SelfState, string> = { clear: '또렷', fair: '보통', foggy: '흐림' };
+export const SELF_LABEL_EN: Record<SelfState, string> = { clear: 'Clear', fair: 'Fair', foggy: 'Foggy' };
 
 /** Everything the analysis reads. */
 export type DebriefLog = { sessions: DSession[]; runs: DRun[]; lookups: DLookup[]; marks: DMark[]; questions: DQuestion[]; selves: DSelf[] };
@@ -246,7 +251,8 @@ function intervals(marks: DMark[], start: number, end: number, open: MarkKind, c
 
 export const overlap = (a: Interval, list: Interval[]) => list.reduce((n, b) => n + Math.max(0, Math.min(a.to, b.to) - Math.max(a.from, b.from)), 0);
 
-export function sessionStrip(s: DSession, log: Pick<DebriefLog, 'runs' | 'lookups' | 'marks'>): Strip {
+export function sessionStrip(s: DSession, log: Pick<DebriefLog, 'runs' | 'lookups' | 'marks'>, locale: Locale = 'ko'): Strip {
+	const c = copy(locale);
 	const runs = log.runs.filter((r) => r.sessionId === s.id).sort((a, b) => a.at - b.at || a.id - b.id);
 	const lookups = log.lookups.filter((l) => l.sessionId === s.id);
 	const marks = log.marks.filter((m) => m.sessionId === s.id).sort((a, b) => a.at - b.at);
@@ -254,8 +260,21 @@ export function sessionStrip(s: DSession, log: Pick<DebriefLog, 'runs' | 'lookup
 	const end = s.endedAt ?? lastEvent;
 	const elapsed = Math.max(0, end - s.startedAt);
 	const t = (at: number) => Math.max(0, Math.min(at, end) - s.startedAt);
+	const head = (r: DRun) => {
+		switch (r.status) {
+			case 'compile_error': return parseCompile(r.output)[0]?.head ?? c('컴파일 오류', 'Compile error');
+			case 'passed': return c('통과', 'Passed');
+			case 'timeout': return c('시간 초과', 'Timed out');
+			case 'failed': {
+				const failed = c('실패', 'Failed');
+				const examples = r.failing.slice(0, 2).join(', ');
+				const suffix = r.failing.length > 2 ? c(' 외', ' and more') : '';
+				return examples ? `${failed}: ${examples}${suffix}` : failed;
+			}
+		}
+	};
 	const stripMarks: StripMark[] = [
-		...runs.map((r): StripMark => ({ t: t(r.at), kind: 'run', status: r.status, head: r.status === 'compile_error' ? (parseCompile(r.output)[0]?.head ?? '컴파일 오류') : r.status === 'failed' ? (r.failing.length ? `실패: ${r.failing.slice(0, 2).join(', ')}${r.failing.length > 2 ? ' 외' : ''}` : '실패') : r.status === 'passed' ? '통과' : '시간 초과', runId: r.id })),
+		...runs.map((r): StripMark => ({ t: t(r.at), kind: 'run', status: r.status, head: head(r), runId: r.id })),
 		...lookups.map((l): StripMark => ({ t: t(l.at), kind: 'lookup' })),
 		...marks.filter((m) => m.kind === 'hint').map((m): StripMark => ({ t: t(m.at), kind: 'hint' }))
 	].sort((a, b) => a.t - b.t);
@@ -291,41 +310,53 @@ export function retries(runs: DRun[]): { gap: number; same: boolean; sessionId: 
 
 export type Observation = { key: string; label: string; text: string; pattern?: string /* link to a note */ };
 const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, '0')}`;
-const minSec = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)}분${sec % 60 ? ` ${Math.round(sec % 60)}초` : ''}` : `${Math.round(sec)}초`);
+const minSec = (sec: number, locale: Locale) => {
+	const minutes = Math.floor(sec / 60);
+	const seconds = Math.round(sec % 60);
+	if (locale === 'en') return minutes ? `${minutes}m${seconds ? ` ${seconds}s` : ''}` : `${seconds}s`;
+	return minutes ? `${minutes}분${seconds ? ` ${seconds}초` : ''}` : `${seconds}초`;
+};
 
-/** Two to four plain observations about one finished session. Facts only; nothing about the person. */
-export function observe(s: DSession, strip: Strip, runs: DRun[], lookups: DLookup[], hits: Hit[], stats: PatternStat[], catalog: DebriefPattern[]): Observation[] {
+/** Two to four terse observations about one finished session. Facts only, no prose; nothing about the person. */
+export function observe(s: DSession, strip: Strip, runs: DRun[], lookups: DLookup[], hits: Hit[], stats: PatternStat[], catalog: DebriefPattern[], locale: Locale = 'ko'): Observation[] {
+	const t = copy(locale);
+	const time = (sec: number) => minSec(sec, locale);
 	const out: Observation[] = [];
 	const mine = runs.filter((r) => r.sessionId === s.id);
 	const n = (st: RunStatus) => mine.filter((r) => r.status === st).length;
 	if (mine.length) {
-		const quick = retries(mine).filter((r) => r.gap <= QUICK_RETRY_SEC);
-		const parts = [n('compile_error') && `컴파일 오류 ${n('compile_error')}`, n('failed') && `실패 ${n('failed')}`, n('passed') && `통과 ${n('passed')}`].filter(Boolean).join(', ');
-		let text = `실행 ${mine.length}번 (${parts}).`;
-		if (quick.length) text += ` 그중 ${quick.length}번은 앞 실패 뒤 ${QUICK_RETRY_SEC}초 안에 다시 실행했습니다${quick.some((q) => q.same) ? '. 같은 오류가 그대로 나온 적도 있습니다' : ''}.`;
-		out.push({ key: 'runs', label: '실행', text });
-	} else out.push({ key: 'runs', label: '실행', text: '한 번도 실행하지 않았습니다.' });
+		const quick = retries(mine).filter((r) => r.gap <= QUICK_RETRY_SEC).length;
+		const parts = [
+			t(`${mine.length}번`, count(mine.length, 'run')),
+			n('compile_error') && t(`오류 ${n('compile_error')}`, count(n('compile_error'), 'compile error')),
+			n('failed') && t(`실패 ${n('failed')}`, count(n('failed'), 'failure')),
+			n('passed') && t(`통과 ${n('passed')}`, count(n('passed'), 'pass', 'passes')),
+			quick && t(`${QUICK_RETRY_SEC}초 내 재실행 ${quick}`, `${count(quick, 'retry', 'retries')} within ${QUICK_RETRY_SEC}s`)
+		];
+		out.push({ key: 'runs', label: t('실행', 'Runs'), text: parts.filter(Boolean).join(' · ') });
+	} else out.push({ key: 'runs', label: t('실행', 'Runs'), text: t('없음', 'None') });
 
 	const byId = new Map(stats.map((p) => [p.id, p]));
 	for (const id of [...new Set(hits.filter((h) => h.sessionId === s.id).map((h) => h.pattern))]) {
 		const p = catalog.find((c) => c.id === id)!;
 		const st = byId.get(id);
 		out.push(st?.note
-			? { key: 'pattern:' + id, label: '패턴', text: `노트 “${p.short}”의 근거가 하나 늘었습니다. 지금까지 ${st.runs}번, 문제 ${st.problems.length}개.`, pattern: id }
-			: { key: 'pattern:' + id, label: '처음 보인 실수', text: `“${p.short}”. 다른 세션에서 한 번 더 나오면 노트가 됩니다.` });
+			? { key: 'pattern:' + id, label: t('패턴', 'Pattern'), text: `${p.short} · ${t(`${st.runs}번째`, count(st.runs, 'occurrence'))}`, pattern: id }
+			: { key: 'pattern:' + id, label: t('처음', 'First occurrence'), text: p.short });
 	}
 
 	if (strip.silent) {
 		const sl = strip.silent;
 		const away = overlap(sl, strip.away);
 		const idle = overlap(sl, strip.idle);
-		let text = `${mmss(sl.from)}부터 ${minSec(sl.to - sl.from)} 동안 실행과 조회가 없었습니다.`;
-		if (!strip.recorded) text += ' 그 시간이 무엇이었는지는 기록에 없습니다.';
-		else if (away || idle) text += [away && ` 그중 ${minSec(away)}는 다른 탭에 있었고`, idle && ` ${minSec(idle)}는 입력이 없었습니다`].filter(Boolean).join(',') + '.';
-		else text += ' 화면에 있었고 입력도 이어졌습니다.';
-		out.push({ key: 'silent', label: '빈 시간', text });
+		const duration = time(sl.to - sl.from);
+		const parts = [t(`${mmss(sl.from)}부터 ${duration}`, `${duration} from ${mmss(sl.from)}`), away && t(`이탈 ${time(away)}`, `${time(away)} away`), idle && t(`정지 ${time(idle)}`, `${time(idle)} idle`)];
+		out.push({ key: 'silent', label: t('정적', 'Quiet interval'), text: parts.filter(Boolean).join(' · ') });
 	}
-	if (s.outcome === 'revealed' && !lookups.some((l) => l.sessionId === s.id)) out.push({ key: 'reveal', label: '답 공개', text: `치트시트를 한 번도 열지 않고 답을 열었습니다${s.hintsUsed >= 2 ? ' (힌트 2개 사용 후)' : ''}.` });
+	if (s.outcome === 'revealed' && !lookups.some((l) => l.sessionId === s.id)) {
+		const hints = s.hintsUsed >= 2 ? t(' · 힌트 2', ' · 2 hints') : '';
+		out.push({ key: 'reveal', label: t('공개', 'Solution opened'), text: t('치트시트 없이', 'Without a cheatsheet lookup') + hints });
+	}
 	return out;
 }
 
@@ -446,47 +477,61 @@ export const WEEK_SEC = 7 * 86_400;
 export const PREV_MIN_SESSIONS = 5;
 
 /** The traces of attention over the last seven days, each next to the seven days before when those had enough sessions. */
-export function focusFacts(log: DebriefLog, now: number): FocusFact[] {
+export function focusFacts(log: DebriefLog, now: number, locale: Locale = 'ko'): FocusFact[] {
+	const t = copy(locale);
+	const time = (sec: number) => minSec(sec, locale);
 	const cur = measures(log, { from: now - WEEK_SEC, to: now + 1 });
 	const prevM = measures(log, { from: now - 2 * WEEK_SEC, to: now - WEEK_SEC });
 	const prev = prevM.sessions >= PREV_MIN_SESSIONS ? prevM : null;
 	const facts: FocusFact[] = [];
 	const rate = (r: number | null, a: number, b: number) => (r === null ? null : `${a} / ${b}`);
 	facts.push({
-		id: 'sessions', label: '세션', value: cur.sessions ? `${cur.sessions}` : null,
-		detail: cur.sessions ? `${cur.sittings}번 앉아서 했고, 가장 길게 이어 한 시간은 ${minSec(cur.longestSittingSec)}입니다. 20분 넘게 비면 새로 앉은 것으로 셉니다.` : '최근 7일 기록이 없습니다.',
-		need: '세션 1개', before: prev ? `${prev.sessions}` : null
+		id: 'sessions', label: t('세션', 'Sessions'), value: cur.sessions ? `${cur.sessions}` : null,
+		detail: cur.sessions ? t(
+			`${cur.sittings}번 앉아서 했고, 가장 길게 이어 한 시간은 ${time(cur.longestSittingSec)}입니다. 20분 넘게 비면 새로 앉은 것으로 셉니다.`,
+			`${count(cur.sittings, 'sitting')}. The longest lasted ${time(cur.longestSittingSec)}. A break of 20 minutes starts a new sitting.`
+		) : t('최근 7일 기록이 없습니다.', 'No sessions in the last seven days.'),
+		need: t('세션 1개', '1 session'), before: prev ? `${prev.sessions}` : null
 	});
 	facts.push({
-		id: 'quick', label: `실패 뒤 ${QUICK_RETRY_SEC}초 안 재실행`, value: rate(cur.quickRate, cur.quick, cur.retries),
-		detail: cur.quickRate === null ? '' : `실패한 실행 다음 실행 ${cur.retries}번 중 ${cur.quick}번${cur.quickSame ? `, 그중 ${cur.quickSame}번은 같은 오류가 다시 났습니다` : ''}.`,
-		need: `실패 뒤 다시 실행 ${FACT_MIN}번`, before: prev && prev.quickRate !== null ? `${prev.quick} / ${prev.retries}` : null
+		id: 'quick', label: retryLabel(locale), value: rate(cur.quickRate, cur.quick, cur.retries),
+		detail: cur.quickRate === null ? '' : t(
+			`실패한 실행 다음 실행 ${cur.retries}번 중 ${cur.quick}번${cur.quickSame ? `, 그중 ${cur.quickSame}번은 같은 오류가 다시 났습니다` : ''}.`,
+			`${cur.quick} of ${count(cur.retries, 'retry', 'retries')} after failure came within ${QUICK_RETRY_SEC}s.${cur.quickSame ? ` The same error returned on ${count(cur.quickSame, 'retry', 'retries')}.` : ''}`
+		),
+		need: t(`실패 뒤 다시 실행 ${FACT_MIN}번`, `${FACT_MIN} retries after failure`), before: prev && prev.quickRate !== null ? `${prev.quick} / ${prev.retries}` : null
 	});
 	facts.push({
-		id: 'reveal', label: '조회 없이 답 공개', value: rate(cur.revealNoLookupRate, cur.revealNoLookup, cur.revealed),
-		detail: cur.revealNoLookupRate === null ? '' : `답을 연 ${cur.revealed}번 중 ${cur.revealNoLookup}번은 치트시트를 열지 않았습니다. 힌트 두 개를 다 쓰고 연 것은 ${cur.revealHints2}번.`,
-		need: `답 공개 ${FACT_MIN}번`, before: prev && prev.revealNoLookupRate !== null ? `${prev.revealNoLookup} / ${prev.revealed}` : null
+		id: 'reveal', label: revealLabel(locale), value: rate(cur.revealNoLookupRate, cur.revealNoLookup, cur.revealed),
+		detail: cur.revealNoLookupRate === null ? '' : t(
+			`답을 연 ${cur.revealed}번 중 ${cur.revealNoLookup}번은 치트시트를 열지 않았습니다. 힌트 두 개를 다 쓰고 연 것은 ${cur.revealHints2}번.`,
+			`${cur.revealNoLookup} of ${cur.revealed} solutions were opened without a lookup. Both hints were used before opening ${count(cur.revealHints2, 'solution')}.`
+		),
+		need: t(`답 공개 ${FACT_MIN}번`, `${FACT_MIN} solutions opened`), before: prev && prev.revealNoLookupRate !== null ? `${prev.revealNoLookup} / ${prev.revealed}` : null
 	});
 	facts.push({
-		id: 'silent', label: `${LONG_SILENT_SEC / 60}분 넘게 실행 없음`, value: `${cur.silentLong.length}`,
-		detail: cur.silentLong.length ? cur.silentLong.slice(0, 3).map((x) => `${localDate(x.at).slice(5).replace('-', '/')} ${clock(x.at)} ${x.problemId}: ${minSec(x.sec)}`).join(' · ') : '긴 빈 시간이 없었습니다.',
+		id: 'silent', label: t(`${LONG_SILENT_SEC / 60}분 넘게 실행 없음`, `At least ${LONG_SILENT_SEC / 60}m without a run or lookup`), value: `${cur.silentLong.length}`,
+		detail: cur.silentLong.length ? cur.silentLong.slice(0, 3).map((x) => `${localDate(x.at).slice(5).replace('-', '/')} ${clock(x.at)} ${x.problemId}: ${time(x.sec)}`).join(' · ') : t('긴 빈 시간이 없었습니다.', 'No long gaps.'),
 		before: prev ? `${prev.silentLong.length}` : null
 	});
 	facts.push({
-		id: 'away', label: '다른 탭 / 입력 없음', value: cur.recordedSessions ? `${minSec(cur.awaySec)} / ${minSec(cur.idleSec)}` : null,
-		detail: cur.recordedSessions ? `기록한 세션 ${cur.recordedSessions}개, 문제 화면에 있던 시간 ${minSec(cur.activeSec)} 중.` : '',
-		need: '새 기록이 쌓이면 보입니다 (이 기능 이후의 세션부터)', before: prev && prev.recordedSessions ? `${minSec(prev.awaySec)} / ${minSec(prev.idleSec)}` : null
+		id: 'away', label: t('다른 탭 / 입력 없음', 'Away / Idle'), value: cur.recordedSessions ? `${time(cur.awaySec)} / ${time(cur.idleSec)}` : null,
+		detail: cur.recordedSessions ? t(`기록한 세션 ${cur.recordedSessions}개, 문제 화면에 있던 시간 ${time(cur.activeSec)} 중.`, `${count(cur.recordedSessions, 'tracked session')} spanning ${time(cur.activeSec)}.`) : '',
+		need: t('새 기록이 쌓이면 보입니다 (이 기능 이후의 세션부터)', 'Needs sessions with tab and input activity recorded'), before: prev && prev.recordedSessions ? `${time(prev.awaySec)} / ${time(prev.idleSec)}` : null
 	});
 	facts.push({
-		id: 'fatigue', label: '앉은 지 1시간 전후 통과율', value: cur.earlyRate !== null && cur.lateRate !== null ? `${pct(cur.earlyRate, 1)} → ${pct(cur.lateRate, 1)}` : null,
-		detail: cur.earlyRate !== null && cur.lateRate !== null ? `1시간 안에 시작한 세션 ${cur.early}개, 그 뒤 ${cur.late}개.` : '',
-		need: `양쪽에 끝난 세션 ${FACT_MIN}개씩`, before: prev && prev.earlyRate !== null && prev.lateRate !== null ? `${pct(prev.earlyRate, 1)} → ${pct(prev.lateRate, 1)}` : null
+		id: 'fatigue', label: t('앉은 지 1시간 전후 통과율', 'Pass rate in the first hour and later'), value: cur.earlyRate !== null && cur.lateRate !== null ? `${pct(cur.earlyRate, 1)} → ${pct(cur.lateRate, 1)}` : null,
+		detail: cur.earlyRate !== null && cur.lateRate !== null ? t(`1시간 안에 시작한 세션 ${cur.early}개, 그 뒤 ${cur.late}개.`, `${count(cur.early, 'session')} started in the first hour, and ${cur.late} started later.`) : '',
+		need: t(`양쪽에 끝난 세션 ${FACT_MIN}개씩`, `${FACT_MIN} finished sessions in each group`), before: prev && prev.earlyRate !== null && prev.lateRate !== null ? `${pct(prev.earlyRate, 1)} → ${pct(prev.lateRate, 1)}` : null
 	});
 	const self = (['clear', 'fair', 'foggy'] as SelfState[]).map((st) => ({ st, n: cur.selves.filter((x) => x === st).length, r: cur.selfPass(st) }));
+	const selfLabel = locale === 'en' ? SELF_LABEL_EN : SELF_LABEL;
 	facts.push({
-		id: 'self', label: '자기 보고', value: cur.selves.length ? self.filter((x) => x.n).map((x) => `${SELF_LABEL[x.st]} ${x.n}`).join(' · ') : null,
-		detail: self.some((x) => x.r !== null) ? self.filter((x) => x.r !== null).map((x) => `${SELF_LABEL[x.st]}일 때 통과 ${pct(x.r!, 1)}`).join(', ') + '.' : cur.selves.length ? '상태별 통과율은 상태마다 3번 이상 모이면 보입니다.' : '',
-		need: '세션을 마친 뒤 한 번 눌러 남깁니다 (선택)'
+		id: 'self', label: t('자기 보고', 'Self-reports'), value: cur.selves.length ? self.filter((x) => x.n).map((x) => `${selfLabel[x.st]} ${x.n}`).join(' · ') : null,
+		detail: self.some((x) => x.r !== null)
+			? self.filter((x) => x.r !== null).map((x) => t(`${selfLabel[x.st]}일 때 통과 ${pct(x.r!, 1)}`, `${selfLabel[x.st]}: ${pct(x.r!, 1)} passed`)).join(', ') + '.'
+			: cur.selves.length ? t('상태별 통과율은 상태마다 3번 이상 모이면 보입니다.', 'Pass rates need at least three reports per state.') : '',
+		need: t('세션을 마친 뒤 한 번 눌러 남깁니다 (선택)', 'Optional after a finished session')
 	});
 	return facts;
 }
@@ -496,18 +541,25 @@ export const EXPERIMENTS = {
 	'read-error': { title: '오류 첫 줄 읽고 실행', detail: '실패하면 메시지 첫 줄을 읽고 나서 다시 실행합니다.', measure: 'quick' as const },
 	'cheat-first': { title: '답 열기 전 치트시트 한 번', detail: '막지 않고 기록만 합니다. 답을 열기 전에 관련 문법을 한 번 찾아봅니다.', measure: 'reveal' as const }
 };
+const experimentsEn: Record<keyof typeof EXPERIMENTS, { title: string; detail: string }> = {
+	'read-error': { title: 'Read before retrying', detail: 'After a failure, read the first line of the error before running again.' },
+	'cheat-first': { title: 'Look up syntax first', detail: 'Check the relevant syntax before opening the solution.' }
+};
 export type ExperimentId = keyof typeof EXPERIMENTS;
 export const isExperiment = (v: unknown): v is ExperimentId => typeof v === 'string' && Object.hasOwn(EXPERIMENTS, v);
+export const experimentCopy = (id: ExperimentId, locale: Locale) => locale === 'en' ? experimentsEn[id] : EXPERIMENTS[id];
+const retryLabel = (locale: Locale) => copy(locale)(`실패 뒤 ${QUICK_RETRY_SEC}초 안 재실행`, `Retried within ${QUICK_RETRY_SEC}s of failure`);
+const revealLabel = (locale: Locale) => copy(locale)('조회 없이 답 공개', 'Opened solutions without a lookup');
 
 /** The chosen experiment's measure before (14 days before choosing) and since choosing. */
-export function experimentResult(log: DebriefLog, id: ExperimentId, chosenAt: number, now: number) {
+export function experimentResult(log: DebriefLog, id: ExperimentId, chosenAt: number, now: number, locale: Locale = 'ko') {
 	const before = measures(log, { from: chosenAt - 2 * WEEK_SEC, to: chosenAt });
 	const after = measures(log, { from: chosenAt, to: now + 1 });
 	const show = (m: ReturnType<typeof measures>) =>
 		EXPERIMENTS[id].measure === 'quick'
 			? m.retries ? `${m.quick} / ${m.retries}` : '—'
 			: m.revealed ? `${m.revealNoLookup} / ${m.revealed}` : '—';
-	const label = EXPERIMENTS[id].measure === 'quick' ? `실패 뒤 ${QUICK_RETRY_SEC}초 안 재실행` : '조회 없이 답 공개';
+	const label = EXPERIMENTS[id].measure === 'quick' ? retryLabel(locale) : revealLabel(locale);
 	return { label, before: show(before), after: show(after), afterSessions: after.sessions };
 }
 
@@ -515,16 +567,28 @@ export function experimentResult(log: DebriefLog, id: ExperimentId, chosenAt: nu
 export type CoachFact = { id: string; text: string };
 
 /** What a reading may rely on: pattern notes, the week's traces, questions. Each with an id the sentences must cite. */
-export function coachingFacts(log: DebriefLog, stats: PatternStat[], catalog: DebriefPattern[], now: number): CoachFact[] {
+export function coachingFacts(log: DebriefLog, stats: PatternStat[], catalog: DebriefPattern[], now: number, locale: Locale = 'ko'): CoachFact[] {
+	const t = copy(locale);
 	const facts: CoachFact[] = [];
 	const name = (id: string) => catalog.find((p) => p.id === id)?.short ?? id;
 	for (const p of stats.filter((x) => x.note).slice(0, 5))
-		facts.push({ id: `pattern:${p.id}`, text: `반복된 실수 “${name(p.id)}”: 실행 ${p.runs}번, 세션 ${p.sessions}개, 문제 ${p.problems.join(', ')}. 마지막 ${localDate(p.lastAt)} ${clock(p.lastAt)}.` });
-	for (const f of focusFacts(log, now)) if (f.value !== null) facts.push({ id: `focus:${f.id}`, text: `최근 7일 ${f.label}: ${f.value}. ${f.detail}${f.before ? ` 그 전 7일: ${f.before}.` : ''}`.trim() });
+		facts.push({ id: `pattern:${p.id}`, text: t(
+			`반복된 실수 “${name(p.id)}”: 실행 ${p.runs}번, 세션 ${p.sessions}개, 문제 ${p.problems.join(', ')}. 마지막 ${localDate(p.lastAt)} ${clock(p.lastAt)}.`,
+			`Recurring mistake “${name(p.id)}” appeared in ${count(p.runs, 'run')} across ${count(p.sessions, 'session')}, on problems ${p.problems.join(', ')}. Last seen ${localDate(p.lastAt)} ${clock(p.lastAt)}.`
+		) });
+	for (const fact of focusFacts(log, now, locale)) {
+		if (fact.value === null) continue;
+		const previous = fact.before ? t(` 그 전 7일: ${fact.before}.`, ` Previous seven days: ${fact.before}.`) : '';
+		facts.push({ id: `focus:${fact.id}`, text: t(
+			`최근 7일 ${fact.label}: ${fact.value}. ${fact.detail}${previous}`,
+			`Last seven days, ${fact.label}: ${fact.value}. ${fact.detail}${previous}`
+		).trim() });
+	}
 	const qs = log.questions.filter((q) => q.at >= now - WEEK_SEC);
 	if (qs.length) {
 		const sessionOf = new Map(log.sessions.map((s) => [s.id, s]));
-		facts.push({ id: 'questions', text: `최근 7일 Operator 질문 ${qs.length}개: ${qs.slice(-6).map((q) => `[${sessionOf.get(q.sessionId)?.problemId ?? '?'}] ${q.text.replace(/\s+/g, ' ').slice(0, 60)}`).join(' / ')}` });
+		const questions = qs.slice(-6).map((q) => `[${sessionOf.get(q.sessionId)?.problemId ?? '?'}] ${q.text.replace(/\s+/g, ' ').slice(0, 60)}`).join(' / ');
+		facts.push({ id: 'questions', text: t(`최근 7일 Operator 질문 ${qs.length}개: ${questions}`, `${count(qs.length, 'Operator question')} in the last seven days: ${questions}`) });
 	}
 	return facts;
 }
@@ -544,15 +608,32 @@ export const COACH_SYSTEM = [
 	'{"sentences":[{"text":"문장","facts":["fact id","fact id"]}]}'
 ].join('\n');
 
-export const coachingPrompt = (facts: CoachFact[]) => `최근 학습 기록의 사실입니다. 이 사실로만 코칭해 주세요.\n\n${JSON.stringify({ facts }, null, 1)}`;
-
 export const COACH_MAX_CHARS = 110;
+const COACH_EN_MAX_CHARS = 180;
 export const COACH_MAX_SENTENCES = 5;
+export const COACH_SYSTEM_EN = [
+	'Give short, specific coaching on recent practice in plain English.',
+	'Use only the facts in the input JSON. Keep all numbers, names, and dates as given.',
+	`Write three to five sentences, at most ${COACH_EN_MAX_CHARS} characters each.`,
+	'Each sentence must cite the supporting fact IDs in its facts array.',
+	'Describe recorded behavior. Avoid judging personality, talent, willpower, or concentration. Mark what the records leave unknown. Avoid invented praise or concern.',
+	'Suggest one specific next action supported by the records in the final sentence.',
+	'Use no tools or files. Return only JSON in this format, with no Markdown:',
+	'{"sentences":[{"text":"Sentence","facts":["fact id","fact id"]}]}'
+].join('\n');
+
+export function coachingPrompt(facts: CoachFact[], locale: Locale = 'ko') {
+	const lead = copy(locale)('최근 학습 기록의 사실입니다. 이 사실로만 코칭해 주세요.', 'Give coaching based on these recorded practice facts.');
+	return `${lead}\n\n${JSON.stringify({ facts }, null, 1)}`;
+}
+
 const JUDGING = /(당신|너|그대)(은|는)\s|성격|재능|게으|의지가|집중(력)?(을|이)?\s?(못|부족|약)|산만/;
+const JUDGING_EN = /\b(?:lazy|willpower|your personality|your talent|lack(?:ed|s)? concentration|could not focus|you (?:are|were) distracted)\b/i;
 
 /** Strict JSON in, validated sentences out (each cites known fact ids, is short, and judges no one). Null when the text is not the expected JSON. */
-export function parseCoaching(text: string, facts: CoachFact[]): { sentences: { text: string; factIds: string[] }[]; dropped: number } | null {
+export function parseCoaching(text: string, facts: CoachFact[], locale: Locale = 'ko'): { sentences: { text: string; factIds: string[] }[]; dropped: number } | null {
 	const known = new Set(facts.map((f) => f.id));
+	const limit = locale === 'en' ? COACH_EN_MAX_CHARS : COACH_MAX_CHARS;
 	const a = text.indexOf('{');
 	const b = text.lastIndexOf('}');
 	if (a < 0 || b <= a) return null;
@@ -570,7 +651,7 @@ export function parseCoaching(text: string, facts: CoachFact[]): { sentences: { 
 		const o = (x && typeof x === 'object' ? x : {}) as { text?: unknown; facts?: unknown };
 		const t = typeof o.text === 'string' ? o.text.trim() : '';
 		const ids = Array.isArray(o.facts) ? (o.facts.filter((i) => typeof i === 'string' && known.has(i)) as string[]) : [];
-		if (!t || !ids.length || Array.from(t).length > COACH_MAX_CHARS || JUDGING.test(t) || out.length >= COACH_MAX_SENTENCES) {
+		if (!t || !ids.length || Array.from(t).length > limit || JUDGING.test(t) || (locale === 'en' && JUDGING_EN.test(t)) || out.length >= COACH_MAX_SENTENCES) {
 			dropped++;
 			continue;
 		}

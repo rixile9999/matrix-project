@@ -1,3 +1,4 @@
+import { tr } from './locale.ts';
 import { argon2, createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
@@ -44,9 +45,9 @@ function allowAttempt(bucket: string, limit: number, now: number) {
 }
 
 export async function register(name: string, password: string, ip: string) {
-	if (!/^[a-zA-Z0-9_.-]{1,64}$/.test(name)) return { error: '아이디는 영문, 숫자, 점, 밑줄, 하이픈으로 1~64자를 입력하세요.', status: 400 } as const;
-	if (password.length < 12 || password.length > 512) return { error: '비밀번호는 12~512자로 입력하세요.', status: 400 } as const;
-	if (hashing >= 4 || !allowAttempt('signup:'+ip, 12, Date.now())) return { error: '잠시 후 다시 시도하세요.', status: 429 } as const;
+	if (!/^[a-zA-Z0-9_.-]{1,64}$/.test(name)) return { error: tr('아이디는 영문, 숫자, 점, 밑줄, 하이픈으로 1~64자를 입력하세요.', 'Use 1–64 letters, numbers, periods, underscores, or hyphens for your username.'), status: 400 } as const;
+	if (password.length < 12 || password.length > 512) return { error: tr('비밀번호는 12~512자로 입력하세요.', 'Use a password between 12 and 512 characters.'), status: 400 } as const;
+	if (hashing >= 4 || !allowAttempt('signup:'+ip, 12, Date.now())) return { error: tr('잠시 후 다시 시도하세요.', 'Try again shortly.'), status: 429 } as const;
 	hashing++;
 	try {
 		const hash = await passwordHash(password);
@@ -56,7 +57,7 @@ export async function register(name: string, password: string, ip: string) {
 			const created = db.prepare('INSERT INTO users(id,name,password) VALUES(?,?,?) ON CONFLICT(name) DO NOTHING').run(id,name,hash);
 			if (!created.changes) {
 				db.exec('ROLLBACK');
-				return { error: '이미 사용 중인 아이디입니다.', status: 409 } as const;
+				return { error: tr('이미 사용 중인 아이디입니다.', 'This username is already taken.'), status: 409 } as const;
 			}
 			db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(digest(token),id,Date.now()+sessionAge*1000);
 			db.exec('COMMIT');

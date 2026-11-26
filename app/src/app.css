@@ -29,7 +29,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(
 
 .screen > .bar { display: flex; align-items: center; gap: 18px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .bar .brand { font: 700 16px var(--f-display); letter-spacing: -.01em; }
-.screen > .bar nav { display: flex; gap: 14px; flex: 1; }
+.screen > .bar nav { display: flex; flex-wrap: wrap; gap: 4px 14px; flex: 1; }
 .screen > .bar nav a { color: var(--muted); text-decoration: none; padding: 2px 0; border-bottom: 2px solid transparent; }
 .screen > .bar nav a.on { color: var(--ink); border-color: var(--accent); }
 .handle { font: 12px var(--f-mono); color: var(--muted); }
@@ -505,3 +505,9 @@ code, pre, .cm-editor, .cm-editor *, .cs-code, .cs-peek, .lang-out, .case .detai
 :root[data-look="arena"] .cheat-panel.open, :root[data-look="arena"] .co-sheet { background: #08090d; box-shadow: none; }
 :root[data-look="arena"] .co-svg { filter: brightness(.9); }
 :root[data-look="arena"] :is(.kind, .chip, .clean) { background: rgba(6, 7, 11, .72); }
+
+/* View mode (ambience): the page steps aside so the backdrop can be watched whole. */
+.viewing { opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
+.view-open { font: 500 12px var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.view-open:hover { border-color: var(--accent); color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .viewing { transition: none; } }

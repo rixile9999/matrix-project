@@ -1,3 +1,4 @@
+import { readPack } from './content-language.ts';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Check, MemoCard, Pattern } from '#lib/core/memo.ts';
@@ -10,7 +11,7 @@ function readAll<T>(lang: string, sub: string): T[] {
 	return readdirSync(dir)
 		.filter((f) => f.endsWith('.json'))
 		.sort()
-		.flatMap((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as T[]);
+		.flatMap((f) => readPack(readFileSync(join(dir, f), 'utf8')) as T[]);
 }
 
 export const listCards = (lang: string) => readAll<MemoCard>(lang, 'cards');
@@ -21,7 +22,7 @@ export function loadPatterns(lang: string): Record<string, Pattern> {
 	if (!existsSync(dir)) return {};
 	const out: Record<string, Pattern> = {};
 	for (const f of readdirSync(dir).filter((f) => /^patterns(-[\w-]+)?\.json$/.test(f)).sort())
-		Object.assign(out, JSON.parse(readFileSync(join(dir, f), 'utf8')));
+		Object.assign(out, readPack(readFileSync(join(dir, f), 'utf8')));
 	return out;
 }
 /** File name (without .json) of each card/check, for verifier messages and filters. */
@@ -30,4 +31,4 @@ export function memoFiles(lang: string, sub: 'cards' | 'checks'): string[] {
 	return existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort() : [];
 }
 export const readMemoFile = <T>(lang: string, sub: 'cards' | 'checks', file: string) =>
-	JSON.parse(readFileSync(join(DIR, lang, sub, file), 'utf8')) as T[];
+	readPack(readFileSync(join(DIR, lang, sub, file), 'utf8')) as T[];

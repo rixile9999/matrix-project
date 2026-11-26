@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// One pattern note: my own code where it happened, the rule (with my own line), verified examples, one retrieval question, and the way into the deck.
 	import { untrack } from 'svelte';
 	import { renderInline } from '#lib/inline.ts';
@@ -34,7 +35,7 @@
 		if (mine.trim() === mineSaved.trim()) return;
 		const r = await fetch('/debrief/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pattern: note.id, text: mine }) });
 		const j = (await r.json()) as { ok?: true; error?: string };
-		mineMsg = j.ok ? '저장했습니다.' : (j.error ?? '저장하지 못했습니다.');
+		mineMsg = j.ok ? '' : (j.error ?? t('저장하지 못했습니다.', 'Could not save.'));
 		if (j.ok) mineSaved = mine;
 	}
 
@@ -61,19 +62,18 @@
 		const r = await fetch('/debrief/deck', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pattern: note.id }) });
 		const j = (await r.json()) as { ok?: true; error?: string };
 		if (j.ok) inDeck = true;
-		deckMsg = j.ok ? '덱에 넣었습니다. 암기 복습에서 간격 반복으로 다시 나옵니다.' : (j.error ?? '넣지 못했습니다.');
+		deckMsg = j.ok ? '' : (j.error ?? t('넣지 못했습니다.', 'Could not add.'));
 	}
 </script>
 
 <article class="note" id="note-{note.id}" aria-labelledby="nt-{note.id}">
 	<h3 id="nt-{note.id}">{@html renderInline(note.title)}</h3>
 	<div class="meta mono">
-		<span>실행 {note.runs}번</span><span>세션 {note.sessions}개</span><span>문제 {note.problems.length}개</span><span>마지막 {date(note.lastAt)}</span>
-		{#if !note.note}<span class="pending">아직 노트 전 · 두 세션 이상이면 노트가 됩니다</span>{/if}
+		<span>{note.runs}×</span><span>{date(note.lastAt)}</span>
 	</div>
 
 	<div class="block">
-		<div class="lab">내 코드에서</div>
+		<div class="lab">{t('내 코드', 'My code')}</div>
 		{#each evidence as e, i (i)}
 			<div class="ev">
 				<header><span>{e.title}</span><span>{date(e.at)}</span></header>
@@ -82,33 +82,33 @@
 					<div class="msg">{e.head}</div>
 				{:else}
 					<pre>{e.code}</pre>
-					<div class="msg fail">실패: {e.cases.join(', ')}</div>
+					<div class="msg fail">{t('실패', 'Failed')}: {e.cases.join(', ')}</div>
 				{/if}
 			</div>
 		{/each}
-		{#if note.evidence.length > SHOWN && !more}<button class="more" type="button" onclick={() => (more = true)}>근거 {note.evidence.length - SHOWN}개 더 보기</button>{/if}
+		{#if note.evidence.length > SHOWN && !more}<button class="more" type="button" onclick={() => (more = true)}>+{note.evidence.length - SHOWN}</button>{/if}
 	</div>
 
 	{#if note.questions.length}
 		<div class="block">
-			<div class="lab">이 실수가 나온 세션에서 한 질문</div>
+			<div class="lab">{t('질문', 'Question')}</div>
 			<ul class="qs">{#each note.questions as q, i (i)}<li><span class="mono">{q.problemId}</span>{q.text}</li>{/each}</ul>
 		</div>
 	{/if}
 
 	<div class="block">
-		<div class="lab">규칙</div>
+		<div class="lab">{t('규칙', 'Rule')}</div>
 		<ul class="rule">{#each note.rule as r, i (i)}<li>{@html renderInline(r)}</li>{/each}</ul>
 		<label class="mine">
-			<span>내 말로 한 줄 <small>직접 쓰면 더 오래 남습니다</small></span>
-			<input bind:value={mine} maxlength="200" placeholder="예: _ 는 자리 하나, 두 번 쓰면 이름을 붙인다" autocomplete="off" onblur={saveMine} onkeydown={(e) => e.key === 'Enter' && saveMine()} />
+			<span class="sr">{t('내 말로 한 줄', 'One line in my words')}</span>
+			<input bind:value={mine} maxlength="200" placeholder={t('내 말로 한 줄', 'One line in my words')} autocomplete="off" onblur={saveMine} onkeydown={(e) => e.key === 'Enter' && saveMine()} />
 		</label>
 		{#if mineMsg}<small class="hint" aria-live="polite">{mineMsg}</small>{/if}
 	</div>
 
 	{#if note.examples.length}
 		<div class="block">
-			<div class="lab">예제 <span class="ok-tag">실행으로 확인한 값</span></div>
+		<div class="lab">{t('예', 'Example')}</div>
 			<div class="ex">
 				{#each note.examples as x, i (i)}<div class="e">{x.expr}</div><div class="v">{x.value}</div>{/each}
 			</div>
@@ -118,7 +118,7 @@
 	{#if note.check}
 		{@const c = note.check}
 		<div class="block">
-			<div class="lab">인출 한 문제</div>
+		<div class="lab">{t('한 문제', 'One check')}</div>
 			<div class="check">
 				<p>{@html renderInline(c.prompt)}</p>
 				<pre>{c.code}</pre>
@@ -128,12 +128,11 @@
 					{/each}
 				</div>
 				{#if picked !== null}
-					<p class="why" aria-live="polite">{@html renderInline(picked === c.answer ? c.options[c.answer].why : `${c.options[picked].why} 정답은 ${c.options[c.answer].text}.`)}</p>
+					<p class="why" aria-live="polite">{@html renderInline(picked === c.answer ? c.options[c.answer].why : `${c.options[picked].why} ${t('정답은', 'The answer is')} ${c.options[c.answer].text}.`)}</p>
 				{/if}
 				<div class="act">
-					{#if inDeck}<span class="hint">덱에 들어 있습니다. 암기 › 점검에서 간격 반복으로 나옵니다.</span>
-					{:else if note.note}<button class="btn small" type="button" onclick={addDeck}>암기 덱에 넣기</button><span class="hint">{deckMsg || 'FSRS 일정에 들어가고, 맞히면 간격이 늘어납니다.'}</span>
-					{:else}<span class="hint">노트가 되면 덱에 넣을 수 있습니다.</span>{/if}
+					{#if inDeck}<span class="hint">{t('덱에 있음', 'In deck')}</span>
+					{:else if note.note}<button class="btn small" type="button" onclick={addDeck}>{t('덱에 넣기', 'Add to deck')}</button>{#if deckMsg}<span class="hint">{deckMsg}</span>{/if}{/if}
 				</div>
 			</div>
 		</div>
@@ -141,10 +140,10 @@
 
 	{#if note.practice.length}
 		<div class="block">
-			<div class="lab">이 규칙을 쓰는 문제</div>
+			<div class="lab">{t('연습', 'Practice')}</div>
 			<div class="prac">
 				{#each note.practice as p (p.id)}
-					<form method="POST" action="/lang?/start"><input type="hidden" name="problemId" value={p.id} /><button class="chip" type="submit">{p.title}{p.passed ? ' · 통과함' : ''}</button></form>
+					<form method="POST" action="/lang?/start"><input type="hidden" name="problemId" value={p.id} /><button class="chip" type="submit">{p.title}</button></form>
 				{/each}
 			</div>
 		</div>
@@ -154,10 +153,8 @@
 <style>
 	.note h3 { font: 400 clamp(22px, 3vw, 30px)/1.2 var(--f-display); letter-spacing: -.015em; margin: 0 0 8px; text-wrap: balance; }
 	.meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
-	.pending { color: var(--accent); }
 	.block { margin-top: 26px; }
 	.lab { font: 500 12px var(--f-mono); letter-spacing: .08em; color: var(--muted); margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
-	.ok-tag { color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); border-radius: 999px; padding: 1px 8px; letter-spacing: 0; }
 	.ev { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
 	.ev header { display: flex; justify-content: space-between; gap: 12px; padding: 7px 14px; font: 500 12px var(--f-mono); color: var(--muted); background: color-mix(in srgb, var(--ink) 3%, transparent); flex-wrap: wrap; }
 	.ev pre { margin: 0; padding: 11px 14px 4px; overflow-x: auto; font: 13.5px/1.6 var(--f-mono); font-variant-ligatures: none; }
@@ -171,8 +168,7 @@
 	.rule { margin: 0; padding-left: 20px; font-size: 16px; line-height: 1.7; max-width: 62ch; }
 	.rule li { margin-bottom: 4px; }
 	.mine { display: grid; gap: 4px; margin-top: 14px; max-width: 62ch; }
-	.mine span { font-size: 13px; color: var(--muted); }
-	.mine small { margin-left: 6px; opacity: .8; }
+	.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 	.mine input { background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); font: 16px var(--f-body); padding: 8px 0; border-radius: 0; }
 	.mine input:focus { outline: none; border-bottom-color: var(--accent); }
 	.hint { font-size: 13px; color: var(--muted); }

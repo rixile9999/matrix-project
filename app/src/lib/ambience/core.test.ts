@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-	BEAT, BREATH, SCENE_PARAMS, bloomStep, easeParams, easeProgress, motifEvents, nextBreath, orbitProgress, pickBackdrop, rippleStep,
+	SCENE_PARAMS, bloomStep, easeParams, easeProgress, orbitProgress, pickBackdrop, rippleStep,
 } from './core';
 
 describe('easeParams', () => {
@@ -42,34 +42,6 @@ describe('orbit progress', () => {
 		expect(easeProgress(0.2, 0.4, 0.1)).toBeGreaterThan(0.2);
 		expect(easeProgress(0.2, 0.4, 0.1)).toBeLessThan(0.4);
 		expect(easeProgress(1, 0, 0.1)).toBe(0);
-	});
-});
-
-describe('motif schedule (3+3+2)', () => {
-	const ev = motifEvents(100);
-	const plucks = ev.filter((e) => e.kind === 'pluck');
-	it('has 4 bars x 6 plucks and thumps from bar 2', () => {
-		expect(plucks).toHaveLength(24);
-		expect(ev.filter((e) => e.kind === 'thump')).toHaveLength(12);
-	});
-	it('first bar hits at 3+3+2 twice in sixteenths', () => {
-		const rel = plucks.slice(0, 6).map((e) => Math.round(((e.t - 100) / BEAT) * 2));
-		expect(rel).toEqual([0, 3, 6, 8, 11, 14]);
-	});
-	it('ends inside 32 beats and levels rise then fall', () => {
-		expect(Math.max(...ev.map((e) => e.t)) - 100).toBeLessThan(32 * BEAT);
-		const bar = (i: number) => plucks[i * 6].peak;
-		expect(bar(0)).toBeLessThan(bar(1));
-		expect(bar(3)).toBeLessThan(bar(2));
-	});
-});
-
-describe('nextBreath', () => {
-	it('lands on a breath boundary after now', () => {
-		const t = nextBreath(10, 10 + 25.2);
-		expect((t - 10) % BREATH).toBeCloseTo(0, 9);
-		expect(t).toBeGreaterThanOrEqual(10 + 25.2 + 0.1);
-		expect(t).toBeLessThan(10 + 25.2 + 0.1 + BREATH);
 	});
 });
 

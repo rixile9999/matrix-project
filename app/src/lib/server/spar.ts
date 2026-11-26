@@ -1,3 +1,5 @@
+import { displayJudge } from './content-language.ts';
+import { tr, label } from './locale.ts';
 import { WorkerUnavailable } from './worker.ts';
 // Sparring (Sprint and Recall): runs, events and the views built from them. Rules and arithmetic: core/spar.ts. Contract: the Sparring
 // section of src/lib/types.ts. Everything stored is an append-only event; nothing derived is stored.
@@ -72,7 +74,7 @@ function rowOf(r: Judged, best: boolean): SparRecordRow {
 		kind: r.kind,
 		startedAt: r.startedAt,
 		status: r.status,
-		label: sp ? sprintLabel(r.status, sp) : recallLabel(r.status, rc!),
+		label: sp ? sprintLabel(r.status, sp, tr('ko', 'en')) : recallLabel(r.status, rc!, tr('ko', 'en')),
 		totalMs: sp && r.status === 'finished' ? sp.totalMs : null,
 		skipped: sp?.skipped ?? 0,
 		answered: rc?.answered ?? 0,
@@ -117,12 +119,12 @@ function start(kind: SparKind): { id: number; kind: SparKind } {
 	if (active) return { id: active.id, kind: active.kind };
 	if (kind === 'sprint') {
 		const pool = passedBasics();
-		if (pool.length < MIN_ITEMS) throw new SparFail(409, `통과한 기본 문제가 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`);
+		if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`통과한 기본 문제가 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Pass at least ${MIN_ITEMS} basic problems to start. Currently ${pool.length}.`));
 		const recent = new Set(allRuns('sprint').slice(-2).flatMap((r) => r.items));
 		return { id: createRun('sprint', pickSprint(pool.map((p) => ({ id: p.id, topic: p.topic })), recent, Math.random, SPRINT_SIZE)), kind };
 	}
 	const pool = recallPool();
-	if (pool.length < MIN_ITEMS) throw new SparFail(409, `열린 점검이 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`);
+	if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`열린 점검이 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Unlock at least ${MIN_ITEMS} checks to start. Currently ${pool.length}.`));
 	return { id: createRun('recall', orderRecall(pool)), kind };
 }
 export const startSprint = () => start('sprint');
@@ -137,7 +139,7 @@ const bestSprintRun = (runs: Judged[], before?: number) => {
 /** The whole Sprint screen state for a run (any status). */
 export function sprintView(runId: number): SparSprintData {
 	const settled = settleOne(runId);
-	if (!settled) throw new SparFail(409, '기록을 찾을 수 없습니다.');
+	if (!settled) throw new SparFail(409, tr('기록을 찾을 수 없습니다.', 'Record not found.'));
 	let { status } = settled;
 	const run = settled.run;
 	const events = eventsOf(runId);
@@ -163,10 +165,10 @@ export function sprintView(runId: number): SparSprintData {
 			const mine = events.filter((e) => e.type === 'run' && e.itemId === p.id);
 			const last = mine.at(-1)?.payload as { code?: string; result?: JudgeResult } | undefined;
 			code = last?.code ?? p.starter;
-			lastResult = last?.result ?? null;
+			lastResult = last?.result ? displayJudge(last.result) : null;
 			runs = mine.length;
 			problem = {
-				id: p.id, topic: p.topic, topicLabel: TOPICS[p.topic], kind: p.kind, title: p.title, limitSec: p.limitSec, statement: p.statement, starter: p.starter,
+				id: p.id, topic: p.topic, topicLabel: label(TOPICS[p.topic]), kind: p.kind, title: p.title, limitSec: p.limitSec, statement: p.statement, starter: p.starter,
 				avoid: p.kind === 'refactor' ? p.avoid : [], bestCumMs: best?.cumMs[index] ?? null
 			};
 		}
@@ -196,19 +198,19 @@ export function sprintView(runId: number): SparSprintData {
 /** The run if it is a running Sprint and `problemId` is its current problem; otherwise throws SparFail(409). */
 function currentSprint(runId: number, problemId: unknown): { run: RunRow; index: number } {
 	const s = settleOne(runId);
-	if (!s || s.run.kind !== 'sprint') throw new SparFail(409, '기록을 찾을 수 없습니다.');
-	if (s.status !== 'running') throw new SparFail(409, '이미 끝난 도전입니다.', true, runId);
+	if (!s || s.run.kind !== 'sprint') throw new SparFail(409, tr('기록을 찾을 수 없습니다.', 'Record not found.'));
+	if (s.status !== 'running') throw new SparFail(409, tr('이미 끝난 도전입니다.', 'This challenge has ended.'), true, runId);
 	const index = sprintSummary(s.run.items, eventsOf(runId, true)).done;
-	if (typeof problemId !== 'string' || s.run.items[index] !== problemId) throw new SparFail(409, '이미 지나간 문제입니다. 화면을 새로 불러오세요.');
+	if (typeof problemId !== 'string' || s.run.items[index] !== problemId) throw new SparFail(409, tr('이미 지나간 문제입니다. 화면을 새로 불러오세요.', 'This problem is no longer active. Refresh the page.'));
 	return { run: s.run, index };
 }
 
 export async function sprintRun(runId: number, problemId: unknown, code: unknown): Promise<SparSprintRunResponse> {
-	if (typeof code !== 'string' || code.trim() === '') throw new SparFail(400, '코드를 입력하세요.');
-	if (code.length > MAX_CODE) throw new SparFail(400, `코드가 너무 깁니다. (최대 ${MAX_CODE.toLocaleString('en-US')}자)`);
+	if (typeof code !== 'string' || code.trim() === '') throw new SparFail(400, tr('코드를 입력하세요.', 'Enter your code.'));
+	if (code.length > MAX_CODE) throw new SparFail(400, tr(`코드가 너무 깁니다. (최대 ${MAX_CODE.toLocaleString('en-US')}자)`, `Code exceeds ${MAX_CODE.toLocaleString('en-US')} characters.`));
 	const { run, index } = currentSprint(runId, problemId);
 	const p = findProblem(run.items[index]);
-	if (!p) throw new SparFail(409, '문제를 찾을 수 없습니다.');
+	if (!p) throw new SparFail(409, tr('문제를 찾을 수 없습니다.', 'Problem not found.'));
 	const ms = Date.now() - run.startedMs; // the moment of submission: judge latency is not charged to the learner
 
 	const result = await judge(LANG, p, code);
@@ -217,8 +219,8 @@ export async function sprintRun(runId: number, problemId: unknown, code: unknown
 	tx(() => {
 		// While the judge ran, the run may have been abandoned or the problem skipped (another tab): then nothing is recorded.
 		const s = settleOne(runId);
-		if (!s || s.status !== 'running' || !isOpen(runId)) throw new SparFail(409, '이미 끝난 도전입니다.', true, runId);
-		if (sprintSummary(run.items, eventsOf(runId, true)).done !== index) throw new SparFail(409, '이미 지나간 문제입니다. 화면을 새로 불러오세요.');
+		if (!s || s.status !== 'running' || !isOpen(runId)) throw new SparFail(409, tr('이미 끝난 도전입니다.', 'This challenge has ended.'), true, runId);
+		if (sprintSummary(run.items, eventsOf(runId, true)).done !== index) throw new SparFail(409, tr('이미 지나간 문제입니다. 화면을 새로 불러오세요.', 'This problem is no longer active. Refresh the page.'));
 		appendEvent(runId, 'run', ms, p.id, { code, status: result.status, result });
 		if (result.status === 'passed') {
 			passed = true;
@@ -226,7 +228,7 @@ export async function sprintRun(runId: number, problemId: unknown, code: unknown
 			if (index + 1 >= run.items.length) appendEvent(runId, 'finish', ms);
 		}
 	});
-	return { result, passed, sprint: sprintView(runId) };
+	return { result: displayJudge(result), passed, sprint: sprintView(runId) };
 }
 
 export function sprintSkip(runId: number, problemId: unknown): SparSprintSkipResponse {
@@ -278,7 +280,7 @@ export function recallScreen(runId: number): SparRecallData | null {
 export async function recallAnswer(runId: number, id: unknown, choice: unknown): Promise<SparRecallAnswerResponse> {
 	const t = Date.now();
 	const s = settleOne(runId, t);
-	if (!s || s.run.kind !== 'recall') throw new SparFail(409, '기록을 찾을 수 없습니다.');
+	if (!s || s.run.kind !== 'recall') throw new SparFail(409, tr('기록을 찾을 수 없습니다.', 'Record not found.'));
 	const events = eventsOf(runId);
 	const sum = recallSummary(events);
 	const over = (accepted: boolean, correct: boolean | null, highlight: number | null, answered = sum.answered, right = sum.correct): SparRecallAnswerResponse =>
@@ -298,12 +300,12 @@ export async function recallAnswer(runId: number, id: unknown, choice: unknown):
 	} catch (e) {
 		throw new SparFail(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : String(e));
 	}
-	if (!r) throw new SparFail(409, '점검을 찾을 수 없습니다.');
+	if (!r) throw new SparFail(409, tr('점검을 찾을 수 없습니다.', 'Check not found.'));
 	const highlight = r.correctIndex ?? r.bugIndex;
 
 	let last = false;
 	tx(() => {
-		if (!isOpen(runId) || recallSummary(eventsOf(runId, true)).answered !== sum.answered) throw new SparFail(409, '이미 처리된 답입니다.');
+		if (!isOpen(runId) || recallSummary(eventsOf(runId, true)).answered !== sum.answered) throw new SparFail(409, tr('이미 처리된 답입니다.', 'This answer has already been recorded.'));
 		appendEvent(runId, 'answer', ms, id, { choice, correct: r.correct, recorded: r.recorded });
 		last = sum.answered + 1 >= s.run.items.length;
 		if (last) appendEvent(runId, 'finish', ms);
@@ -346,7 +348,7 @@ function sprintDetail(me: Judged, base: Base, events: ReturnType<typeof eventsOf
 		return {
 			problemId: r.id,
 			title: p?.title ?? r.id,
-			topicLabel: p ? TOPICS[p.topic] : '',
+			topicLabel: p ? label(TOPICS[p.topic]) : '',
 			kind: p?.kind ?? 'write',
 			limitSec: p?.limitSec ?? 0,
 			outcome: r.outcome,

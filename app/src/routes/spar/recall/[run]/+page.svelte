@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { AmbienceControls, audio } from '#lib/ambience/index.ts';
 	import { stage } from '#lib/ambience/stage.svelte.ts';
 	import TimeGlyph from '#lib/TimeGlyph.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import type { MemoCheckView, SparAbandonResponse, SparError, SparRecallAnswerResponse, SparRecallData } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: SparRecallData } = $props();
 
@@ -21,6 +23,12 @@
 	let confirmQuit = $state(false);
 	let error = $state('');
 	let shownAt = $state(0); // index of the check on screen, to animate each new one
+
+	$effect(() => {
+		current = data.current;
+		answered = data.answered;
+		correctCount = data.correct;
+	});
 
 	const left = $derived(Math.max(0, data.durationMs - elapsed));
 	const progress = $derived(Math.min(1, elapsed / data.durationMs));
@@ -45,6 +53,7 @@
 		const c = current;
 		if (!c || inFlight || flash || leaving) return;
 		inFlight = true;
+		const locale = page.data.locale;
 		error = '';
 		try {
 			const r = await fetch(`/spar/recall/${data.run.id}/answer`, {
@@ -54,7 +63,7 @@
 			});
 			const j = (await r.json().catch(() => ({}))) as Partial<SparRecallAnswerResponse> & Partial<SparError>;
 			if (!r.ok) {
-				error = j.error ?? `요청에 실패했습니다 (${r.status}). 다시 눌러 보세요.`;
+				error = j.error ?? `${t('요청에 실패했습니다', 'Request failed')} (${r.status}). ${t('다시 눌러 보세요.', 'Try again.')}`;
 				return;
 			}
 			if (j.accepted) {
@@ -70,7 +79,8 @@
 				return;
 			}
 			if (j.next) {
-				current = j.next;
+				if (page.data.locale === locale) current = j.next;
+				else await invalidateAll();
 				shownAt++;
 			}
 		} catch (e) {
@@ -106,7 +116,7 @@
 
 <main class="a-page narrow">
 	<div class="a-top">
-		<span>Recall · {answered}개 답함{answered ? ` · 맞힘 ${correctCount}` : ''}</span>
+		<span>Recall · {answered} {t('답함', 'answered')}{answered ? ` · ${t('맞힘', 'correct')} ${correctCount}` : ''}</span>
 		<TimeGlyph remainingSec={Math.ceil(left / 1000)} limitSec={data.durationMs / 1000} size={24} />
 	</div>
 	<div class="a-thin" aria-hidden="true"><b style="width:{progress * 100}%"></b></div>
@@ -128,17 +138,17 @@
 			</div>
 		{/key}
 	{:else}
-		<p class="a-p">더 풀 점검이 없습니다.</p>
+		<p class="a-p">{t('더 풀 점검이 없습니다.', 'No more checks.')}</p>
 	{/if}
 	{#if error}<p class="a-err" role="alert">{error}</p>{/if}
 
 	<div class="a-corner">
 		{#if !confirmQuit}
-			<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = true)}>그만두기</button>
+			<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = true)}>{t('그만두기', 'Quit')}</button>
 		{:else}
-			<span class="a-confirm">이 도전을 중단으로 기록합니다.
-				<button class="a-btn ghost small" type="button" onclick={quit}>중단</button>
-				<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = false)}>계속하기</button>
+			<span class="a-confirm">{t('이 도전을 중단으로 기록합니다.', 'Record this challenge as abandoned.')}
+				<button class="a-btn ghost small" type="button" onclick={quit}>{t('중단', 'Abandon')}</button>
+				<button class="a-btn quiet" type="button" onclick={() => (confirmQuit = false)}>{t('계속하기', 'Continue')}</button>
 			</span>
 		{/if}
 		<AmbienceControls />

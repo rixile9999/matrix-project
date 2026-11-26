@@ -1,4 +1,4 @@
-import * as m from '#lib/server/memo.ts';
-import type { MemoCheckData } from '#lib/types.ts';
+import { checkSession } from '#lib/server/memo.ts';
+import { bothLanguages } from '#lib/server/locale.ts';
 
-export const load = async (): Promise<MemoCheckData> => ({ checks: m.checkSession() });
+export const load = () => ({ queue: bothLanguages(checkSession) });

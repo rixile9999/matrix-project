@@ -1,3 +1,5 @@
+import { displayJudge } from './content-language.ts';
+import { tr, label } from './locale.ts';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db } from './db.ts';
@@ -83,14 +85,14 @@ const bookProblems = (bookId: string, problems = allProblems()) =>
 
 function requireProblem(id: string): LangProblem {
 	const p = findProblem(id);
-	if (!p) throw new Error('문제를 찾을 수 없습니다.');
+	if (!p) throw new Error(tr('문제를 찾을 수 없습니다.', 'Problem not found.'));
 	return p;
 }
 
 /** The session a run/hint/reveal applies to: the latest one, which must still be open. */
 function openSession(problemId: string, message: string): SessionRow {
 	const s = latestSession(problemId);
-	if (!s) throw new Error('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.');
+	if (!s) throw new Error(tr('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.', 'Start this problem to open a session.'));
 	if (s.ended_at !== null) throw new Error(message);
 	return s;
 }
@@ -190,13 +192,13 @@ export function listView(): LangHomeData {
 	const topics: LangTopicRow[] = (Object.keys(TOPICS) as TopicId[])
 		.map((topic) => ({
 			topic,
-			label: TOPICS[topic],
+			label: label(TOPICS[topic]),
 			levels: LEVEL_KEYS.map((lv) => problems.filter((p) => p.topic === topic && p.level === lv).map((p) => items.get(p.id)!)) as LangTopicRow['levels']
 		}))
 		.filter((t) => t.levels.some((l) => l.length));
 	const levels = LEVEL_KEYS.map((level) => {
 		const mine = base.filter((p) => p.level === level);
-		return { level, label: LEVELS[level], passed: mine.filter((p) => at.has(p.id)).length, total: mine.length };
+		return { level, label: label(LEVELS[level]), passed: mine.filter((p) => at.has(p.id)).length, total: mine.length };
 	});
 
 	const study: StudyProblem[] = base.map((p) => ({ id: p.id, level: p.level, topic: p.topic, passedAt: at.get(p.id) ?? null }));
@@ -207,9 +209,9 @@ export function listView(): LangHomeData {
 		return [{ level: p.level, topic: p.topic, endedAt: r.ended_at, hintsUsed: r.hints_used, outcome: r.outcome, overtime: r.outcome === 'passed' && (r.elapsed_sec ?? 0) > p.limitSec }];
 	});
 	const wanted: [LangSuggestion['key'], string, string | null][] = [
-		['continue', '이어서', nextUnpassed(study, 2)],
-		['warmup', '기본 워밍업', suggestWarmup(study, sessions, sprintStruggleSessions((id) => (level.get(id)?.level === 1 ? level.get(id) : undefined)))],
-		['challenge', '복합 도전', nextUnpassed(study, 3)]
+		['continue', tr('이어서', 'Continue'), nextUnpassed(study, 2)],
+		['warmup', tr('기본 워밍업', 'Warm-up'), suggestWarmup(study, sessions, sprintStruggleSessions((id) => (level.get(id)?.level === 1 ? level.get(id) : undefined)))],
+		['challenge', tr('복합 도전', 'Advanced challenge'), nextUnpassed(study, 3)]
 	];
 	const suggestions = wanted.flatMap(([key, label, id]) => (id ? [{ key, label, problemId: id, title: items.get(id)!.title }] : []));
 	const cards: LangBookCard[] = Object.entries(books()).map(([id, meta]) => {
@@ -328,7 +330,7 @@ export function sessionView(problemId: string): Omit<LangSessionData, 'debrief'>
 			code: last?.code ?? p.starter,
 			hints: p.hints.slice(0, s.hints_used),
 			...revealExtras(p, s.hints_used, finished !== null),
-			lastResult: last ? (JSON.parse(last.result) as JudgeResult) : null,
+			lastResult: last ? displayJudge(JSON.parse(last.result) as JudgeResult) : null,
 			finished
 		},
 		cheat: cheatEntries(),
@@ -347,9 +349,9 @@ const endSession = (id: number, outcome: 'passed' | 'revealed', avoided: string[
 
 export async function runCode(problemId: string, code: unknown): Promise<{ result: JudgeResult; finished: boolean }> {
 	const p = requireProblem(problemId);
-	if (typeof code !== 'string' || code.trim() === '') throw new Error('코드를 입력하세요.');
-	if (code.length > MAX_CODE) throw new Error(`코드가 너무 깁니다. (최대 ${MAX_CODE.toLocaleString('en-US')}자)`);
-	const s = openSession(problemId, '이미 끝난 세션입니다. 다시 풀려면 다시 시작하세요.');
+	if (typeof code !== 'string' || code.trim() === '') throw new Error(tr('코드를 입력하세요.', 'Enter your code.'));
+	if (code.length > MAX_CODE) throw new Error(tr(`코드가 너무 깁니다. (최대 ${MAX_CODE.toLocaleString('en-US')}자)`, `Code exceeds ${MAX_CODE.toLocaleString('en-US')} characters.`));
+	const s = openSession(problemId, tr('이미 끝난 세션입니다. 다시 풀려면 다시 시작하세요.', 'This session has ended. Restart to try again.'));
 
 	const result = await judge(LANG, p, code);
 	// The session may have been ended (reveal, double submit) while the judge was running.
@@ -357,12 +359,12 @@ export async function runCode(problemId: string, code: unknown): Promise<{ resul
 	db().prepare('INSERT INTO lang_runs(session_id, at, status, code, result) VALUES(?,?,?,?,?)').run(s.id, now(), result.status, code, JSON.stringify(result));
 	let finished = false;
 	if (open && result.status === 'passed') finished = endSession(s.id, 'passed', result.avoided).changes > 0;
-	return { result, finished };
+	return { result: displayJudge(result), finished };
 }
 
 export function useHint(problemId: string): { hints: string[]; refs: string[]; intent: string | null } {
 	const p = requireProblem(problemId);
-	const s = openSession(problemId, '이미 끝난 세션에서는 힌트를 볼 수 없습니다.');
+	const s = openSession(problemId, tr('이미 끝난 세션에서는 힌트를 볼 수 없습니다.', 'Hints are closed for this session.'));
 	db().prepare('UPDATE lang_sessions SET hints_used = MIN(hints_used + 1, ?) WHERE id = ?').run(MAX_HINTS, s.id);
 	const used = getSession(s.id)!.hints_used;
 	if (used > s.hints_used) db().prepare("INSERT INTO lang_marks(session_id, at, kind) VALUES(?,?, 'hint')").run(s.id, now()); // Debrief: when the hint was taken
@@ -373,7 +375,7 @@ export function useHint(problemId: string): { hints: string[]; refs: string[]; i
 export function revealSolution(problemId: string): void {
 	requireProblem(problemId);
 	const s = latestSession(problemId);
-	if (!s) throw new Error('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.');
+	if (!s) throw new Error(tr('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.', 'Start this problem to open a session.'));
 	if (s.ended_at === null) endSession(s.id, 'revealed', []);
 }
 

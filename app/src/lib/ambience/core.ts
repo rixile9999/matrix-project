@@ -46,47 +46,6 @@ export function easeProgress(cur: number, target: number, dt: number): number {
 	return cur + (target - cur) * Math.min(1, dt * 2);
 }
 
-// ---------- rhythm ----------
-export const BREATH = 11; // seconds; one breath every 11 s
-export const BEAT = BREATH / 16; // sixteen beats to a breath, about 87 a minute
-
-export const MOTIF_ROOT = 146.83; // D
-export const MOTIF_SCALE = [1, 1.2, 1.5, 1.78, 2.25, 3]; // D, F, A, C, E, A: open above the bed's D-A-E
-export const MOTIF_SEQ = [0, 2, 4, 3, 2, 5, 4, 1];
-export const MOTIF_HITS = [0, 3, 6, 8, 11, 14]; // in sixteenths: 3+3+2, 3+3+2
-export const MOTIF_LEVELS = [0.45, 1, 1, 0.5]; // rises, holds, falls away
-export const MOTIF_THUMPS = [0, 2.5, 4, 6.5]; // in beats within a bar (from the second bar on)
-export const MOTIF_BEATS = 32;
-
-export type MotifEvent =
-	| { kind: 'pluck'; t: number; freq: number; dur: number; peak: number }
-	| { kind: 'thump'; t: number; peak: number };
-
-/** The rhythm that surfaces now and then: four bars of 8 beats in a 3+3+2 grouping. `start` is in seconds. */
-export function motifEvents(start: number, beat = BEAT): MotifEvent[] {
-	const out: MotifEvent[] = [];
-	for (let bar = 0; bar < 4; bar++) {
-		const level = MOTIF_LEVELS[bar];
-		for (let h = 0; h < MOTIF_HITS.length; h++) {
-			const t = start + (bar * 8 + MOTIF_HITS[h] / 2) * beat;
-			const n = MOTIF_SEQ[(bar * 3 + h) % MOTIF_SEQ.length];
-			out.push({
-				kind: 'pluck', t,
-				freq: MOTIF_ROOT * MOTIF_SCALE[n] * (h === 5 && bar % 2 ? 2 : 1),
-				dur: beat * 0.9,
-				peak: 0.11 * level * (h % 3 === 0 ? 1 : 0.7),
-			});
-		}
-		if (bar > 0) for (const b of MOTIF_THUMPS) out.push({ kind: 'thump', t: start + (bar * 8 + b) * beat, peak: 0.2 * level });
-	}
-	return out;
-}
-
-/** Next breath boundary (relative to t0) at or after `now + lead`. */
-export function nextBreath(t0: number, now: number, lead = 0.1): number {
-	return t0 + Math.ceil((now - t0 + lead) / BREATH) * BREATH;
-}
-
 // ---------- backdrop ----------
 export function pickBackdrop(setting: Backdrop | 'random', rng: () => number = Math.random): Backdrop {
 	if (setting !== 'random') return setting;
@@ -101,11 +60,11 @@ export const WORK_DIM = 0.4;
 export type StageDefault = { scene?: Scene; dim: number; sound: SoundMode };
 /**
  * What the ambience shows when a page says nothing. Sparring pages set their own scene (so: none here), full picture, full sound.
- * Work screens (a problem being solved, a memo review or check): frozen and dim, the bed very quietly. Everything else: the slow home scene, dimmed, the bed only.
+ * Work screens (a problem being solved, a memo review or check): frozen and dim, the score very quietly. Everything else: the slow home scene, dimmed, the background mix.
  */
 export function stageDefault(path: string): StageDefault {
 	if (path === '/spar' || path.startsWith('/spar/')) return { dim: 0, sound: 'full' };
-	if (path === '/garden' || path.startsWith('/garden/')) return { scene: 'home', dim: 0.35, sound: 'bed' }; // a quiet room: always dark, picture softened, no rhythm
+	if (path === '/garden' || path.startsWith('/garden/')) return { scene: 'home', dim: 0.35, sound: 'bed' }; // a quiet room: always dark, picture softened
 	const work = path.startsWith('/attempt/') || path === '/memo/review' || path === '/memo/check' || /^\/lang\/(?!book(\/|$)|cheatsheet(\/|$))[^/]+/.test(path);
 	return work ? { scene: 'still', dim: WORK_DIM, sound: 'quiet' } : { scene: 'home', dim: HOME_DIM, sound: 'bed' };
 }

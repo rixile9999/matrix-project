@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CompareBlock } from '#lib/core/coach.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 	let { block }: { block: CompareBlock } = $props();
 
 	// a line is highlighted when it does not appear (ignoring indentation) on the other side
@@ -24,5 +25,5 @@
 			<pre class="co-pre">{#each right as r, i (i)}<span class:hl={r.hl}>{r.l}</span>{'\n'}{/each}</pre>
 		</div>
 	</div>
-	<p class="co-hint">달라진 줄만 강조합니다.</p>
+	<p class="co-hint">{t('달라진 줄만 강조합니다.', 'Only changed lines are highlighted.')}</p>
 </div>

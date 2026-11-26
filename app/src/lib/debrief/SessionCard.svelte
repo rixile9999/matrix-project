@@ -1,14 +1,17 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// The strip of one finished session, two to four observations, and (optionally) the one-tap self report.
 	import { renderInline } from '#lib/inline.ts';
 	import SessionStrip from './SessionStrip.svelte';
-	import { SELF_LABEL } from '#lib/core/debrief.ts';
+	import { SELF_LABEL, SELF_LABEL_EN } from '#lib/core/debrief.ts';
+	import { page } from '$app/state';
 	import type { DebriefSessionCard, SelfState } from '#lib/types.ts';
 
 	let { card, askSelf = false, heading = '' }: { card: DebriefSessionCard; askSelf?: boolean; heading?: string } = $props();
 
 	let self = $state<SelfState | null>(null);
 	let saving = $state(false);
+	const selfLabels = $derived(page.data.locale === 'en' ? SELF_LABEL_EN : SELF_LABEL);
 	$effect(() => {
 		self = card.self;
 	});
@@ -25,7 +28,7 @@
 	}
 </script>
 
-<section class="dc" aria-label={heading || '이번 세션'}>
+<section class="dc" aria-label={heading || t('이번 세션', 'This session')}>
 	{#if heading}<h3 class="dc-h">{heading}</h3>{/if}
 	<SessionStrip strip={card.strip} />
 	<div class="seen">
@@ -33,19 +36,18 @@
 			<div>
 				<span class="k">{o.label}</span>
 				{@html renderInline(o.text)}
-				{#if o.pattern}<a class="go" href="/debrief#note-{o.pattern}">노트 보기</a>{/if}
+				{#if o.pattern}<a class="go" href="/debrief#note-{o.pattern}">{t('노트', 'Note')}</a>{/if}
 			</div>
 		{/each}
 	</div>
 	{#if askSelf}
 		<div class="self">
-			<span class="q">방금 머리 상태는?</span>
-			<div class="chips" role="group" aria-label="자기 보고">
-				{#each Object.entries(SELF_LABEL) as [k, v] (k)}
+			<span class="q">{t('상태', 'State')}</span>
+			<div class="chips" role="group" aria-label={t('자기 보고', 'Self-report')}>
+				{#each Object.entries(selfLabels) as [k, v] (k)}
 					<button class="chip" type="button" aria-pressed={self === k} disabled={saving} onclick={() => pick(k as SelfState)}>{v}</button>
 				{/each}
 			</div>
-			<small>누르지 않아도 됩니다. 쌓이면 상태별 통과율과 맞춰 봅니다.</small>
 		</div>
 	{/if}
 </section>
@@ -61,5 +63,4 @@
 	.q { font-size: 14px; color: var(--muted); }
 	.chips { display: flex; gap: 6px; }
 	.chip[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-	small { color: var(--muted); font-size: 12.5px; }
 </style>

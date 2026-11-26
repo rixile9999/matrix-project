@@ -2,7 +2,7 @@ import { pickBackdrop } from './core';
 import type { AmbienceSettings, Backdrop } from './types';
 
 const KEY = 'ambience';
-const DEFAULTS: AmbienceSettings = { sound: false, volume: 0.6, motion: true, backdrop: 'random' };
+const DEFAULTS: AmbienceSettings = { track: 'patterns', sound: false, volume: 0.6, motion: true, backdrop: 'random' };
 const BACKDROP_VALUES = ['none', 'earthrise', 'blackhole', 'earth', 'random'];
 
 function load(): AmbienceSettings {
@@ -11,6 +11,7 @@ function load(): AmbienceSettings {
 		const raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(KEY);
 		if (raw) {
 			const o = JSON.parse(raw) as Partial<AmbienceSettings>;
+			if (o.track === 'space' || o.track === 'patterns') s.track = o.track;
 			if (typeof o.sound === 'boolean') s.sound = o.sound;
 			if (typeof o.volume === 'number' && o.volume >= 0 && o.volume <= 1) s.volume = o.volume;
 			if (typeof o.motion === 'boolean') s.motion = o.motion;
@@ -25,7 +26,7 @@ export const settings: AmbienceSettings = $state(load());
 let saved = JSON.stringify(settings);
 /** Persist when something changed. Called by the components' effects; cheap and idempotent. */
 export function saveSettings(): void {
-	const json = JSON.stringify({ sound: settings.sound, volume: settings.volume, motion: settings.motion, backdrop: settings.backdrop });
+	const json = JSON.stringify({ track: settings.track, sound: settings.sound, volume: settings.volume, motion: settings.motion, backdrop: settings.backdrop });
 	if (json === saved) return;
 	saved = json;
 	try { if (typeof localStorage !== 'undefined') localStorage.setItem(KEY, json); } catch { /* private mode etc. */ }

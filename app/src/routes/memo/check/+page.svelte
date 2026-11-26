@@ -1,17 +1,21 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import MemoClock from '#lib/MemoClock.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import { mmss } from '#lib/rank.ts';
 	import type { MemoCheckData, MemoCheckResponse, MemoSolutionResponse } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
-	let { data }: { data: MemoCheckData } = $props();
+	let { data: session }: { data: { queue: Record<'en' | 'ko', MemoCheckData['checks']> } } = $props();
+	const data = $derived({ checks: session.queue[page.data.locale] });
 
 	const sessionStart = Date.now();
 	let i = $state(0);
 	let startedAt = $state(Date.now());
 	let stoppedAt = $state<number | null>(null);
 	let picked = $state<number[]>([]); // order: displayed pool indexes, in the chosen order
-	let res = $state<MemoCheckResponse | null>(null);
+	let answered = $state<Record<'en' | 'ko', MemoCheckResponse> | null>(null);
+	const res = $derived(answered?.[page.data.locale] ?? null);
 	let tapped = $state<number | null>(null); // choice checks: option or line tapped (first tap decides)
 	let firstDone = $state(false); // the first submission has been recorded
 	let solved = $state(false); // order: right answer reached or the solution was shown
@@ -29,7 +33,7 @@
 
 	async function post<T>(url: string, body: object): Promise<T> {
 		const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-		if (!r.ok) throw new Error(r.status === 404 ? '이 점검은 지금 열 수 없습니다.' : '요청에 실패했습니다. 다시 눌러 보세요.');
+		if (!r.ok) throw new Error(r.status === 404 ? t('이 점검은 지금 열 수 없습니다.', 'This check is unavailable.') : t('요청에 실패했습니다. 다시 눌러 보세요.', 'Request failed. Try again.'));
 		return r.json();
 	}
 
@@ -40,8 +44,9 @@
 		const first = !firstDone;
 		if (first) stoppedAt = Date.now();
 		try {
-			const r = await post<MemoCheckResponse>('/memo/check/answer', { id: c.id, choice, elapsedMs: (stoppedAt ?? Date.now()) - startedAt });
-			res = r;
+			const feedback = await post<Record<'en' | 'ko', MemoCheckResponse>>('/memo/check/answer', { id: c.id, choice, elapsedMs: (stoppedAt ?? Date.now()) - startedAt });
+			answered = feedback;
+			const r = feedback[page.data.locale];
 			if (first) {
 				firstDone = true;
 				right = [...right, r.correct];
@@ -68,7 +73,7 @@
 		try {
 			picked = (await post<MemoSolutionResponse>('/memo/check/solution', { id: c.id })).order;
 			solved = true;
-			res = null;
+			answered = null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -84,7 +89,7 @@
 		startedAt = Date.now();
 		stoppedAt = null;
 		picked = [];
-		res = null;
+		answered = null;
 		tapped = null;
 		firstDone = false;
 		lateRight = false;
@@ -94,26 +99,26 @@
 
 	const reset = () => {
 		picked = [];
-		res = null;
+		answered = null;
 	};
 	const optClass = (k: number) => (!res || !firstDone ? '' : k === res.correctIndex ? 'right' : k === tapped ? 'wrong' : '');
 	const lineClass = (k: number) => (!res || res.bugIndex === null ? '' : k === res.bugIndex ? 'right' : k === tapped ? 'wrong' : '');
 	const score = $derived(right.filter(Boolean).length);
 </script>
 
-<svelte:head><title>문제 점검 · Matrix</title></svelte:head>
+<svelte:head><title>{t('문제 점검 · Matrix', 'Problem checks · Matrix')}</title></svelte:head>
 
 <div class="memo">
 	{#if data.checks.length === 0}
-		<div class="m-top"><a href="/memo" style="color:inherit">‹ 암기</a><span>문제 점검</span></div>
-		<p class="m-empty">지금 풀 수 있는 점검이 없습니다.</p>
-		<a class="m-btn ghost" href="/memo">돌아가기</a>
+		<div class="m-top"><a href="/memo" style="color:inherit">‹ {t('암기', 'Memo')}</a><span>{t('문제 점검', 'Problem checks')}</span></div>
+		<p class="m-empty">{t('지금 풀 수 있는 점검이 없습니다.', 'No checks available right now.')}</p>
+		<a class="m-btn ghost" href="/memo">{t('돌아가기', 'Back')}</a>
 	{:else if done}
-		<div class="m-top"><span>점검 끝</span><span>{data.checks.length}개</span></div>
-		<p class="m-q">{data.checks.length}개 중 {score}개를 처음 답에서 맞혔습니다. ({mmss((doneAt - sessionStart) / 1000)})</p>
+		<div class="m-top"><span>{t('점검 끝', 'Checks complete')}</span><span>{t(`${data.checks.length}개`, `${data.checks.length}`)}</span></div>
+		<p class="m-q">{t(`${data.checks.length}개 중 ${score}개를 처음 답에서 맞혔습니다.`, `${score} of ${data.checks.length} were correct on the first answer.`)} ({mmss((doneAt - sessionStart) / 1000)})</p>
 		<div class="m-spacer"></div>
-		<a class="m-btn" href="/memo/review">복습 하기</a>
-		<a class="m-btn ghost" href="/memo">암기 홈으로</a>
+		<a class="m-btn" href="/memo/review">{t('복습 하기', 'Review cards')}</a>
+		<a class="m-btn ghost" href="/memo">{t('암기 홈으로', 'Memo home')}</a>
 	{:else}
 		<div class="m-top">
 			<span class="m-kind">{c.kindLabel}</span>
@@ -125,18 +130,18 @@
 		{#if c.given}<pre class="m-code">{c.given}</pre>{/if}
 
 		{#if c.kind === 'order'}
-			<div class="m-slot">내 답</div>
+			<div class="m-slot">{t('내 답', 'My answer')}</div>
 			<div class="m-lines m-ans">
 				{#each picked as k (k)}
 					<button class="m-line" type="button" disabled={solved || running} onclick={() => (picked = picked.filter((x) => x !== k))}>{c.lines[k]}</button>
 				{:else}
-					<div class="m-dash">아래 줄을 순서대로 누르세요</div>
+					<div class="m-dash">{t('아래 줄을 순서대로 누르세요', 'Tap the lines below in order')}</div>
 				{/each}
 			</div>
-			<div class="m-slot">남은 줄</div>
+			<div class="m-slot">{t('남은 줄', 'Remaining lines')}</div>
 			<div class="m-lines">
 				{#each pool as l (l.k)}
-					<button class="m-line" type="button" disabled={solved || running} onclick={() => { picked = [...picked, l.k]; res = null; }}>{l.text}</button>
+					<button class="m-line" type="button" disabled={solved || running} onclick={() => { picked = [...picked, l.k]; answered = null; }}>{l.text}</button>
 				{/each}
 			</div>
 		{:else if c.kind === 'bug'}
@@ -153,34 +158,34 @@
 
 		<div class="m-spacer"></div>
 		{#if running && c.kind === 'order'}
-			<div class="m-msg" role="status">채점 중입니다. 처음에는 1분쯤 걸릴 수 있습니다.</div>
+			<div class="m-msg" role="status">{t('채점 중입니다. 처음에는 1분쯤 걸릴 수 있습니다.', 'Grading. The first check can take about a minute.')}</div>
 		{:else if res}
 			{#if c.kind === 'order'}
-				<div class="m-msg {res.correct ? 'ok' : 'bad'}" role="status">{res.correct ? '맞습니다.' : ''}{@html renderInline(res.correct ? '' : (res.message ?? '통과하지 못했습니다.'))}</div>
+				<div class="m-msg {res.correct ? 'ok' : 'bad'}" role="status">{res.correct ? t('맞습니다.', 'Correct.') : ''}{@html renderInline(res.correct ? '' : (res.message ?? t('통과하지 못했습니다.', 'Not passed.')))}</div>
 			{:else if c.kind === 'bug'}
-				<div class="m-msg {res.correct ? 'ok' : 'bad'}" role="status">{res.correct ? '맞습니다. ' : '아닙니다. '}{@html renderInline(res.why ?? '')}</div>
+				<div class="m-msg {res.correct ? 'ok' : 'bad'}" role="status">{res.correct ? t('맞습니다. ', 'Correct. ') : t('아닙니다. ', 'Not quite. ')}{@html renderInline(res.why ?? '')}</div>
 				{#if res.fixed}<pre class="m-code">{res.fixed}</pre>{/if}
 			{:else if tapped !== null}
-				<div class="m-msg {tapped === res.correctIndex ? 'ok' : 'bad'}" role="status">{tapped === res.correctIndex ? '맞습니다. ' : '아닙니다. '}{@html renderInline(res.whys[tapped] ?? '')}</div>
-				{#if tapped !== res.correctIndex}<div class="m-msg">정답: {c.options[res.correctIndex ?? 0]}</div>{/if}
+				<div class="m-msg {tapped === res.correctIndex ? 'ok' : 'bad'}" role="status">{tapped === res.correctIndex ? t('맞습니다. ', 'Correct. ') : t('아닙니다. ', 'Not quite. ')}{@html renderInline(res.whys[tapped] ?? '')}</div>
+				{#if tapped !== res.correctIndex}<div class="m-msg">{t('정답:', 'Answer:')} {c.options[res.correctIndex ?? 0]}</div>{/if}
 			{/if}
-			{#if lateRight}<div class="m-msg" role="status">제한 시간을 넘겨서 '흔들림'으로 기록했습니다. 더 일찍 다시 나옵니다.</div>{/if}
+			{#if lateRight}<div class="m-msg" role="status">{t("제한 시간을 넘겨서 '흔들림'으로 기록했습니다. 더 일찍 다시 나옵니다.", "You went over the limit, so this is marked 'shaky' and will return sooner.")}</div>{/if}
 		{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
 
 		{#if c.kind === 'order' && !solved}
 			<div class="m-row">
-				<button class="m-btn ghost" type="button" onclick={reset} disabled={running}>처음부터</button>
-				<button class="m-btn" type="button" onclick={() => submit(picked)} disabled={running || picked.length === 0}>{running ? '채점 중…' : '확인'}</button>
+				<button class="m-btn ghost" type="button" onclick={reset} disabled={running}>{t('처음부터', 'Reset')}</button>
+				<button class="m-btn" type="button" onclick={() => submit(picked)} disabled={running || picked.length === 0}>{running ? t('채점 중…', 'Grading…') : t('확인', 'Check')}</button>
 			</div>
 			{#if firstDone}
 				<div class="m-row">
-					<button class="m-btn ghost" type="button" onclick={showSolution} disabled={running}>정답 보기</button>
-					<button class="m-btn ghost" type="button" onclick={next} disabled={running}>{last ? '끝내기' : '다음으로'}</button>
+					<button class="m-btn ghost" type="button" onclick={showSolution} disabled={running}>{t('정답 보기', 'View answer')}</button>
+					<button class="m-btn ghost" type="button" onclick={next} disabled={running}>{last ? t('끝내기', 'Finish') : t('다음으로', 'Next')}</button>
 				</div>
 			{/if}
 		{:else if firstDone || solved}
-			<button class="m-btn" type="button" onclick={next}>{last ? '끝내기' : '다음 점검'}</button>
+			<button class="m-btn" type="button" onclick={next}>{last ? t('끝내기', 'Finish') : t('다음 점검', 'Next check')}</button>
 		{/if}
 	{/if}
 </div>

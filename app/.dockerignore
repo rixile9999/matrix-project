@@ -22,3 +22,5 @@ src/lib/*
 !src/lib/server/
 src/lib/server/*
 !src/lib/server/auth.ts
+!src/lib/server/locale.ts
+!src/lib/locale.ts

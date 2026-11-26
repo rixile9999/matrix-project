@@ -1,3 +1,4 @@
+import { tr } from './locale.ts';
 import { db, tx } from './db.ts';
 import * as cf from './cf.ts';
 import { replay, expected, type Rating, type Result, type TagStat, deviation } from '#lib/core/rating.ts';
@@ -63,7 +64,7 @@ function storeSubmissions(subs: cf.CfSubmission[]) {
 
 export async function syncSubmissions() {
 	const handle = getSetting('handle');
-	if (!handle) throw new Error('핸들이 설정되지 않았습니다.');
+	if (!handle) throw new Error(tr('핸들이 설정되지 않았습니다.', 'Set your Codeforces handle first.'));
 	storeSubmissions(await cf.fetchSubmissions(handle));
 }
 
@@ -75,7 +76,7 @@ export async function sync() {
 
 export async function setHandle(handle: string, initialRating?: number | null) {
 	handle = handle.trim();
-	if (!handle) throw new Error('핸들을 입력하세요.');
+	if (!handle) throw new Error(tr('핸들을 입력하세요.', 'Enter your Codeforces handle.'));
 	const info = await cf.fetchUserInfo(handle); // throws on unknown handle
 	setSetting('handle', info.handle);
 	if (info.rating != null) setSetting('cf_rating', info.rating);
@@ -197,9 +198,9 @@ export function buildOffers(): Offer[] {
 }
 
 export function startAttempt(mode: string, problemId: string): number {
-	if (!(mode in MODES)) throw new Error('알 수 없는 모드입니다.');
-	if (getActiveAttemptId() !== null) throw new Error('이미 진행 중인 시도가 있습니다.');
-	if (!getProblem(problemId)) throw new Error('문제를 찾을 수 없습니다.');
+	if (!(mode in MODES)) throw new Error(tr('알 수 없는 모드입니다.', 'Unknown training mode.'));
+	if (getActiveAttemptId() !== null) throw new Error(tr('이미 진행 중인 시도가 있습니다.', 'An attempt is already in progress.'));
+	if (!getProblem(problemId)) throw new Error(tr('문제를 찾을 수 없습니다.', 'Problem not found.'));
 	const r = db()
 		.prepare('INSERT INTO attempts(problem_id, mode, started_at, limit_sec) VALUES(?,?,?,?)')
 		.run(problemId, mode, now(), MODES[mode as Mode].limitSec);
@@ -220,10 +221,10 @@ export function giveUp(id: number) {
 /** Resolves an active attempt against Codeforces. Throws if the CF call fails. */
 export async function resolveAttempt(id: number): Promise<{ resolved: boolean; outcome: Outcome | null }> {
 	const row = db().prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
-	if (!row) throw new Error('시도를 찾을 수 없습니다.');
+	if (!row) throw new Error(tr('시도를 찾을 수 없습니다.', 'Attempt not found.'));
 	if (row.ended_at !== null) return { resolved: true, outcome: row.outcome };
 	const handle = getSetting('handle');
-	if (!handle) throw new Error('핸들이 설정되지 않았습니다.');
+	if (!handle) throw new Error(tr('핸들이 설정되지 않았습니다.', 'Set your Codeforces handle first.'));
 	const subs = await cf.fetchSubmissions(handle, 50);
 	storeSubmissions(subs);
 	const deadline = row.started_at + row.limit_sec;

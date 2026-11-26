@@ -186,7 +186,8 @@ JSON 문자열 안의 줄바꿈은 \\n으로 씁니다. 블록 앞뒤에는 한�
 평범한 코드 예제는 위 블록이 아니라 \`\`\`scala 코드 블록으로 씁니다.`;
 
 /** The system prompt for a kind of context and an access level (never called for 'locked'). */
-export function systemPrompt(kind: 'lang' | 'memo', access: Granted): string {
+export function systemPrompt(kind: 'lang' | 'memo', access: Granted, locale = 'ko'): string {
 	const mode = kind === 'memo' ? FULL_MEMO : access === 'limited' ? LIMITED : FULL_LANG;
-	return [ROLE, STYLE, mode, FORMAT].join('\n\n');
+	const style = locale === 'en' ? STYLE.replace('한국어로,', '영어로,') + '\nAnswer in concise English, including all diagram labels and notes.' : STYLE;
+	return [ROLE, style, mode, FORMAT].join('\n\n');
 }

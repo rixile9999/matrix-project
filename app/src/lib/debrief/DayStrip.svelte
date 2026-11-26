@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// One day of sessions on a clock: passed, revealed, never finished (dashed), long stretches without a run (hatched); rests labelled.
 	import type { Day } from '#lib/types.ts';
 
@@ -23,12 +24,12 @@
 		for (let t = Math.ceil(range.a / step) * step; t <= range.b; t += step) out.push(t);
 		return out;
 	});
-	const restText = (sec: number) => (sec >= 3600 ? `쉼 ${Math.floor(sec / 3600)}시간${Math.round((sec % 3600) / 60) ? ` ${Math.round((sec % 3600) / 60)}분` : ''}` : `쉼 ${Math.round(sec / 60)}분`);
-	const OUT = { passed: '통과', revealed: '답 공개', open: '끝내지 않음' } as const;
+	const restText = (sec: number) => (sec >= 3600 ? `${t('쉼', 'Rest')} ${Math.floor(sec / 3600)}${t('시간', 'h')}${Math.round((sec % 3600) / 60) ? ` ${Math.round((sec % 3600) / 60)}${t('분', 'm')}` : ''}` : `${t('쉼', 'Rest')} ${Math.round(sec / 60)}${t('분', 'm')}`);
+	const OUT = $derived({ passed: t('통과', 'Passed'), revealed: t('답 공개', 'Answer revealed'), open: t('끝내지 않음', 'Unfinished') } as const);
 	const mins = (s: number) => Math.round(s / 60);
 </script>
 
-<svg viewBox="0 0 {W} 150" role="img" aria-label="{day.date} 세션 {day.sessions.length}개">
+	<svg viewBox="0 0 {W} 150" role="img" aria-label={`${day.date} ${t('세션', 'sessions')} ${day.sessions.length}`}>
 	<defs>
 		<pattern id="d-{uid}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" class="hatch" stroke-width="2" /></pattern>
 	</defs>
@@ -42,15 +43,15 @@
 		{@const x = X(s.from)}
 		{@const w = Math.max(3, X(s.to) - x)}
 		<rect {x} y="54" width={w} height="26" rx="3" class="s {s.outcome}" class:long={s.silentLong} fill={s.silentLong ? `url(#d-${uid})` : undefined}>
-			<title>{clock(s.from)}–{clock(s.to)} · {s.title} · {OUT[s.outcome]} · 실행 {s.runs}번{s.silentLong ? ' · 10분 넘게 실행 없음' : ''}</title>
+			<title>{clock(s.from)}–{clock(s.to)} · {s.title} · {OUT[s.outcome]} · {t('실행', 'runs')} {s.runs}{s.silentLong ? ` · ${t('10분 넘게 실행 없음', 'no run for 10+ minutes')}` : ''}</title>
 		</rect>
-		{#if s.silentLong && w > 70}<text x={x + w / 2} y="98" text-anchor="middle" class="cool">{s.problemId.split('-')[0]} · {mins(s.to - s.from)}분 · 실행 {s.runs}번</text>{/if}
+		{#if s.silentLong && w > 70}<text x={x + w / 2} y="98" text-anchor="middle" class="cool">{s.problemId.split('-')[0]} · {mins(s.to - s.from)}{t('분', 'm')} · {t('실행', 'runs')} {s.runs}</text>{/if}
 	{/each}
 	<g class="legend">
-		<rect x="0" y="136" width="12" height="10" rx="2" class="s passed" /><text x="18" y="145">통과</text>
-		<rect x="90" y="136" width="12" height="10" rx="2" class="s revealed" /><text x="108" y="145">답 공개</text>
-		<rect x="190" y="136" width="12" height="10" rx="2" fill="url(#d-{uid})" class="s long" /><text x="208" y="145">10분 넘게 실행 없음</text>
-		<rect x="360" y="136" width="12" height="10" rx="2" class="s open" /><text x="378" y="145">끝내지 않음</text>
+		<rect x="0" y="136" width="12" height="10" rx="2" class="s passed" /><text x="18" y="145">{t('통과', 'Passed')}</text>
+		<rect x="90" y="136" width="12" height="10" rx="2" class="s revealed" /><text x="108" y="145">{t('답 공개', 'Answer revealed')}</text>
+		<rect x="190" y="136" width="12" height="10" rx="2" fill="url(#d-{uid})" class="s long" /><text x="208" y="145">{t('10분 넘게 실행 없음', 'No run for 10+ minutes')}</text>
+		<rect x="360" y="136" width="12" height="10" rx="2" class="s open" /><text x="378" y="145">{t('끝내지 않음', 'Unfinished')}</text>
 	</g>
 </svg>
 

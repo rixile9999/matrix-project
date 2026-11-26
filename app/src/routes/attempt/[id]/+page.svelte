@@ -5,6 +5,7 @@
 	import { MODES } from '#lib/core/select.ts';
 	import { rankColor, mmss, signed } from '#lib/rank.ts';
 	import type { AttemptData, CheckResponse } from '#lib/types.ts';
+	import { t, label } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: AttemptData } = $props();
 
@@ -34,7 +35,7 @@
 		try {
 			const res = await fetch(`/attempt/${a.id}/check`, { method: 'POST' });
 			const j = (await res.json()) as CheckResponse;
-			checkError = j.error ?? (res.ok ? '' : `확인 실패 (${res.status})`);
+		checkError = j.error ?? (res.ok ? '' : t(`확인 실패 (${res.status})`, `Check failed (${res.status})`));
 			if (j.resolved) await invalidateAll();
 		} catch (e) {
 			checkError = e instanceof Error ? e.message : String(e);
@@ -67,7 +68,7 @@
 
 	const delta = $derived(a.ratingAfter === null ? 0 : a.ratingAfter - a.ratingBefore);
 	const outcomeText = $derived(
-		a.outcome === 'solved' ? `해결 · ${mmss(a.elapsedSec ?? 0)}` : a.outcome === 'timeout' ? '시간 초과' : '포기'
+		a.outcome === 'solved' ? `${t('해결', 'Solved')} · ${mmss(a.elapsedSec ?? 0)}` : a.outcome === 'timeout' ? t('시간 초과', 'Time expired') : t('포기', 'Gave up')
 	);
 </script>
 
@@ -75,32 +76,32 @@
 
 <div class="body focus">
 	{#if active}
-		<span class="label">{MODES[a.mode].label} · <span class="mono rk" style="color:{rankColor(a.problem.rating)}">{a.problem.rating}</span></span>
+		<span class="label">{label(MODES[a.mode].label)} · <span class="mono rk" style="color:{rankColor(a.problem.rating)}">{a.problem.rating}</span></span>
 		<span class="prob" style="font-size:17px">{a.problem.id} · {a.problem.name}</span>
-		<span class="timer" role="timer" aria-label="남은 시간">{mmss(remaining)}</span>
+		<span class="timer" role="timer" aria-label={t('남은 시간', 'Time remaining')}>{mmss(remaining)}</span>
 		<div class="track"><b style="width:{progress}%"></b></div>
-		<div class="actions"><a class="btn" href={a.problem.url} target="_blank" rel="noopener">Codeforces에서 열기 ↗</a></div>
+		<div class="actions"><a class="btn" href={a.problem.url} target="_blank" rel="noopener">{t('Codeforces에서 열기', 'Open on Codeforces')} ↗</a></div>
 		<span class="status" aria-live="polite">
 			<span class="pulse"></span>
-			{#if checkError}<span style="color:var(--bad)">{checkError}</span>{:else if checking}확인 중…{:else}제출 확인 중 · 20초마다{/if}
+			{#if checkError}<span style="color:var(--bad)">{checkError}</span>{:else if checking}{t('확인 중…', 'Checking…')}{:else}{t('제출 확인 중 · 20초마다', 'Checking submission · every 20s')}{/if}
 		</span>
 		<div class="actions">
-			<button class="btn ghost" type="button" onclick={check} disabled={checking}>지금 확인</button>
+			<button class="btn ghost" type="button" onclick={check} disabled={checking}>{t('지금 확인', 'Check now')}</button>
 			{#if !confirming}
-				<button class="btn ghost" type="button" onclick={() => (confirming = true)}>포기</button>
+				<button class="btn ghost" type="button" onclick={() => (confirming = true)}>{t('포기', 'Give up')}</button>
 			{/if}
 		</div>
 		{#if confirming}
 			<div class="confirm">
-				<span>정말 포기할까요? 실패로 기록됩니다.</span>
+				<span>{t('정말 포기할까요? 실패로 기록됩니다.', 'Give up? This will be recorded as a failure.')}</span>
 				<form method="POST" action="?/giveUp" use:enhance>
-					<button class="btn danger small">포기하기</button>
+					<button class="btn danger small">{t('포기하기', 'Give up')}</button>
 				</form>
-				<button class="btn ghost small" type="button" onclick={() => (confirming = false)}>계속 풀기</button>
+				<button class="btn ghost small" type="button" onclick={() => (confirming = false)}>{t('계속 풀기', 'Keep solving')}</button>
 			</div>
 		{/if}
 	{:else}
-		<span class="label">{MODES[a.mode].label} · <span class="mono rk" style="color:{rankColor(a.problem.rating)}">{a.problem.rating}</span></span>
+		<span class="label">{label(MODES[a.mode].label)} · <span class="mono rk" style="color:{rankColor(a.problem.rating)}">{a.problem.rating}</span></span>
 		<span class="prob" style="font-size:17px">{a.problem.id} · {a.problem.name}</span>
 		<span class="result-line" style="color:{a.outcome === 'solved' ? 'var(--ok)' : 'var(--bad)'}">{outcomeText}</span>
 		{#if a.ratingAfter !== null}
@@ -110,11 +111,11 @@
 			</span>
 		{/if}
 		<div class="tags">
-			{#each a.problem.tags as t (t)}<span class="tag">{t}</span>{:else}<span class="note">태그 없음</span>{/each}
+				{#each a.problem.tags as tag (tag)}<span class="tag">{tag}</span>{:else}<span class="note">{t('태그 없음', 'No tags')}</span>{/each}
 		</div>
 		<div class="actions">
-			<a class="btn" href="/">다음 세션 고르기</a>
-			<a class="btn ghost" href={a.problem.url} target="_blank" rel="noopener">문제 다시 보기 ↗</a>
+			<a class="btn" href="/">{t('다음 세션 고르기', 'Choose next session')}</a>
+			<a class="btn ghost" href={a.problem.url} target="_blank" rel="noopener">{t('문제 다시 보기', 'View problem again')} ↗</a>
 		</div>
 	{/if}
 </div>

@@ -3,13 +3,18 @@
 	import { onMount, untrack } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import './arena.css';
-	import { enable, isReady, setMode as setSoundMode, setScene as setSoundScene, setVolume } from './audio';
+	import { enable, isReady, setMode as setSoundMode, setScene as setSoundScene, setTrack, setVolume } from './audio';
 	import { createCanvasScene, type CanvasScene } from './canvasScene';
 	import { VIDEO_RATE, VIDEO_SHOW } from './core';
 	import { resolveBackdrop, saveSettings, settings } from './settings.svelte';
-	import type { Scene, SoundMode } from './types';
+	import type { Backdrop, Scene, SoundMode } from './types';
 
-	let { scene, progress, bloom, dim = 0, sound = 'full' }: { scene: Scene; progress?: number; bloom?: number; dim?: number; sound?: SoundMode } = $props();
+	let { scene, progress, bloom, dim = 0, sound = 'full', view = false, viewBackdrop = null, fit = 'contain' }: {
+		scene: Scene; progress?: number; bloom?: number; dim?: number; sound?: SoundMode;
+		view?: boolean; // view mode: the footage whole (full colour, normal speed), no scrim, no canvas over it, no veil
+		fit?: 'contain' | 'cover'; // view mode only: the whole frame, or filling the screen
+		viewBackdrop?: Backdrop | null; // the backdrop picked inside view mode; null = the current one
+	} = $props();
 
 	let layer: HTMLDivElement | undefined = $state();
 	let cv: HTMLCanvasElement | undefined = $state();
@@ -21,9 +26,10 @@
 	let fading = $state(false); // the earthrise does not loop cleanly: it fades out before its end and starts over
 
 	const reduce = new MediaQuery('prefers-reduced-motion: reduce');
-	const frozen = $derived(scene === 'still' || !settings.motion || reduce.current);
-	const backdrop = $derived(mounted ? resolveBackdrop() : 'none');
-	const videoOpacity = $derived(fading ? 0 : VIDEO_SHOW[scene]);
+	const frozen = $derived(reduce.current || (!view && (scene === 'still' || !settings.motion))); // view mode is an explicit request to watch
+	const backdrop = $derived(mounted ? (view && viewBackdrop ? viewBackdrop : resolveBackdrop()) : 'none');
+	const src = $derived(backdrop === 'none' ? '' : view ? `/video/full/${backdrop}.mp4` : `/video/${backdrop}.mp4`);
+	const videoOpacity = $derived(fading ? 0 : view ? 1 : VIDEO_SHOW[scene]);
 
 	let raf = 0, last = 0, restartTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -92,7 +98,7 @@
 	});
 	function onMeta(e: Event) {
 		const v = e.currentTarget as HTMLVideoElement;
-		if (backdrop !== 'none') v.playbackRate = VIDEO_RATE[backdrop];
+		if (backdrop !== 'none') v.playbackRate = view ? 1 : VIDEO_RATE[backdrop];
 		fading = false;
 		if (frozen) v.currentTime = 0.05; // show one frame
 	}
@@ -112,6 +118,7 @@
 	// sound: the engine is shared and outlives this component
 	$effect(() => { setSoundScene(scene); });
 	$effect(() => { setSoundMode(sound); });
+	$effect(() => { setTrack(settings.track); });
 	$effect(() => { setVolume(settings.volume); });
 	$effect(() => {
 		const on = settings.sound;
@@ -127,24 +134,25 @@
 	$effect(() => { saveSettings(); });
 </script>
 
-<div class="amb" class:calm={!settings.motion || reduce.current} bind:this={layer} aria-hidden="true">
+<div class="amb" class:calm={!settings.motion || reduce.current} class:viewing-bg={view} bind:this={layer} aria-hidden="true">
 	{#if backdrop !== 'none'}
-		{#key backdrop}
+		{#key src}
 			<video
 				bind:this={video}
-				src={`/video/${backdrop}.mp4`}
+				{src}
 				muted playsinline preload="metadata"
 				loop={backdrop !== 'earthrise'}
 				style:opacity={videoOpacity}
+				style:object-fit={view ? fit : 'cover'}
 				onloadedmetadata={onMeta}
 				ontimeupdate={onTime}
 				onended={onEnded}
 			></video>
 		{/key}
 	{/if}
-	<div class="scrim" class:on={backdrop !== 'none'}></div>
-	<canvas bind:this={cv}></canvas>
-	<div class="veil" style:opacity={dim}></div>
+	<div class="scrim" class:on={backdrop !== 'none' && !view}></div>
+	<canvas bind:this={cv} class:gone={view && backdrop !== 'none'}></canvas>
+	<div class="veil" style:opacity={view ? 0 : dim}></div>
 </div>
 
 <style>
@@ -152,7 +160,9 @@
 	video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 3s ease; }
 	.scrim { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(6, 7, 11, .62), rgba(6, 7, 11, 0)); opacity: 0; transition: opacity 3s ease; }
 	.scrim.on { opacity: 1; }
-	canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+	canvas { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 1.2s ease; }
+	canvas.gone { opacity: 0; }
 	.veil { position: absolute; inset: 0; background: #06070b; opacity: 0; transition: opacity 3s ease; }
 	.calm video, .calm .scrim, .calm .veil { transition: none; }
+	.amb.viewing-bg { background: #000; } /* letterbox bars blend with the footage's black */
 </style>

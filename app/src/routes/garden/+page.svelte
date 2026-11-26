@@ -1,10 +1,10 @@
 <script lang="ts">
 	import '#lib/ambience/arena.css';
 	import Plant from '#lib/garden/Plant.svelte';
-	import Legend from '#lib/garden/Legend.svelte';
 	import Rhythm from '#lib/garden/Rhythm.svelte';
 	import Reading from '#lib/garden/Reading.svelte';
 	import type { GardenData } from '#lib/types.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data }: { data: GardenData } = $props();
 
@@ -16,9 +16,9 @@
 	const past = $derived(i < last);
 	const dateText = $derived.by(() => {
 		const [, m, d] = cur.date.split('-').map(Number);
-		return `${m}월 ${d}일`;
+		return `${m}${t('월', '/')} ${d}${t('일', '')}`;
 	});
-	const label = $derived(`기록에서 자란 모양. ${form.kindLabel}. 통과한 문제 ${form.numbers.langPassed}개, 복습 ${form.numbers.memoReviews}회, 잎 ${form.leafCount}장.`);
+	const label = $derived(`${t('기록에서 자란 모양', 'A shape grown from your record')}. ${form.kindLabel}. ${t('통과한 문제', 'Problems passed')} ${form.numbers.langPassed}, ${t('복습', 'reviews')} ${form.numbers.memoReviews}, ${t('잎', 'leaves')} ${form.leafCount}.`);
 </script>
 
 <svelte:head><title>Garden · Matrix</title></svelte:head>
@@ -27,51 +27,44 @@
 	<main class="a-page g-page">
 		<header>
 			<h1 class="a-title">Garden</h1>
-			<p class="a-sub">내 기록이 형태로 자라는 방입니다. 점수가 아니라 모양이 남습니다. 아래 모양은 기록한 행동에서만 그려지며, 나를 판단하지 않습니다.</p>
+			<p class="a-sub">{t('기록이 자라는 방.', 'A room where your record grows.')}</p>
 		</header>
 
-		<section class="room" aria-label="기록에서 자란 모양">
+		<section class="room" aria-label={t('기록에서 자란 모양', 'A shape grown from your record')}>
 			<div class="stage">
 				<Plant {form} {label} />
 				<div class="cap">
-					<span class="a-num">{form.day ? `${form.day}일째` : '기록 없음'}</span>
+					<span class="a-num">{form.day ? `${form.day}${t('일째', 'th day')}` : t('기록 없음', 'No record')}</span>
 					<span>{form.kindLabel}</span>
 				</div>
 			</div>
 			<div class="side">
 				<div class="time">
-					<h2>날짜 되돌리기</h2>
+						<h2>{t('날짜 되돌리기', 'Revisit a date')}</h2>
 					{#if last > 0}
 						<label class="slide">
-							<span class="sr">날짜</span>
-							<input type="range" min="0" max={last} step="1" value={i} oninput={(e) => (picked = +e.currentTarget.value)} aria-valuetext="{dateText}, {form.day}일째" />
+							<span class="sr">{t('날짜', 'Date')}</span>
+							<input type="range" min="0" max={last} step="1" value={i} oninput={(e) => (picked = +e.currentTarget.value)} aria-valuetext={`${dateText}, ${form.day}${t('일째', 'th day')}`} />
 						</label>
 						<div class="when">
-							<span class="a-num">{dateText} · {form.day}일째{past ? '' : ' (오늘)'}</span>
-							{#if past}<button type="button" class="a-btn quiet" onclick={() => (picked = -1)}>오늘로</button>{/if}
+							<span class="a-num">{dateText} · {form.day}{t('일째', 'th day')}{past ? '' : ` (${t('오늘', 'today')})`}</span>
+							{#if past}<button type="button" class="a-btn quiet" onclick={() => (picked = -1)}>{t('오늘로', 'Today')}</button>{/if}
 						</div>
 						<div class="ends a-num" aria-hidden="true"><span>{data.days[0].date.slice(5).replace('-', '.')}</span><span>{data.days[last].date.slice(5).replace('-', '.')}</span></div>
 					{:else}
-						<p class="a-small">{form.day ? '기록이 오늘 하루뿐이라 되돌릴 날이 없습니다.' : '기록이 쌓이면 지난 모습을 볼 수 있습니다.'}</p>
+						<p class="a-small">{form.day ? t('오늘이 첫날.', 'Today is day one.') : t('아직 씨앗.', 'Still a seed.')}</p>
 					{/if}
 				</div>
-				<p class="a-small">쉬는 동안에는 시들지 않고 그대로 멈춰 있습니다. 같은 기록에서는 언제나 같은 모양이 나오므로, 날짜를 되돌려 그날까지의 모습을 볼 수 있습니다.</p>
-				{#if past}<p class="a-small a-warm">{dateText}까지의 기록으로 그린 모양입니다.</p>{/if}
 			</div>
-		</section>
-
-		<section aria-labelledby="g-legend">
-			<h2 id="g-legend">읽는 법</h2>
-			<Legend {form} />
 		</section>
 
 		<section class="cols">
 			<div aria-labelledby="g-rhythm">
-				<h2 id="g-rhythm">내 리듬 · 시간대별 정답률</h2>
+				<h2 id="g-rhythm">{t('리듬', 'Rhythm')}</h2>
 				<Rhythm rhythm={data.rhythm} />
 			</div>
 			<div aria-labelledby="g-read">
-				<h2 id="g-read">이번 주 풀이</h2>
+				<h2 id="g-read">{t('이번 주 풀이', 'This week')}</h2>
 				<Reading week={data.week} reading={data.reading} backends={data.backends} defaultBackend={data.defaultBackend} />
 			</div>
 		</section>

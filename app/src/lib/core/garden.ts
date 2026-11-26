@@ -4,6 +4,7 @@
 // Time zone: the process's local time. Timestamps are unix seconds. I/O (reading the tables) lives in src/lib/server/garden.ts.
 import { TOPICS } from './lang.ts';
 import { noteStatus, replayEach, type Rating } from './memo-sched.ts';
+import type { Locale } from '../locale.ts';
 import type { GardenForm, GardenHour, GardenKind, GardenNumbers, GardenRhythmFact } from '../types.ts';
 
 // ---------- records ----------
@@ -64,6 +65,9 @@ export const dateString = (n: number): string => new Date(n * 86_400_000).toISOS
 const hourOf = (sec: number) => new Date(sec * 1000).getHours();
 const md = (sec: number) => `${new Date(sec * 1000).getMonth() + 1}.${new Date(sec * 1000).getDate()}`;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
+const copy = (locale: Locale) => (ko: string, en: string) => locale === 'en' ? en : ko;
+const count = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+const hour = (n: number) => `${String(n).padStart(2, '0')}:00`;
 /** 32-bit string hash. */
 export function hash(s: string): number {
 	let h = 2166136261;
@@ -73,6 +77,9 @@ export function hash(s: string): number {
 
 export const KIND_LABEL: Record<GardenKind, string> = {
 	unknown: '아직 무엇이 될지 모름', wide: '넓게 퍼지는 형태', straight: '곧게 서는 형태', even: '고르게 자라는 형태'
+};
+const kindLabelEn: Record<GardenKind, string> = {
+	unknown: 'Still taking shape', wide: 'Spreading out', straight: 'Growing upright', even: 'Growing evenly'
 };
 
 /** Short label of the form from its values, as in the mockup. Describes the recorded practice, not a person. */
@@ -136,7 +143,8 @@ export function mendedProblems(sessions: LangRec[]): Mended[] {
 export type Moment = { at: number; kind: 'sprint-best' | 'recall-best' | 'first-level3'; label: string; problemId?: string };
 
 /** A new best is an improvement over an earlier qualifying best (the first qualifying run is not a "new" best). Same rules as core/spar.ts bestSprint / bestRecall. */
-export function sparBestMoments(spar: SparRec[]): Moment[] {
+export function sparBestMoments(spar: SparRec[], locale: Locale = 'ko'): Moment[] {
+	const t = copy(locale);
 	const out: Moment[] = [];
 	const runs = spar.filter((r) => r.status === 'finished' && r.endedAt !== null).sort((a, b) => a.endedAt! - b.endedAt! || a.id - b.id);
 	let sprint: number | null = null;
@@ -144,12 +152,12 @@ export function sparBestMoments(spar: SparRec[]): Moment[] {
 	for (const r of runs) {
 		if (r.kind === 'sprint') {
 			if (r.skipped > 0 || r.totalMs === null) continue;
-			if (sprint !== null && r.totalMs < sprint) out.push({ at: r.endedAt!, kind: 'sprint-best', label: 'Sprint 최고 기록 경신' });
+			if (sprint !== null && r.totalMs < sprint) out.push({ at: r.endedAt!, kind: 'sprint-best', label: t('Sprint 최고 기록 경신', 'New Sprint best') });
 			if (sprint === null || r.totalMs < sprint) sprint = r.totalMs;
 		} else {
 			if (r.accuracy === null || r.accuracy < 0.8) continue;
 			const better = !recall || r.correct > recall.correct || (r.correct === recall.correct && r.accuracy > recall.accuracy);
-			if (recall && better) out.push({ at: r.endedAt!, kind: 'recall-best', label: 'Recall 최고 기록 경신' });
+			if (recall && better) out.push({ at: r.endedAt!, kind: 'recall-best', label: t('Recall 최고 기록 경신', 'New Recall best') });
 			if (better) recall = { correct: r.correct, accuracy: r.accuracy };
 		}
 	}
@@ -157,14 +165,14 @@ export function sparBestMoments(spar: SparRec[]): Moment[] {
 }
 
 /** The first pass of each level-3 problem. */
-export function firstLevel3Moments(lang: LangRec[]): Moment[] {
+export function firstLevel3Moments(lang: LangRec[], locale: Locale = 'ko'): Moment[] {
 	const first = new Map<string, LangRec>();
 	for (const s of lang) {
 		if (s.level !== 3 || !isPassed(s)) continue;
 		const f = first.get(s.problemId);
 		if (!f || s.endedAt! < f.endedAt!) first.set(s.problemId, s);
 	}
-	return [...first.values()].map((s) => ({ at: s.endedAt!, kind: 'first-level3' as const, label: `${s.title} 첫 통과`, problemId: s.problemId }));
+	return [...first.values()].map((s) => ({ at: s.endedAt!, kind: 'first-level3' as const, label: copy(locale)(`${s.title} 첫 통과`, `First pass on ${s.title}`), problemId: s.problemId }));
 }
 
 // ---------- the form ----------
@@ -203,16 +211,17 @@ export function firstRecordAt(rec: GardenRecords): number | null {
 }
 
 /** A garden over a set of records. `formAt(t)` is the form from the records up to t (inclusive). */
-export function createGarden(rec: GardenRecords) {
+export function createGarden(rec: GardenRecords, locale: Locale = 'ko') {
 	const first = firstRecordAt(rec);
 	const seed = first === null ? 1 : hash(dateString(dayNumber(first))) % 1_000_000;
 	const timeline = stableTimeline(rec.memo, rec.cards);
-	const moments = [...sparBestMoments(rec.spar), ...firstLevel3Moments(rec.lang)].sort((a, b) => a.at - b.at);
+	const moments = [...sparBestMoments(rec.spar, locale), ...firstLevel3Moments(rec.lang, locale)].sort((a, b) => a.at - b.at);
+	const kindLabels = locale === 'en' ? kindLabelEn : KIND_LABEL;
 
 	function formAt(asOf: number): GardenForm {
 		if (first === null || first > asOf) {
 			return {
-				day: 0, volume: 0, breadth: 0, leaves: 0, roots: 0, pace: 0.5, leafCount: 0, mended: 0, flowers: 0, kind: 'unknown', kindLabel: KIND_LABEL.unknown, seed,
+				day: 0, volume: 0, breadth: 0, leaves: 0, roots: 0, pace: 0.5, leafCount: 0, mended: 0, flowers: 0, kind: 'unknown', kindLabel: kindLabels.unknown, seed,
 				numbers: emptyNumbers(rec.topicsTotal)
 			};
 		}
@@ -247,7 +256,7 @@ export function createGarden(rec: GardenRecords) {
 
 		const kind = kindOf(volume, breadth);
 		return {
-			day: dayNumber(asOf) - dayNumber(first) + 1, volume, breadth, leaves, roots, pace: paceOf(medianRatio), leafCount: stable, mended, flowers: mine.length, kind, kindLabel: KIND_LABEL[kind], seed,
+			day: dayNumber(asOf) - dayNumber(first) + 1, volume, breadth, leaves, roots, pace: paceOf(medianRatio), leafCount: stable, mended, flowers: mine.length, kind, kindLabel: kindLabels[kind], seed,
 			numbers: {
 				langPassed: passed.length, memoReviews: memo.length, sparRuns: spar.length, topics: byTopic.size, topicsTotal: rec.topicsTotal, stableCards: stable, deepPassed: deep, overtimeMin,
 				medianRatio, mended, bests, firstLevel3
@@ -300,7 +309,7 @@ export function hourly(outcomes: Outcome[], min = MIN_PER_HOUR): GardenHour[] {
 	return hours;
 }
 
-const hourText = (h: GardenHour) => `${h.hour}시 · ${pct(h.rate!)} (${h.n}건)`;
+const hourText = (h: GardenHour, locale: Locale) => copy(locale)(`${h.hour}시 · ${pct(h.rate!)} (${h.n}건)`, `${hour(h.hour)} · ${pct(h.rate!)} (${count(h.n, 'attempt')})`);
 
 /** Best and shakiest hours: only hours with enough samples are named, and only when at least MIN_HOURS of them exist. */
 export function bestAndShaky(hours: GardenHour[]): { best: GardenHour; shaky: GardenHour } | 'few' | 'flat' {
@@ -335,7 +344,8 @@ export function activeDays(rec: Pick<GardenRecords, 'lang' | 'memo' | 'spar'>): 
 const daysWord = (n: number) => (n === 0 ? '같은 날 돌아옴' : n === 1 ? '하루' : n === 2 ? '이틀' : n === 3 ? '사흘' : `${n}일`);
 
 /** The two gap facts: how much slower on the first day back after >= GAP_DAYS without records, and how many days until normal speed again. */
-export function gapFacts(days: number[], speeds: SpeedRec[]): { slow: string | null; back: string | null } {
+export function gapFacts(days: number[], speeds: SpeedRec[], locale: Locale = 'ko'): { slow: string | null; back: string | null } {
+	const t = copy(locale);
 	const returns: number[] = [];
 	for (let i = 1; i < days.length; i++) if (days[i] - days[i - 1] >= GAP_DAYS) returns.push(days[i]);
 	const byDay = new Map<number, number[]>();
@@ -348,7 +358,8 @@ export function gapFacts(days: number[], speeds: SpeedRec[]): { slow: string | n
 	let slow: string | null = null;
 	if (base !== null && base > 0 && gaps.length >= GAP_NEED.gaps && after.length >= GAP_NEED.after && normal.length >= GAP_NEED.normal) {
 		const x = median(after)! / base - 1;
-		slow = Math.abs(x) < 0.05 ? '평소와 비슷' : x > 0 ? `평소보다 ${Math.round(x * 100)}% 느림` : `평소보다 ${Math.round(-x * 100)}% 빠름`;
+		slow = Math.abs(x) < 0.05 ? t('평소와 비슷', 'About the usual pace') :
+			x > 0 ? t(`평소보다 ${pct(x)} 느림`, `${pct(x)} slower than usual`) : t(`평소보다 ${pct(-x)} 빠름`, `${pct(-x)} faster than usual`);
 	}
 	let back: string | null = null;
 	if (base !== null && base > 0 && normal.length >= GAP_NEED.normal) {
@@ -363,7 +374,10 @@ export function gapFacts(days: number[], speeds: SpeedRec[]): { slow: string | n
 			}
 		}
 		const m = median(took);
-		if (took.length >= GAP_NEED.gaps && m !== null) back = daysWord(Math.round(m));
+		if (took.length >= GAP_NEED.gaps && m !== null) {
+			const days = Math.round(m);
+			back = t(daysWord(days), days === 0 ? 'Same day' : count(days, 'day'));
+		}
 	}
 	return { slow, back };
 }
@@ -374,20 +388,22 @@ export const RHYTHM_NEED = {
 	gapReturn: `돌아온 날이 ${GAP_NEED.gaps}번 이상, 평소 기록이 ${GAP_NEED.normal}개 이상이면 보입니다.`
 };
 
-export function rhythmOf(rec: GardenRecords): { hours: GardenHour[]; total: number; minPerHour: number; facts: GardenRhythmFact[] } {
+export function rhythmOf(rec: GardenRecords, locale: Locale = 'ko'): { hours: GardenHour[]; total: number; minPerHour: number; facts: GardenRhythmFact[] } {
+	const t = copy(locale);
 	const outcomes = firstAttempts(rec);
 	const hours = hourly(outcomes);
 	const bs = bestAndShaky(hours);
-	const gaps = gapFacts(activeDays(rec), speedSamples(rec));
+	const gaps = gapFacts(activeDays(rec), speedSamples(rec), locale);
 	const named = typeof bs === 'object';
-	const flat = bs === 'flat' ? '시간대 차이가 크지 않음' : null;
+	const flat = bs === 'flat' ? t('시간대 차이가 크지 않음', 'Similar across hours') : null;
+	const hourNeed = t(RHYTHM_NEED.best, `Needs ${MIN_HOURS} hours with at least ${MIN_PER_HOUR} attempts each.`);
 	return {
 		hours, total: outcomes.length, minPerHour: MIN_PER_HOUR,
 		facts: [
-			{ key: 'best', label: '가장 잘 푸는 시간', value: named ? hourText(bs.best) : flat, need: RHYTHM_NEED.best },
-			{ key: 'shaky', label: '가장 흔들리는 시간', value: named ? hourText(bs.shaky) : flat, need: RHYTHM_NEED.best },
-			{ key: 'gapSlow', label: `${GAP_DAYS}일 이상 비운 뒤 속도`, value: gaps.slow, need: RHYTHM_NEED.gapSlow },
-			{ key: 'gapReturn', label: '돌아오는 데 걸리는 날', value: gaps.back, need: RHYTHM_NEED.gapReturn }
+			{ key: 'best', label: t('가장 잘 푸는 시간', 'Strongest hour'), value: named ? hourText(bs.best, locale) : flat, need: hourNeed },
+			{ key: 'shaky', label: t('가장 흔들리는 시간', 'Weakest hour'), value: named ? hourText(bs.shaky, locale) : flat, need: hourNeed },
+			{ key: 'gapSlow', label: t(`${GAP_DAYS}일 이상 비운 뒤 속도`, `Pace after a break of ${GAP_DAYS}+ days`), value: gaps.slow, need: t(RHYTHM_NEED.gapSlow, `Needs ${GAP_NEED.gaps} returns, ${GAP_NEED.after} attempts on return days, and ${GAP_NEED.normal} on other days.`) },
+			{ key: 'gapReturn', label: t('돌아오는 데 걸리는 날', 'Time to regain your pace'), value: gaps.back, need: t(RHYTHM_NEED.gapReturn, `Needs ${GAP_NEED.gaps} returns and ${GAP_NEED.normal} attempts on other days.`) }
 		]
 	};
 }
@@ -401,21 +417,31 @@ export function weekStartOf(now: number): number {
 	return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime() / 1000;
 }
 export const weekKeyOf = (start: number): string => dateString(dayNumber(start));
-export const weekLabelOf = (start: number): string => {
+export const weekLabelOf = (start: number, locale: Locale = 'ko'): string => {
 	const s = new Date(start * 1000);
 	const e = new Date(start * 1000 + 6 * 86_400_000);
+	if (locale === 'en') {
+		const date = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+		return `${date.format(s)} – ${date.format(e)}`;
+	}
 	return `${s.getMonth() + 1}월 ${s.getDate()}일 – ${e.getMonth() + 1}월 ${e.getDate()}일`;
 };
 
-const topicName = (t: string) => (t in TOPICS ? TOPICS[t as keyof typeof TOPICS] : t);
+const topicsEn: Record<keyof typeof TOPICS, string> = {
+	syntax: 'Basic syntax', collections: 'Collections', folds: 'Folds and accumulation', maps: 'Map and Set',
+	pattern: 'Pattern matching', errors: 'Option, Either, and Try', strings: 'Strings', recursion: 'Recursion',
+	lazy: 'Lazy evaluation', types: 'Types and ADTs', functions: 'Functions', context: 'Given and extension', sugar: 'Desugaring'
+};
+const topicName = (topic: string, locale: Locale) =>
+	Object.hasOwn(TOPICS, topic) ? (locale === 'en' ? topicsEn : TOPICS)[topic as keyof typeof TOPICS] : topic;
 const inWeek = (at: number, a: number, b: number) => at >= a && at < b;
 const top = (m: Map<string, number>, n: number) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n);
 
 /**
- * The facts of the week starting at `start` (up to `now`), each with an id and a plain Korean sentence. Used both as what the backend may rely on
- * and as what "근거 보기" shows. Empty when the week has no record at all.
+ * Weekly facts with stable ids, used by the backend and shown as evidence.
  */
-export function weeklyFacts(rec: GardenRecords, start: number, now: number, garden = createGarden(rec)): WeekFact[] {
+export function weeklyFacts(rec: GardenRecords, start: number, now: number, garden = createGarden(rec), locale: Locale = 'ko'): WeekFact[] {
+	const t = copy(locale);
 	const end = Math.min(dayStart(dayNumber(start) + 7), now + 1);
 	const prevStart = dayStart(dayNumber(start) - 7);
 	const facts: WeekFact[] = [];
@@ -432,58 +458,82 @@ export function weeklyFacts(rec: GardenRecords, start: number, now: number, gard
 	// days with a record
 	const dayset = new Set(activeDays({ lang: rec.lang, memo: rec.memo, spar: rec.spar }).filter((d) => inWeek(dayStart(d), start, end)));
 	const elapsedDays = Math.min(7, dayNumber(now) - dayNumber(start) + 1);
-	add('days', `이번 주 ${elapsedDays}일 가운데 기록이 있는 날은 ${dayset.size}일입니다.`);
+	add('days', t(`이번 주 ${elapsedDays}일 가운데 기록이 있는 날은 ${dayset.size}일입니다.`, `Practice is recorded on ${dayset.size} of ${count(elapsedDays, 'day')} so far this week.`));
 
 	if (passedWeek.length) {
 		const by = new Map<string, number>();
 		for (const s of passedWeek) by.set(s.topic, (by.get(s.topic) ?? 0) + 1);
-		const list = top(by, 4).map(([t, n]) => `${topicName(t)} ${n}`).join(', ');
-		add('lang', `이번 주 통과한 언어 문제는 ${passedWeek.length}개입니다. (${list})`);
+		const name = (topic: string) => topicName(topic, locale);
+		const list = top(by, 4).map(([topic, n]) => `${name(topic)} ${n}`).join(', ');
+		add('lang', t(`이번 주 통과한 언어 문제는 ${passedWeek.length}개입니다. (${list})`, `This week, ${count(passedWeek.length, 'language problem')} passed (${list}).`));
 		const before = new Set(sessions.filter((s) => isPassed(s) && s.endedAt! < start).map((s) => s.topic));
 		const fresh = [...new Set(passedWeek.map((s) => s.topic))].filter((t) => !before.has(t));
-		add('topics', fresh.length ? `이번 주 처음 통과한 주제가 ${fresh.length}개 있습니다. (${fresh.map(topicName).join(', ')})` : `이번 주에는 처음 다룬 주제가 없습니다. 이번 주 주제는 ${new Set(passedWeek.map((s) => s.topic)).size}개입니다.`);
+		const topicCount = new Set(passedWeek.map((s) => s.topic)).size;
+		add('topics', fresh.length
+			? t(`이번 주 처음 통과한 주제가 ${fresh.length}개 있습니다. (${fresh.map(name).join(', ')})`, `First passes in ${count(fresh.length, 'topic')} this week (${fresh.map(name).join(', ')}).`)
+			: t(`이번 주에는 처음 다룬 주제가 없습니다. 이번 주 주제는 ${topicCount}개입니다.`, `Passes spanned ${count(topicCount, 'topic')} this week, all with prior passes.`));
 		const deep = passedWeek.filter((s) => s.level === 3 || s.book);
 		if (deep.length) {
 			const min = Math.round(deep.reduce((a, s) => a + (s.elapsedSec ?? 0), 0) / 60);
-			add('deep', `복합 문제나 책 문제를 ${deep.length}개 통과했습니다. 걸린 시간은 모두 ${min}분입니다.`);
+			add('deep', t(`복합 문제나 책 문제를 ${deep.length}개 통과했습니다. 걸린 시간은 모두 ${min}분입니다.`, `${count(deep.length, 'advanced or book problem')} passed in ${count(min, 'minute')} total.`));
 		}
 		const ratios = passedWeek.filter((s) => s.limitSec > 0).map((s) => (s.elapsedSec ?? 0) / s.limitSec);
 		const all = sessions.filter((s) => isPassed(s) && s.limitSec > 0).map((s) => (s.elapsedSec ?? 0) / s.limitSec);
-		if (ratios.length >= PACE.min && all.length >= 2 * PACE.min) add('pace', `이번 주 통과 문제는 제한 시간의 ${pct(median(ratios)!)}(중앙값)를 썼습니다. 지금까지 전체는 ${pct(median(all)!)}입니다.`);
+		if (ratios.length >= PACE.min && all.length >= 2 * PACE.min) {
+			const recent = pct(median(ratios)!);
+			const overall = pct(median(all)!);
+			add('pace', t(`이번 주 통과 문제는 제한 시간의 ${recent}(중앙값)를 썼습니다. 지금까지 전체는 ${overall}입니다.`, `This week’s passes used a median of ${recent} of the time limit, compared with ${overall} across all passes.`));
+		}
 	}
 
 	const mended = mendedProblems(sessions).filter((m) => inWeek(m.passedAt, start, end)).slice(0, 3);
 	const how = { revealed: '모범답안을 보고 끝낸', abandoned: '풀다 만', over: '제한 시간을 넘긴' } as const;
-	mended.forEach((m, i) => add(`mend${i + 1}`, `${m.title}: ${md(m.struggleAt)}에 ${how[m.how]} 문제를 ${md(m.passedAt)}에 다시 풀어 통과했습니다.`));
+	const howEn = { revealed: 'the solution was opened', abandoned: 'the attempt was left unfinished', over: 'the attempt went over time' } as const;
+	mended.forEach((m, i) => add(`mend${i + 1}`, t(
+		`${m.title}: ${md(m.struggleAt)}에 ${how[m.how]} 문제를 ${md(m.passedAt)}에 다시 풀어 통과했습니다.`,
+		`${m.title} passed on ${md(m.passedAt)} after ${howEn[m.how]} on ${md(m.struggleAt)}.`
+	)));
 
 	if (memoWeek.length) {
 		const ok = memoWeek.filter((r) => r.rating >= 2).length;
-		add('memo', `이번 주 암기 복습은 ${memoWeek.length}회, 기억한 비율은 ${pct(ok / memoWeek.length)}입니다.${memoPrev.length ? ` 지난주는 ${memoPrev.length}회였습니다.` : ''}`);
+		const recalled = pct(ok / memoWeek.length);
+		add('memo', t(
+			`이번 주 암기 복습은 ${memoWeek.length}회, 기억한 비율은 ${recalled}입니다.${memoPrev.length ? ` 지난주는 ${memoPrev.length}회였습니다.` : ''}`,
+			`${count(memoWeek.length, 'review')} this week with ${recalled} recall.${memoPrev.length ? ` Last week had ${count(memoPrev.length, 'review')}.` : ''}`
+		));
 	}
 	if (rec.memo.length) {
 		const a = garden.stableCountAt(start - 1), b = garden.stableCountAt(Math.min(end - 1, now));
-		if (b !== a) add('leaf', `안정된 카드가 주초 ${a}장에서 지금 ${b}장으로 ${b > a ? '늘었' : '줄었'}습니다.`);
-		else if (b > 0) add('leaf', `안정된 카드는 이번 주 ${b}장 그대로입니다.`);
+		if (b !== a) add('leaf', t(`안정된 카드가 주초 ${a}장에서 지금 ${b}장으로 ${b > a ? '늘었' : '줄었'}습니다.`, `The number of stable cards changed from ${a} at the start of the week to ${b} now.`));
+		else if (b > 0) add('leaf', t(`안정된 카드는 이번 주 ${b}장 그대로입니다.`, `The number of stable cards stayed at ${b} this week.`));
 		const twice = twiceFailed(rec.memo, rec.cards);
-		if (twice > 0) add('shaky', `최근 복습에서 두 번 연속 모른 카드가 ${twice}장 있습니다.`);
+		if (twice > 0) add('shaky', t(`최근 복습에서 두 번 연속 모른 카드가 ${twice}장 있습니다.`, `Both of the last two reviews were missed for ${count(twice, 'card')}.`));
 	}
 
 	if (sparWeek.length) {
 		const bests = sparBestMoments(rec.spar).filter((m) => inWeek(m.at, start, end));
-		add('spar', `이번 주 끝낸 Sparring은 ${sparWeek.length}회입니다.${bests.length ? ` 그중 최고 기록을 새로 쓴 것이 ${bests.length}번입니다.` : ''}`);
+		add('spar', t(
+			`이번 주 끝낸 Sparring은 ${sparWeek.length}회입니다.${bests.length ? ` 그중 최고 기록을 새로 쓴 것이 ${bests.length}번입니다.` : ''}`,
+			`${count(sparWeek.length, 'Sparring run')} finished this week.${bests.length ? ` They included ${count(bests.length, 'new best')}.` : ''}`
+		));
 	}
 	const l3 = firstLevel3Moments(sessions).filter((m) => inWeek(m.at, start, end));
-	if (l3.length) add('first3', `복합 문제를 처음 통과했습니다. (${l3.slice(0, 3).map((m) => m.label.replace(/ 첫 통과$/, '')).join(', ')})`);
+	if (l3.length) {
+		const titles = l3.slice(0, 3).map((moment) => sessions.find((s) => s.problemId === moment.problemId)?.title ?? moment.problemId).join(', ');
+		add('first3', t(`복합 문제를 처음 통과했습니다. (${titles})`, `First passes on advanced problems (${titles}).`));
+	}
 
 	const hoursWeek = new Map<string, number>();
 	for (const o of [...memoWeek.map((r) => r.at), ...passedWeek.map((s) => s.endedAt!)]) hoursWeek.set(String(hourOf(o)), (hoursWeek.get(String(hourOf(o))) ?? 0) + 1);
 	const [h1] = top(hoursWeek, 1);
-	if (h1 && h1[1] >= 4) add('hour', `이번 주 기록이 가장 몰린 시간은 ${h1[0]}시대입니다. (${h1[1]}건)`);
+	if (h1 && h1[1] >= 4) add('hour', t(`이번 주 기록이 가장 몰린 시간은 ${h1[0]}시대입니다. (${h1[1]}건)`, `The busiest hour this week was ${hour(Number(h1[0]))} (${count(h1[1], 'record')}).`));
 
-	const r = rhythmOf(rec);
-	const best = r.facts.find((f) => f.key === 'best');
-	const shaky = r.facts.find((f) => f.key === 'shaky');
-	if (best?.value && shaky?.value && best.value !== shaky.value && !best.value.includes('크지 않음')) add('rhythm', `전체 기록에서 정답률이 가장 높은 시간은 ${best.value}, 가장 낮은 시간은 ${shaky.value}입니다.`);
+	const rhythm = bestAndShaky(hourly(firstAttempts(rec)));
+	if (typeof rhythm === 'object') {
+		const best = hourText(rhythm.best, locale);
+		const shaky = hourText(rhythm.shaky, locale);
+		add('rhythm', t(`전체 기록에서 정답률이 가장 높은 시간은 ${best}, 가장 낮은 시간은 ${shaky}입니다.`, `Across all records, the highest accuracy was at ${best} and the lowest at ${shaky}.`));
+	}
 	return facts;
 }
 
@@ -502,6 +552,7 @@ function twiceFailed(memo: MemoRec[], cards: string[]): number {
 
 // ---------- the reading ----------
 export const READING_MAX_CHARS = 80;
+const READING_EN_MAX_CHARS = 160;
 export const READING_MAX_SENTENCES = 5;
 
 export const READING_SYSTEM = [
@@ -518,18 +569,32 @@ export const READING_SYSTEM = [
 	'{"sentences":[{"text":"문장","facts":["fact id","fact id"]}]}'
 ].join('\n');
 
-export function readingPrompt(weekLabel: string, facts: WeekFact[]): string {
-	return `이번 주(${weekLabel})의 기록 사실입니다. 이 사실로만 한 주를 읽어 주세요.\n\n${JSON.stringify({ week: weekLabel, facts }, null, 1)}`;
+export const READING_SYSTEM_EN = [
+	'Write a short, calm reflection on a week of practice. Draw on nature and seasonal imagery in the style of East Asian ink painting.',
+	'Use only the facts in the input JSON. Keep all numbers, names, and dates as given.',
+	`Write three to five sentences in English, at most ${READING_EN_MAX_CHARS} characters each.`,
+	'Each sentence must cite the supporting fact IDs in its facts array.',
+	'Describe only recorded behavior and changes. Avoid claims about personality, talent, temperament, fortune, or the future.',
+	'Avoid unsupported advice, praise, and concern. Treat slow days and days off neutrally.',
+	'Use no tools or files. Return only JSON in this format, with no Markdown:',
+	'{"sentences":[{"text":"Sentence","facts":["fact id","fact id"]}]}'
+].join('\n');
+
+export function readingPrompt(weekLabel: string, facts: WeekFact[], locale: Locale = 'ko'): string {
+	const lead = copy(locale)(`이번 주(${weekLabel})의 기록 사실입니다. 이 사실로만 한 주를 읽어 주세요.`, `Reflect on the week of ${weekLabel} using these recorded facts.`);
+	return `${lead}\n\n${JSON.stringify({ week: weekLabel, facts }, null, 1)}`;
 }
 
 /** Phrases that read as a statement about the person or a fortune; such a sentence is dropped. */
 const PERSON = /(당신|너|그대)(은|는|의 (성격|기질|천성|운))|운세|팔자|타고난|천성|성격|기질|앞날|미래에는/;
+const PERSON_EN = /\b(?:personality|temperament|innate talent|destin(?:y|ed)|your future|you (?:are|were) a .*person)\b/i;
 
 export type ParsedReading = { sentences: { text: string; factIds: string[] }[]; dropped: number };
 
-/** Strict JSON in, validated sentences out. Drops sentences that cite no known fact id, exceed 80 characters, or say who the person is. Null when the text is not the expected JSON. */
-export function parseReading(text: string, facts: WeekFact[]): ParsedReading | null {
+/** Checks cited facts, sentence length, and person judgments. */
+export function parseReading(text: string, facts: WeekFact[], locale: Locale = 'ko'): ParsedReading | null {
 	const known = new Set(facts.map((f) => f.id));
+	const limit = locale === 'en' ? READING_EN_MAX_CHARS : READING_MAX_CHARS;
 	const a = text.indexOf('{');
 	const b = text.lastIndexOf('}');
 	if (a < 0 || b <= a) return null;
@@ -546,7 +611,7 @@ export function parseReading(text: string, facts: WeekFact[]): ParsedReading | n
 	for (const x of list) {
 		const t = x && typeof x === 'object' && typeof (x as { text?: unknown }).text === 'string' ? (x as { text: string }).text.trim() : '';
 		const ids = x && typeof x === 'object' && Array.isArray((x as { facts?: unknown }).facts) ? ((x as { facts: unknown[] }).facts.filter((i) => typeof i === 'string' && known.has(i)) as string[]) : [];
-		if (!t || ids.length === 0 || Array.from(t).length > READING_MAX_CHARS || PERSON.test(t) || out.length >= READING_MAX_SENTENCES) {
+		if (!t || ids.length === 0 || Array.from(t).length > limit || PERSON.test(t) || (locale === 'en' && PERSON_EN.test(t)) || out.length >= READING_MAX_SENTENCES) {
 			dropped++;
 			continue;
 		}

@@ -145,8 +145,12 @@ export function sprintExtremes(rows: SprintRow[], bestSplit: (id: string) => num
 	return { slowest, fastest };
 }
 
-export const sprintLabel = (status: SparStatus, s: SprintSummary): string =>
-	status === 'running' ? '진행 중' : status === 'abandoned' ? '중단' : s.skipped > 0 ? `건너뜀 ${s.skipped}` : fmtMs(s.totalMs ?? 0);
+export function sprintLabel(status: SparStatus, s: SprintSummary, locale = 'ko'): string {
+	if (status === 'running') return locale === 'en' ? 'In progress' : '진행 중';
+	if (status === 'abandoned') return locale === 'en' ? 'Abandoned' : '중단';
+	if (s.skipped > 0) return locale === 'en' ? `Skipped ${s.skipped}` : `건너뜀 ${s.skipped}`;
+	return fmtMs(s.totalMs ?? 0);
+}
 
 // ---------- Recall ----------
 export type RecallSummary = { answered: number; correct: number; accuracy: number | null };
@@ -168,5 +172,9 @@ export function bestRecall<T extends RunInfo & { summary: RecallSummary }>(runs:
 	return best;
 }
 
-export const recallLabel = (status: SparStatus, s: RecallSummary): string =>
-	status === 'running' ? '진행 중' : status === 'abandoned' ? '중단' : s.accuracy === null ? '0개' : `${s.correct} · ${Math.round(s.accuracy * 100)}%`;
+export function recallLabel(status: SparStatus, s: RecallSummary, locale = 'ko'): string {
+	if (status === 'running') return locale === 'en' ? 'In progress' : '진행 중';
+	if (status === 'abandoned') return locale === 'en' ? 'Abandoned' : '중단';
+	if (s.accuracy === null) return locale === 'en' ? '0 items' : '0개';
+	return `${s.correct} · ${Math.round(s.accuracy * 100)}%`;
+}

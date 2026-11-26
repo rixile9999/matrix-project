@@ -79,8 +79,15 @@ export const dueAfter = (memory: Memory | null, now: Date, rating: Rating): Date
 const dayNumber = (d: Date) => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
 
 /** "오늘", "내일", "9일 뒤", "3주 뒤", "2개월 뒤": calendar days from `now` to `due`. */
-export function humanInterval(due: Date, now: Date): string {
+export function humanInterval(due: Date, now: Date, locale = 'ko'): string {
 	const days = dayNumber(due) - dayNumber(now);
+	if (locale === 'en') {
+		if (days <= 0) return 'Today';
+		if (days === 1) return 'Tomorrow';
+		if (days < 14) return `In ${days} days`;
+		if (days < 60) return `In ${Math.round(days / 7)} weeks`;
+		return `In ${Math.round(days / 30)} months`;
+	}
 	if (days <= 0) return '오늘';
 	if (days === 1) return '내일';
 	if (days < 14) return `${days}일 뒤`;

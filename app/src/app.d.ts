@@ -3,8 +3,8 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		interface Locals { user?: { id: string; name: string } }
-		// interface PageData {}
+		interface Locals { locale: import('./lib/locale.ts').Locale; user?: { id: string; name: string } }
+		interface PageData { locale: import('./lib/locale.ts').Locale }
 		// interface PageState {}
 		// interface Platform {}
 	}

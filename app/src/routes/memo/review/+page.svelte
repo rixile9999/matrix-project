@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import MemoClock from '#lib/MemoClock.svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
 	import Coach from '#lib/Coach.svelte';
@@ -8,12 +9,15 @@
 	import { VERDICT } from '#lib/core/memo-sched.ts';
 	import { mmss } from '#lib/rank.ts';
 	import type { MemoAnswerResponse, MemoReviewData, MemoRevealResponse } from '#lib/types.ts';
+	import { t, label as localizeLabel } from '#lib/i18n.svelte.ts';
 
-	let { data }: { data: MemoReviewData } = $props();
+	let { data: session }: { data: { queue: Record<'en' | 'ko', MemoReviewData['cards']> } } = $props();
+	const data = $derived({ cards: session.queue[page.data.locale] });
 
 	const sessionStart = Date.now();
 	let i = $state(0);
-	let reveal = $state<MemoRevealResponse | null>(null);
+	let revealed = $state<Record<'en' | 'ko', MemoRevealResponse> | null>(null);
+	const reveal = $derived(revealed?.[page.data.locale] ?? null);
 	let ticks = $state<boolean[]>([]);
 	let startedAt = $state(Date.now());
 	let stoppedAt = $state<number | null>(null);
@@ -50,7 +54,7 @@
 
 	async function post<T>(url: string, body: object): Promise<T> {
 		const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-		if (!res.ok) throw new Error(res.status === 404 ? '이 카드는 지금 열 수 없습니다.' : '요청에 실패했습니다. 다시 눌러 보세요.');
+		if (!res.ok) throw new Error(res.status === 404 ? t('이 카드는 지금 열 수 없습니다.', 'This card is unavailable.') : t('요청에 실패했습니다. 다시 눌러 보세요.', 'Request failed. Try again.'));
 		return res.json();
 	}
 
@@ -59,8 +63,8 @@
 		error = '';
 		try {
 			stoppedAt = Date.now();
-			reveal = await post<MemoRevealResponse>('/memo/review/reveal', { id: card.id, elapsedMs: stoppedAt - startedAt });
-			ticks = reveal.points.map(() => false);
+			revealed = await post<Record<'en' | 'ko', MemoRevealResponse>>('/memo/review/reveal', { id: card.id, elapsedMs: stoppedAt - startedAt });
+			ticks = revealed[page.data.locale].points.map(() => false);
 		} catch (e) {
 			stoppedAt = null;
 			error = e instanceof Error ? e.message : String(e);
@@ -84,7 +88,7 @@
 			} else {
 				i++;
 				askOpen = false;
-				reveal = null;
+				revealed = null;
 				stoppedAt = null;
 				startedAt = Date.now();
 			}
@@ -95,22 +99,22 @@
 	}
 </script>
 
-<svelte:head><title>복습 · Matrix</title></svelte:head>
+<svelte:head><title>{t('복습 · Matrix', 'Review · Matrix')}</title></svelte:head>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && askOpen && (askOpen = false)} />
 
 <div class="memo">
 	{#if data.cards.length === 0}
-		<div class="m-top"><a href="/memo" style="color:inherit">‹ 암기</a><span>복습</span></div>
-		<p class="m-empty">지금 복습할 카드가 없습니다.</p>
-		<a class="m-btn ghost" href="/memo">돌아가기</a>
+		<div class="m-top"><a href="/memo" style="color:inherit">‹ {t('암기', 'Memo')}</a><span>{t('복습', 'Review')}</span></div>
+		<p class="m-empty">{t('지금 복습할 카드가 없습니다.', 'No cards to review right now.')}</p>
+		<a class="m-btn ghost" href="/memo">{t('돌아가기', 'Back')}</a>
 	{:else if done}
-		<div class="m-top"><span>복습 끝</span><span>{data.cards.length}장</span></div>
-		<p class="m-q">{data.cards.length}장을 {mmss((doneAt - sessionStart) / 1000)} 동안 복습했습니다.</p>
-		<div class="m-sum"><div><b>{tally[3]}</b>{VERDICT[3]}</div><div><b>{tally[2]}</b>{VERDICT[2]}</div><div><b>{tally[1]}</b>{VERDICT[1]}</div></div>
+		<div class="m-top"><span>{t('복습 끝', 'Review complete')}</span><span>{t(`${data.cards.length}장`, `${data.cards.length} cards`)}</span></div>
+		<p class="m-q">{t(`${data.cards.length}장을 ${mmss((doneAt - sessionStart) / 1000)} 동안 복습했습니다.`, `Reviewed ${data.cards.length} cards in ${mmss((doneAt - sessionStart) / 1000)}.`)}</p>
+		<div class="m-sum"><div><b>{tally[3]}</b>{localizeLabel(VERDICT[3])}</div><div><b>{tally[2]}</b>{localizeLabel(VERDICT[2])}</div><div><b>{tally[1]}</b>{localizeLabel(VERDICT[1])}</div></div>
 		<div class="m-spacer"></div>
-		<a class="m-btn" href="/memo/check">문제 점검 하기</a>
-		<a class="m-btn ghost" href="/memo">암기 홈으로</a>
+		<a class="m-btn" href="/memo/check">{t('문제 점검 하기', 'Check problems')}</a>
+		<a class="m-btn ghost" href="/memo">{t('암기 홈으로', 'Memo home')}</a>
 	{:else}
 		<div class="m-top">
 			<span class="m-kind">{card.kindLabel}</span>
@@ -123,8 +127,8 @@
 
 		{#if reveal}
 			<div class="m-sheet">
-				<span class="label">{card.kind === 'steps' ? '떠올린 단계를 체크하세요' : card.kind === 'syntax' ? '떠올렸으면 체크하세요' : '말한 답에 들어 있던 것을 체크하세요'}</span>
-				{#if reveal.patternTitle}<div class="m-pat">유형: <b>{reveal.patternTitle}</b></div>{/if}
+				<span class="label">{card.kind === 'steps' ? t('떠올린 단계를 체크하세요', 'Check the steps you recalled') : card.kind === 'syntax' ? t('떠올렸으면 체크하세요', 'Check what you recalled') : t('말한 답에 들어 있던 것을 체크하세요', 'Check what your answer included')}</span>
+				{#if reveal.patternTitle}<div class="m-pat">{t('유형:', 'Pattern:')} <b>{reveal.patternTitle}</b></div>{/if}
 				{#each reveal.points as p, k (k)}
 					<label class="m-check"><input type="checkbox" bind:checked={ticks[k]} /><span>{@html label(card.kind, p)}</span></label>
 				{/each}
@@ -134,29 +138,29 @@
 		{/if}
 		<div class="m-spacer"></div>
 		{#if reveal}
-			<div class="m-verdict" role="status">{reveal.points.length}개 중 {n}개 · <b>{VERDICT[grade]}</b>{#if over && n >= reveal.points.length} (시간 초과){/if} · 다음 복습 {reveal.next[n]}</div>
+			<div class="m-verdict" role="status">{t(`${reveal.points.length}개 중 ${n}개`, `${n} of ${reveal.points.length}`)} · <b>{localizeLabel(VERDICT[grade])}</b>{#if over && n >= reveal.points.length} ({t('시간 초과', 'time expired')}){/if} · {t('다음 복습', 'Next review')} {reveal.next[n]}</div>
 		{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
 		{#if reveal && askOk}
-			<button class="m-btn ghost" type="button" onclick={() => (askOpen = true)}>{COACH_NAME}에게 묻기</button>
+			<button class="m-btn ghost" type="button" onclick={() => (askOpen = true)}>{t(`${COACH_NAME}에게 묻기`, `Ask ${COACH_NAME}`)}</button>
 		{/if}
 		{#if reveal}
-			<button class="m-btn" type="button" onclick={next} disabled={busy}>{i + 1 >= data.cards.length ? '끝내기' : '다음 카드'}</button>
+			<button class="m-btn" type="button" onclick={next} disabled={busy}>{i + 1 >= data.cards.length ? t('끝내기', 'Finish') : t('다음 카드', 'Next card')}</button>
 		{:else}
-			<button class="m-btn" type="button" onclick={show} disabled={busy}>{card.kind === 'steps' ? '단계를 떠올린 뒤 누르기' : '머릿속으로 답한 뒤 누르기'}</button>
+			<button class="m-btn" type="button" onclick={show} disabled={busy}>{card.kind === 'steps' ? t('단계를 떠올린 뒤 누르기', 'Recall the steps, then tap') : t('머릿속으로 답한 뒤 누르기', 'Answer mentally, then tap')}</button>
 		{/if}
 	{/if}
 </div>
 
 {#if askOpen && reveal && card}
-	<button class="co-scrim" type="button" tabindex="-1" aria-label="닫기" onclick={() => (askOpen = false)}></button>
-	<div class="co-sheet" role="dialog" aria-label="{COACH_NAME}에게 묻기">
+	<button class="co-scrim" type="button" tabindex="-1" aria-label={t('닫기', 'Close')} onclick={() => (askOpen = false)}></button>
+	<div class="co-sheet" role="dialog" aria-label={t(`${COACH_NAME}에게 묻기`, `Ask ${COACH_NAME}`)}>
 		<div class="co-sheet-bar">
 			<b>{COACH_NAME}</b>
-			<button class="btn ghost small" type="button" onclick={() => (askOpen = false)}>닫기</button>
+			<button class="btn ghost small" type="button" onclick={() => (askOpen = false)}>{t('닫기', 'Close')}</button>
 		</div>
 		<div class="co-sheet-body">
-			{#key card.id}<Coach context={{ kind: 'memo', id: card.id }} placeholder="이 카드에 대해 묻기" />{/key}
+			{#key card.id}<Coach context={{ kind: 'memo', id: card.id }} placeholder={t('이 카드에 대해 묻기', 'Ask about this card')} />{/key}
 		</div>
 	</div>
 {/if}

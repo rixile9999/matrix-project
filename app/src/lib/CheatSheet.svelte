@@ -2,6 +2,7 @@
 	import { tick, untrack } from 'svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
 	import { TOPICS, type CheatEntry, type TopicId } from '#lib/core/lang.ts';
+	import { t, label } from '#lib/i18n.svelte.ts';
 
 	type Link = { id: string; title: string };
 	let {
@@ -67,17 +68,17 @@
 </script>
 
 <div class="cs">
-	<input class="cs-search" type="search" placeholder="치트시트 검색" aria-label="치트시트 검색" bind:value={query} bind:this={search} />
+	<input class="cs-search" type="search" placeholder={t('치트시트 검색', 'Search cheatsheet')} aria-label={t('치트시트 검색', 'Search cheatsheet')} bind:value={query} bind:this={search} />
 	{#if entries.length === 0}
-		<p class="empty">아직 작성된 항목이 없습니다.</p>
+		<p class="empty">{t('아직 작성된 항목이 없습니다.', 'No entries yet.')}</p>
 	{:else if groups.length === 0}
-		<p class="empty">검색 결과가 없습니다.</p>
+		<p class="empty">{t('검색 결과가 없습니다.', 'No results found.')}</p>
 	{/if}
 	{#each groups as g (g.topic)}
 		{@const open = q !== '' || openTopics.has(g.topic)}
 		<section class="cs-group">
 			<button class="cs-topic" type="button" aria-expanded={open} onclick={() => (openTopics = toggle(openTopics, g.topic))}>
-				<span class="cs-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>{TOPICS[g.topic]}<span class="note">{g.items.length}</span>
+				<span class="cs-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>{label(TOPICS[g.topic])}<span class="note">{g.items.length}</span>
 			</button>
 			{#if open}
 				{#each g.items as e (e.id)}
@@ -90,7 +91,7 @@
 						{#if isOpen}
 							<CheatBody entry={e} />
 							{#if passedBy[e.id]?.length}
-								<p class="cs-used note">이 문법을 쓰는 문제: {#each passedBy[e.id] as p, i (p.id)}{i ? ', ' : ''}<a href="/lang/{p.id}">{p.title}</a>{/each}</p>
+								<p class="cs-used note">{t('이 문법을 쓰는 문제:', 'Problems using this syntax:')} {#each passedBy[e.id] as p, i (p.id)}{i ? ', ' : ''}<a href="/lang/{p.id}">{p.title}</a>{/each}</p>
 							{/if}
 						{/if}
 					</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	// Model-made SVG never enters the page DOM: it is shown in a sandboxed iframe (no scripts, no network, no same-origin).
 	let { svg }: { svg: string } = $props();
 
@@ -17,5 +18,5 @@
 </script>
 
 <div class="co-viz">
-	<iframe class="co-svg" style:aspect-ratio={ratio} style:height={ratio ? 'auto' : null} sandbox="" srcdoc={doc} title="설명 그림" loading="lazy"></iframe>
+	<iframe class="co-svg" style:aspect-ratio={ratio} style:height={ratio ? 'auto' : null} sandbox="" srcdoc={doc} title={t('설명 그림', 'Illustration')} loading="lazy"></iframe>
 </div>
