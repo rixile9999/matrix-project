@@ -35,6 +35,23 @@ export function replay(reviews: { at: number; rating: Rating }[]): Memory | null
 	return { card, reviews: sorted.length, lastRating: ratings[ratings.length - 1], tail: ratings.slice(-2) };
 }
 
+/** The memory after each review, in time order: replay(reviews.slice(0, k + 1)) for every k, computed in one pass. */
+export function replayEach(reviews: { at: number; rating: Rating }[]): Memory[] {
+	const sorted = reviews.map((r, i) => ({ ...r, i })).sort((a, b) => a.at - b.at || a.i - b.i);
+	const out: Memory[] = [];
+	if (sorted.length === 0) return out;
+	let card = createEmptyCard(new Date(sorted[0].at * 1000));
+	let prev = sorted[0].at;
+	const ratings: Rating[] = [];
+	for (const r of sorted) {
+		prev = Math.max(prev, r.at);
+		card = scheduler.next(card, new Date(prev * 1000), r.rating as Grade).card;
+		ratings.push(r.rating);
+		out.push({ card, reviews: ratings.length, lastRating: r.rating, tail: ratings.slice(-2) });
+	}
+	return out;
+}
+
 /** Log (oldest first or not) -> memory per item key. */
 export function buildMemories(log: Review[]): Map<string, Memory> {
 	const by = new Map<string, Review[]>();

@@ -1,5 +1,5 @@
 // Pure pieces of the ambience layer: easing, rhythm schedule, backdrop picker. No DOM, no Web Audio.
-import type { Backdrop, Scene } from './types';
+import type { Backdrop, Scene, SoundMode } from './types';
 
 export const BACKDROPS: readonly Backdrop[] = ['none', 'earthrise', 'blackhole', 'earth'];
 
@@ -91,4 +91,21 @@ export function nextBreath(t0: number, now: number, lead = 0.1): number {
 export function pickBackdrop(setting: Backdrop | 'random', rng: () => number = Math.random): Backdrop {
 	if (setting !== 'random') return setting;
 	return BACKDROPS[Math.min(BACKDROPS.length - 1, Math.floor(rng() * BACKDROPS.length))];
+}
+
+// ---------- default stage per route ----------
+/** How far the picture is dimmed on the calm screens (0..1; see Ambience `dim`). */
+export const HOME_DIM = 0.7;
+export const WORK_DIM = 0.4;
+
+export type StageDefault = { scene?: Scene; dim: number; sound: SoundMode };
+/**
+ * What the ambience shows when a page says nothing. Sparring pages set their own scene (so: none here), full picture, full sound.
+ * Work screens (a problem being solved, a memo review or check): frozen and dim, the bed very quietly. Everything else: the slow home scene, dimmed, the bed only.
+ */
+export function stageDefault(path: string): StageDefault {
+	if (path === '/spar' || path.startsWith('/spar/')) return { dim: 0, sound: 'full' };
+	if (path === '/garden' || path.startsWith('/garden/')) return { scene: 'home', dim: 0.35, sound: 'bed' }; // a quiet room: always dark, picture softened, no rhythm
+	const work = path.startsWith('/attempt/') || path === '/memo/review' || path === '/memo/check' || /^\/lang\/(?!book(\/|$)|cheatsheet(\/|$))[^/]+/.test(path);
+	return work ? { scene: 'still', dim: WORK_DIM, sound: 'quiet' } : { scene: 'home', dim: HOME_DIM, sound: 'bed' };
 }

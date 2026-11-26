@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS spar_events (
 );
 CREATE INDEX IF NOT EXISTS spar_events_run ON spar_events(run_id, seq);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+-- Garden: weekly readings written on request (append-only). body = JSON { sentences: [{ text, facts: [{ id, text }] }] }, the cited facts as they were when written.
+CREATE TABLE IF NOT EXISTS garden_readings (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, week_key TEXT NOT NULL, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS garden_readings_week ON garden_readings(week_key, id);
 `);
 
 /** Runs fn inside a transaction. */

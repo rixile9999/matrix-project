@@ -1,13 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	// Model-made SVG never enters the page DOM: it is shown in a sandboxed iframe (no scripts, no network, no same-origin).
 	let { svg }: { svg: string } = $props();
 
-	let dark = $state(false);
-	onMount(() => {
-		const t = document.documentElement.dataset.theme;
-		dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-	});
+	// The drawings are made on a white ground (the Operator is told to), so the frame is white in both looks (dimmed a little in the arena, by CSS).
 	// Height follows the drawing's own proportions (viewBox) so a wide, short figure does not sit in a tall empty box.
 	const ratio = $derived.by(() => {
 		const m = /viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(svg);
@@ -17,7 +12,7 @@
 	});
 	const doc = $derived(
 		`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">` +
-			`<style>html,body{margin:0;height:100%}body{background:${dark ? '#171d27' : '#fff'};display:flex;align-items:center;justify-content:center}svg{max-width:100%;max-height:100%;height:auto}</style>${svg}`
+			`<style>html,body{margin:0;height:100%}body{background:#fff;display:flex;align-items:center;justify-content:center}svg{max-width:100%;max-height:100%;height:auto}</style>${svg}`
 	);
 </script>
 

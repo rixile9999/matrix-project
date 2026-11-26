@@ -486,6 +486,18 @@ export function notesView(): MemoNotesData {
 	return { groups: list.map(({ order: _o, ...g }) => g), shaky: shakyCards(w).length };
 }
 
+/** For Garden: every review with the topic of its item (null if the item no longer exists), and the ids of the cards that can be leaves (file cards that are open). */
+export function gardenMemo(): { reviews: { itemType: ItemType; itemId: string; at: number; rating: Rating; topic: string | null }[]; cards: string[] } {
+	const w = world();
+	const topic = new Map<string, string | null>();
+	for (const c of w.cards) topic.set(itemKey('card', c.id), c.topic && c.topic in TOPICS ? c.topic : null);
+	for (const c of w.checks) topic.set(itemKey('check', c.id), c.topic in TOPICS ? c.topic : null);
+	return {
+		reviews: reviewLog().map((r) => ({ ...r, topic: topic.get(itemKey(r.itemType, r.itemId)) ?? null })),
+		cards: w.cards.filter((c) => c.kind !== 'syntax' && cardOpen(w, c)).map((c) => c.id)
+	};
+}
+
 /** A JSON request body as an object; anything else is {}. */
 export async function readJson(request: Request): Promise<Record<string, unknown>> {
 	try {

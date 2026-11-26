@@ -537,3 +537,67 @@ export type SparRunData = { detail: SparRunDetail };
 
 /** `/spar/records` load: newest first, at most 100 rows. Link each row to `/spar/run/<id>` (a running one redirects to its screen). */
 export type SparRecordsData = { rows: SparRecordRow[]; total: number; truncated: boolean };
+
+// ---------- Garden ----------
+// /garden: the learner's records drawn as a living form, their rhythm by hour of day, and a weekly reading written on request.
+// Everything here is recomputed from the records on each load (core/garden.ts). Only readings are stored (append-only, garden_readings).
+// All timestamps are unix seconds; "local" = the server's time zone.
+
+/** The short label of the form. Describes recorded behaviour, never the person. */
+export type GardenKind = 'unknown' | 'wide' | 'straight' | 'even';
+
+/** The numbers behind each part of the form, shown in the "읽는 법" legend. */
+export type GardenNumbers = {
+	langPassed: number; // passed language sessions (volume)
+	memoReviews: number; // memo reviews, cards and checks (volume)
+	sparRuns: number; // finished Sparring runs (volume)
+	topics: number; // distinct topics practised (breadth)
+	topicsTotal: number; // topics that exist
+	stableCards: number; // cards that are stable now (leaves)
+	deepPassed: number; // distinct level-3 or book problems passed (roots)
+	overtimeMin: number; // minutes spent past the limit on problems that were later passed (roots)
+	medianRatio: number | null; // median elapsed / limit of passed language sessions (pace); null with fewer than 3
+	mended: number; // problems that once ended revealed, abandoned or past the limit and were later passed
+	bests: number; // new Sparring bests
+	firstLevel3: number; // first passes of level-3 problems
+};
+
+/** The form on one day: a pure function of the records up to the end of that day. 0..1 values saturate; counts are exact. */
+export type GardenForm = {
+	day: number; // 1 = the day of the first record; 0 = no record yet
+	volume: number; // 0..1 stem height / thickness
+	breadth: number; // 0..1 how evenly practice is spread over topics (normalised entropy)
+	leaves: number; // 0..1 saturating share of stable cards
+	roots: number; // 0..1
+	pace: number; // 0..1: 1 = fast (dry, broken strokes), 0 = slow (wet, continuous), 0.5 = not enough data
+	leafCount: number; // leaves to draw = stable cards
+	mended: number; // gold marks to draw
+	flowers: number; // flowers to draw
+	kind: GardenKind;
+	kindLabel: string;
+	seed: number; // integer fixed by the first record, so the shape keeps its identity while it grows
+	numbers: GardenNumbers;
+};
+
+export type GardenDay = { date: string /* YYYY-MM-DD, local */; form: GardenForm };
+
+export type GardenHour = { hour: number; n: number; ok: number; rate: number | null /* 0..1, null when n = 0 */; enough: boolean /* n >= GardenRhythm.minPerHour */ };
+/** One fact of the rhythm. value = null: not enough records yet; `need` says how many are needed. */
+export type GardenRhythmFact = { key: 'best' | 'shaky' | 'gapSlow' | 'gapReturn'; label: string; value: string | null; need: string };
+export type GardenRhythm = { hours: GardenHour[] /* 24, by local hour */; total: number; minPerHour: number; facts: GardenRhythmFact[] };
+
+export type GardenReadingSentence = { text: string; facts: { id: string; text: string }[] /* the cited facts, in plain words */ };
+export type GardenReading = { id: number; weekKey: string; createdAt: number; backend: string /* BackendId */; backendName: string; sentences: GardenReadingSentence[] };
+
+/** `/garden` load. */
+export type GardenData = {
+	days: GardenDay[]; // first record day … today, oldest first; one zero form (day 0) when there are no records
+	rhythm: GardenRhythm;
+	week: { key: string /* Monday, YYYY-MM-DD */; label: string; factCount: number /* facts this week can be read from; 0 = nothing to read */ };
+	reading: GardenReading | null; // the latest reading of this week
+	backends: { id: string; name: string }[];
+	defaultBackend: string;
+};
+
+/** POST `/garden/reading` body `{ backend?: string }`. 200 { reading }; failures { error } (Korean, calm). */
+export type GardenReadingResponse = { reading: GardenReading } | { error: string };

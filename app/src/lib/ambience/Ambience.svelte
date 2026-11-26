@@ -3,13 +3,13 @@
 	import { onMount, untrack } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import './arena.css';
-	import { enable, isReady, setScene as setSoundScene, setVolume } from './audio';
+	import { enable, isReady, setMode as setSoundMode, setScene as setSoundScene, setVolume } from './audio';
 	import { createCanvasScene, type CanvasScene } from './canvasScene';
 	import { VIDEO_RATE, VIDEO_SHOW } from './core';
 	import { resolveBackdrop, saveSettings, settings } from './settings.svelte';
-	import type { Scene } from './types';
+	import type { Scene, SoundMode } from './types';
 
-	let { scene, progress, bloom }: { scene: Scene; progress?: number; bloom?: number } = $props();
+	let { scene, progress, bloom, dim = 0, sound = 'full' }: { scene: Scene; progress?: number; bloom?: number; dim?: number; sound?: SoundMode } = $props();
 
 	let layer: HTMLDivElement | undefined = $state();
 	let cv: HTMLCanvasElement | undefined = $state();
@@ -63,6 +63,7 @@
 			document.removeEventListener('visibilitychange', onVis);
 			clearTimeout(restartTimer);
 			video?.pause();
+			enable(false); // the layer is gone (light look): so is its sound; it comes back with the layer
 		};
 	});
 
@@ -110,6 +111,7 @@
 
 	// sound: the engine is shared and outlives this component
 	$effect(() => { setSoundScene(scene); });
+	$effect(() => { setSoundMode(sound); });
 	$effect(() => { setVolume(settings.volume); });
 	$effect(() => {
 		const on = settings.sound;
@@ -142,6 +144,7 @@
 	{/if}
 	<div class="scrim" class:on={backdrop !== 'none'}></div>
 	<canvas bind:this={cv}></canvas>
+	<div class="veil" style:opacity={dim}></div>
 </div>
 
 <style>
@@ -150,5 +153,6 @@
 	.scrim { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(6, 7, 11, .62), rgba(6, 7, 11, 0)); opacity: 0; transition: opacity 3s ease; }
 	.scrim.on { opacity: 1; }
 	canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-	.calm video, .calm .scrim { transition: none; }
+	.veil { position: absolute; inset: 0; background: #06070b; opacity: 0; transition: opacity 3s ease; }
+	.calm video, .calm .scrim, .calm .veil { transition: none; }
 </style>

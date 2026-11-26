@@ -13,5 +13,5 @@
 		<a class="btn ghost" href="/lang">← 목록</a>
 	</div>
 	<p class="note" style="margin:-12px 0 0">Scala 3 기준 문법 모음입니다. 항목을 누르면 예제가 열립니다.</p>
-	<CheatSheet entries={data.entries} passedBy={data.passedBy} full />
+	<div class="cs-panel"><CheatSheet entries={data.entries} passedBy={data.passedBy} full /></div>
 </div>

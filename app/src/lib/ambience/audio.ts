@@ -1,7 +1,7 @@
 // The one shared sound engine (module singleton), synthesized with Web Audio. Created lazily by the first enable(true),
 // which must come from a user gesture. Survives client-side navigation; Ambience.svelte only tells it the scene.
 import { BEAT, BREATH, motifEvents, nextBreath } from './core';
-import type { Scene } from './types';
+import type { Scene, SoundMode } from './types';
 
 type Ctor = typeof AudioContext;
 type Out = AudioNode;
@@ -11,6 +11,8 @@ let master: GainNode, bus: GainNode, toneLp: BiquadFilterNode, colour: GainNode,
 let sources: (AudioScheduledSourceNode)[] = [];
 let wanted = false; // sound switched on by the user
 let volume = 0.6;
+let mode: SoundMode = 'full'; // 'full' = bed + rhythm; 'bed' = bed only; 'quiet' = bed only, much lower
+const level = () => volume * (mode === 'quiet' ? 0.35 : 1);
 let scene: Scene = 'home';
 let t0 = 0, nextMotif = 0, motifUntil = 0;
 let pulseTimer: ReturnType<typeof setInterval> | null = null;
@@ -33,7 +35,7 @@ function init(): boolean {
 		if (!C) return false;
 		ac = new C();
 		const c = ac;
-		master = c.createGain(); master.gain.value = volume; master.connect(c.destination);
+		master = c.createGain(); master.gain.value = level(); master.connect(c.destination);
 		bus = c.createGain(); bus.gain.value = 0;
 		toneLp = c.createBiquadFilter(); toneLp.type = 'lowpass'; toneLp.frequency.value = 700; toneLp.Q.value = 0.3;
 		bus.connect(toneLp); toneLp.connect(master);
@@ -65,7 +67,7 @@ function init(): boolean {
 		n.connect(bp); bp.connect(nv); nv.connect(bus); n.start(); nl.start(); sources.push(n, nl);
 
 		motifTimer = setInterval(() => {
-			if (!ac || !wanted || scene === 'still' || ac.currentTime < nextMotif) return;
+			if (!ac || !wanted || mode !== 'full' || scene === 'still' || ac.currentTime < nextMotif) return;
 			motif(false);
 			nextMotif = ac.currentTime + rand(55, 95);
 		}, 1000);
@@ -178,7 +180,14 @@ export function enable(on: boolean): void {
 
 export function setVolume(v: number): void {
 	volume = Math.min(1, Math.max(0, v));
-	try { if (ac) master.gain.setTargetAtTime(volume, ac.currentTime, 0.05); } catch { /* ignore */ }
+	try { if (ac) master.gain.setTargetAtTime(level(), ac.currentTime, 0.05); } catch { /* ignore */ }
+}
+
+/** How much of the sound scene plays: Sparring 'full', other screens 'bed' (no rhythm), work screens 'quiet'. */
+export function setMode(m: SoundMode): void {
+	if (m === mode) return;
+	mode = m;
+	try { if (ac) master.gain.setTargetAtTime(level(), ac.currentTime, 1.5); } catch { /* ignore */ }
 }
 
 /** Tell the engine which scene is showing. Safe to call before the sound is on; it applies when it comes on. */
@@ -208,7 +217,7 @@ export function isReady(): boolean { return ac !== null; }
 
 /** Debug: persistent sources, transient nodes still alive, running timers, context state. */
 export function stats() {
-	return { sources: sources.length, live, pulse: pulseTimer !== null, motifTimer: motifTimer !== null, state: ac?.state ?? 'none', scene, wanted };
+	return { sources: sources.length, live, pulse: pulseTimer !== null, motifTimer: motifTimer !== null, state: ac?.state ?? 'none', scene, mode, wanted, gain: master ? +master.gain.value.toFixed(3) : 0 };
 }
 
 function teardown() {

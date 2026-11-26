@@ -33,12 +33,6 @@
 
 /* ---- Sparring pages ---- */
 .arena.a-app { min-height: 100vh; display: flex; flex-direction: column; }
-.arena .a-nav { display: flex; align-items: center; gap: 22px; padding: 14px 22px; font-size: 13px; }
-.arena .a-brand { font: 500 14px var(--a-display); letter-spacing: -.01em; color: var(--a-dim); }
-.arena .a-nav nav { display: flex; gap: 18px; flex-wrap: wrap; }
-.arena .a-nav a { color: var(--a-dim); text-decoration: none; padding: 8px 0; border-bottom: 1px solid transparent; transition: color .3s, border-color .3s; }
-.arena .a-nav a:hover, .arena .a-nav a.on { color: var(--a-ink); }
-.arena .a-nav a.on { border-color: var(--a-faint); }
 .arena a:focus-visible, .arena button:focus-visible, .arena summary:focus-visible, .arena input:focus-visible { outline: 2px solid var(--a-warm); outline-offset: 3px; border-radius: 4px; }
 
 /* page container; remaps the app's theme variables so shared components (editor, cheat sheet) read dark */
@@ -134,7 +128,6 @@
 	.arena .a-cols { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
-	.arena .a-nav { padding: 10px 16px; gap: 14px; }
 	.arena .a-page { padding: 8px 16px 44px; }
 	.arena .a-rec { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 10px; }
 }
