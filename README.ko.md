@@ -55,6 +55,18 @@ python3 scripts/admin.py create owner
 - **격리 실행**에서 웹 앱은 전용 Unix 소켓으로 작업을 요청합니다. 브로커만 VM의 Docker 소켓을 사용합니다. 각 작업은 비특권 사용자·읽기 전용 루트·제한된 임시 공간·CPU/메모리/PID/실행 시간/출력 제한을 적용한 새 컨테이너에서 끝납니다. Scala는 컴파일 단계부터 오프라인입니다. 코치는 네트워크가 꺼진 상태에서 제공자 전용 Unix 소켓을 통해 허용된 HTTPS 호스트에만 연결합니다. Operator, 정원 주간 해석과 Scala trace 검증이 같은 경계를 사용합니다.
 - **개발**은 `app/`에서 `MATRIX_DATA`로 개발 전용 계정 디렉터리를 정하고 `node scripts/account.ts create 이름`에 비밀번호를 표준 입력으로 보내 계정을 만듭니다. `pnpm dev`에서 채점과 코칭까지 사용하려면 `MATRIX_WORKER_SOCKET`에 브로커 소켓을 연결합니다. 운영과 같은 경계를 확인하려면 Compose에서 실행하세요.
 
+### macOS 운영 자동 배포
+
+`lima-matrix-workers`에서 `matrix` Compose 서비스가 가동 중인 Mac의 저장소 루트에서 아래 명령을 실행하면 사용자 LaunchAgent가 설치됩니다. 해당 계정에서 비밀번호 입력 없이 `origin`을 읽을 수 있어야 합니다. 운영 환경 설정은 `app/.env`에서 읽습니다.
+
+```sh
+python3 ops/auto-deploy.py --install --builder desktop-linux
+```
+
+사용자가 Mac에 로그인해 있는 동안 1분마다 GitHub `main`을 확인합니다. 새 커밋을 별도 작업 디렉터리에서 타입 검사·테스트·빌드한 뒤 웹 컨테이너를 교체합니다. 워커 소스나 Compose 정의가 바뀌면 워커 이미지도 빌드합니다. 배포 후 운영 로그인 페이지를 확인하며, 교체에 실패하면 직전 이미지와 Compose 설정을 복구합니다. 계정과 학습 기록은 기존 볼륨을 계속 사용합니다. 이미 열어 둔 브라우저 탭은 배포 후 새로고침하면 됩니다.
+
+위 명령은 Lima와 같은 아키텍처의 Docker Desktop에서 이미지를 빌드합니다. Lima에서 직접 빌드하려면 `--builder desktop-linux`를 생략하세요. 로그인 주소가 `http://localhost:5173/login`과 다르면 `--health`로 지정합니다. 배포 스크립트를 수정하면 설치 명령을 다시 실행하세요. 배포 로그는 `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`로 확인할 수 있습니다.
+
 ## 콘텐츠 검증
 
 콘텐츠 검증 스크립트에서 문제 채점은 연결된 브로커를 사용합니다. 저장소에 포함된 치트시트·암기 예제의 오프라인 유지보수 검증에는 로컬 scala-cli도 필요합니다.

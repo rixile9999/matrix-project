@@ -56,6 +56,18 @@ On this Mac, register at `http://localhost:5173/signup`. For Wi-Fi or LAN access
 - **Worker isolation.** The web app submits jobs over a dedicated Unix socket. Only the broker accesses the VM’s Docker socket. Each job runs as an unprivileged user in a fresh container with a read-only root, bounded temporary storage, and CPU, memory, PID, time and output limits. Scala compilation and execution are offline. Coaches have networking disabled and reach approved HTTPS hosts through a provider-specific Unix socket. Operator, Garden readings and Scala trace verification use this boundary.
 - **Development.** In `app/`, set `MATRIX_DATA` to a development account directory and create an account by passing the password on standard input to `node scripts/account.ts create USERNAME`. To use grading and coaching with `pnpm dev`, point `MATRIX_WORKER_SOCKET` at the broker socket. Use Compose to test the production isolation boundary.
 
+### Automatic production updates on macOS
+
+On a Mac already running the `matrix` Compose stack in `lima-matrix-workers`, install the user LaunchAgent from the repository root. The account must be able to fetch `origin` without a password prompt. The job reads production settings from `app/.env`.
+
+```sh
+python3 ops/auto-deploy.py --install --builder desktop-linux
+```
+
+While the user is logged in, the agent checks GitHub `main` every minute. It builds in a separate checkout, runs the type checker and tests, then updates the web container. Changes to worker sources or Compose also rebuild worker images. The job checks the production login page and restores the previous images and Compose configuration if the rollout fails. Database volumes persist across releases. Refresh an open browser tab after deployment.
+
+The command above uses Docker Desktop to build images for the same architecture as Lima. Omit `--builder desktop-linux` to build directly in Lima. Set `--health` to the login URL if it differs from `http://localhost:5173/login`. After editing the deployment script, rerun the install command. View deployments with `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`.
+
 ## Verify content
 
 Problem verification uses a connected broker. Offline maintenance checks for the bundled cheatsheet and memo examples also require local scala-cli.
