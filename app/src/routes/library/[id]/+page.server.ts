@@ -1,6 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { tr } from '#lib/server/locale.ts';
-import { answerPdfQuestion, pdfPracticeView } from '#lib/server/pdf-sets.ts';
+import { answerPdfQuestion, pdfPracticeView, publishPdfSet } from '#lib/server/pdf-sets.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 function missing(): never {
@@ -22,6 +22,12 @@ export const load: PageServerLoad = ({ params, url, locals, depends }) => {
 };
 
 export const actions = {
+	publish: ({ params, url }) => {
+		const index = questionIndex(url);
+		if (!publishPdfSet(params.id)) missing();
+		const question = index === null ? '' : `?question=${index + 1}`;
+		redirect(303, `/library/${params.id}${question}`);
+	},
 	answer: async ({ params, url, request }) => {
 		const index = questionIndex(url);
 		if (index === null) missing();

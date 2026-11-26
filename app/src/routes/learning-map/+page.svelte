@@ -49,7 +49,7 @@
 	<section aria-labelledby="materials">
 		<h2 id="materials">{t('문제와 지도의 역할', 'How problems fit the map')}</h2>
 		<dl>
-			<div><dt>{t('PDF와 보충 문제', 'PDFs and supporting exercises')}</dt><dd>{t('PDF 시범 기능은 선택한 자료를 개인 문제집으로 만듭니다. 장기적으로는 막히는 개념에 짧은 보충 연습을 연결하려 합니다. 목표는 책을 다시 펼치지 않고도 새로운 사례를 풀 수 있게 하는 것입니다.', 'The PDF pilot turns your material into a private practice set. The long-term plan connects short supporting exercises to concepts that cause difficulty. The goal is to solve new cases independently of the book.')}</dd></div>
+			<div><dt>{t('PDF와 보충 문제', 'PDFs and supporting exercises')}</dt><dd>{t('PDF 시범 기능은 선택한 자료를 모든 회원이 풀 수 있는 문제집으로 만듭니다. 장기적으로는 막히는 개념에 짧은 보충 연습을 연결하려 합니다. 목표는 책을 다시 펼치지 않고도 새로운 사례를 풀 수 있게 하는 것입니다.', 'The PDF pilot turns your material into a practice set for all signed-in members. The long-term plan connects short supporting exercises to concepts that cause difficulty. The goal is to solve new cases independently of the book.')}</dd></div>
 			<div><dt>{t('암기·반복·전이', 'Recall, repetition and transfer')}</dt><dd>{t('같은 문제를 다시 풀면 기억을 확인할 수 있습니다. 전이를 확인할 때는 연습에 쓰지 않은 문제군에서 맥락이나 표현을 바꾸고, 풀이법을 스스로 선택하게 합니다.', 'Repeating an item checks recall. To test transfer, hold out a family of problems, change the context or representation, and let the learner choose a method.')}</dd></div>
 			<div><dt>{t('복합 사고', 'Combining ideas')}</dt><dd>{t('기저율과 오판 비용을 따로 연습한 뒤, 새로운 경보 시스템의 임계값을 바꿀지 결정합니다. 필요한 정보를 골라내거나 판단 근거가 부족하다고 설명하는 것도 수행의 일부입니다.', 'After practicing base rates and error costs separately, decide whether to change an alert threshold in a new system. Identifying missing information and explaining when to defer a decision are part of the task.')}</dd></div>
 		</dl>
@@ -60,7 +60,7 @@
 	</section>
 	<section class="live" aria-labelledby="live-title">
 		<h2 id="live-title">{t('지금 사용할 수 있는 기능', 'Available today')}</h2>
-		<p>{t('확률·통계와 스파링에서 연습하고, 복기와 정원에서 내 풀이 기록을 확인할 수 있습니다. PDF 문제집에서 내 자료로 문제를 만들 수 있습니다. 연습 간 전이 효과 추정은 설계 단계입니다.', 'Practice in Statistics and Sparring, then explore your attempts in Debrief and Garden. Create private exercises in PDF sets. Transfer-effect estimation is in design.')}</p>
+		<p>{t('확률·통계와 스파링에서 연습하고, 복기와 정원에서 내 풀이 기록을 확인할 수 있습니다. PDF 문제집에서 내 자료로 문제를 만들 수 있습니다. 연습 간 전이 효과 추정은 설계 단계입니다.', 'Practice in Statistics and Sparring, then explore your attempts in Debrief and Garden. Create and practice shared exercises in PDF sets. Transfer-effect estimation is in design.')}</p>
 		<nav aria-labelledby="live-title">
 			<a href="/library">{t('PDF 문제집', 'PDF sets')}</a><a href="/stats">{t('확률·통계', 'Statistics')}</a><a href="/spar">{t('스파링', 'Sparring')}</a><a href="/debrief">{t('복기', 'Debrief')}</a><a href="/garden">{t('정원', 'Garden')}</a>
 		</nav>

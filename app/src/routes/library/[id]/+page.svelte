@@ -19,7 +19,15 @@
 
 	<header>
 		<h1>{data.title}</h1>
-		<p class="source">{data.sourceName}</p>
+		{#if data.sourceName}<p class="source">{data.sourceName}</p>{/if}
+		{#if !data.isShared}
+			<form class="publish" method="POST" action={question ? `${questionUrl(question.index)}&/publish` : '?/publish'} use:enhance>
+				<p class="source" id="publish-help">
+					<strong>{t('비공개', 'Private')}</strong> · {t('공개하면 로그인한 모든 회원이 문제집을 풀 수 있습니다. 풀이 기록은 비공개입니다.', 'Sharing lets all signed-in members practice this set. Your progress stays private.')}
+				</p>
+				<button class="btn ghost" type="submit" aria-describedby="publish-help">{t('회원에게 공개', 'Share with members')}</button>
+			</form>
+		{/if}
 	</header>
 
 	<div class="tracker">
@@ -124,6 +132,7 @@
 	.card > p { margin-block: 12px 18px; }
 	.question-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 	form { display: grid; justify-items: start; gap: 16px; }
+	.publish { gap: 8px; margin-top: 10px; }
 	fieldset { width: 100%; min-width: 0; border: 0; padding: 0; margin: 0; }
 	legend, h2 { font: 600 19px/1.4 var(--f-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 	legend { padding: 0 0 14px; }

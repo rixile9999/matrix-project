@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS coach_messages (
 );`;
 const coachMessagesIndex = 'CREATE INDEX IF NOT EXISTS coach_messages_ctx ON coach_messages(context_kind, context_id, id);';
 
+const pdfQuestionAttempts = `
+CREATE TABLE IF NOT EXISTS main.pdf_question_attempts (
+	set_id TEXT NOT NULL,
+	question_index INTEGER NOT NULL CHECK (question_index >= 0),
+	started_at INTEGER NOT NULL, answered_at INTEGER, selected INTEGER,
+	CHECK ((answered_at IS NULL) = (selected IS NULL)),
+	PRIMARY KEY (set_id, question_index)
+);`;
+
 function migrateCoachMessages(database: DatabaseSync) {
 	const current = () => database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'coach_messages'").get()?.sql;
 	if (String(current()).includes("'stats'")) return;
@@ -64,7 +73,31 @@ function migrateCoachMessages(database: DatabaseSync) {
 	}
 }
 
+function migratePdfQuestionAttempts(database: DatabaseSync) {
+	// Attempts stay in the account database and can refer to sets in either database.
+	const hasLocalForeignKey = () => database.prepare('PRAGMA main.foreign_key_list(pdf_question_attempts)').get();
+	if (!hasLocalForeignKey()) return;
+	database.exec('BEGIN IMMEDIATE');
+	try {
+		if (hasLocalForeignKey()) {
+			database.exec(`
+				ALTER TABLE main.pdf_question_attempts RENAME TO pdf_question_attempts_previous;
+				${pdfQuestionAttempts}
+				INSERT INTO main.pdf_question_attempts (set_id, question_index, started_at, answered_at, selected)
+				SELECT set_id, question_index, started_at, answered_at, selected
+				FROM main.pdf_question_attempts_previous;
+				DROP TABLE main.pdf_question_attempts_previous;
+			`);
+		}
+		database.exec('COMMIT');
+	} catch (error) {
+		database.exec('ROLLBACK');
+		throw error;
+	}
+}
+
 function initialize(database: DatabaseSync) {
+	database.exec('PRAGMA busy_timeout = 5000');
 	database.prepare('ATTACH DATABASE ? AS catalog').run(join(accountRoot(), 'catalog.db'));
 	database.exec(`
 PRAGMA journal_mode = WAL;
@@ -120,16 +153,14 @@ CREATE TABLE IF NOT EXISTS spar_events (
 );
 CREATE INDEX IF NOT EXISTS spar_events_run ON spar_events(run_id, seq);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS pdf_sets (
+CREATE TABLE IF NOT EXISTS main.pdf_sets (
 	id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, source_name TEXT NOT NULL, content TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS pdf_question_attempts (
-	set_id TEXT NOT NULL REFERENCES pdf_sets(id) ON DELETE CASCADE,
-	question_index INTEGER NOT NULL CHECK (question_index >= 0),
-	started_at INTEGER NOT NULL, answered_at INTEGER, selected INTEGER,
-	CHECK ((answered_at IS NULL) = (selected IS NULL)),
-	PRIMARY KEY (set_id, question_index)
+CREATE TABLE IF NOT EXISTS catalog.pdf_sets (
+	id TEXT PRIMARY KEY, account_id TEXT NOT NULL, request_id TEXT NOT NULL, source_name TEXT NOT NULL, content TEXT NOT NULL,
+	UNIQUE (account_id, request_id)
 );
+${pdfQuestionAttempts}
 -- Garden: weekly readings written on request (append-only). body = JSON { sentences: [{ text, facts: [{ id, text }] }] }, the cited facts as they were when written.
 CREATE TABLE IF NOT EXISTS garden_readings (
 	id INTEGER PRIMARY KEY AUTOINCREMENT, week_key TEXT NOT NULL, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL
@@ -156,6 +187,7 @@ CREATE TABLE IF NOT EXISTS debrief_choices (id INTEGER PRIMARY KEY AUTOINCREMENT
 CREATE TABLE IF NOT EXISTS debrief_readings (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL);
 `);
 	migrateCoachMessages(database);
+	migratePdfQuestionAttempts(database);
 	// Seed the shared public catalogue from the old single-user file when present.
 	if (database.prepare("SELECT 1 FROM main.sqlite_schema WHERE type='table' AND name='problems'").get()) {
 		database.exec('INSERT OR IGNORE INTO catalog.problems SELECT * FROM main.problems');

@@ -15,6 +15,7 @@ const maxMiB = PDF_UPLOAD_MAX_BYTES / (1024 * 1024);
 type UploadFailure = { error: BiText; requestId?: string; backend?: BackendId };
 
 const errors = {
+	audience: { en: 'New sets are shared with all signed-in members. Reload the upload form before generating a set.', ko: '새 문제집은 모든 로그인 회원에게 공개됩니다. 업로드 화면을 새로고침한 뒤 생성하세요.' },
 	request: { en: 'The upload could not be read. Choose a PDF and try again.', ko: '업로드를 읽지 못했습니다. PDF를 선택하고 다시 시도하세요.' },
 	file: { en: 'Choose a PDF to upload.', ko: '업로드할 PDF를 선택하세요.' },
 	size: { en: `Choose a PDF that is ${maxMiB} MiB or smaller.`, ko: `${maxMiB} MiB 이하인 PDF를 선택하세요.` },
@@ -48,6 +49,8 @@ export const actions = {
 
 		const priorSet = findPdfSetByRequest(requestId);
 		if (priorSet !== null) redirect(303, `/library/${priorSet}`);
+		// Tabs opened before the shared library launched still promise a private set.
+		if (form.get('visibility') !== 'members') return fail<UploadFailure>(409, { error: errors.audience });
 
 		const candidate = form.get('backend');
 		if (typeof candidate !== 'string' || !Object.hasOwn(BACKENDS, candidate)) {

@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { afterAll, expect, it } from 'vitest';
 import type { PdfSetContent } from '#lib/pdf-sets.ts';
 import { withAccount } from './db.ts';
 import {
-	answerPdfQuestion, findPdfSetByRequest, listPdfSets, pdfPracticeView, savePdfSet
+	answerPdfQuestion, findPdfSetByRequest, listPdfSets, pdfPracticeView, publishPdfSet, savePdfSet
 } from './pdf-sets.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'matrix-pdf-sets-'));
@@ -38,26 +39,39 @@ const fixture: PdfSetContent = {
 	]
 };
 
-it('deduplicates uploads within one account and lists its newest sets first', () => {
-	const account = randomUUID();
+it('publishes new sets with stable IDs and keeps request IDs and filenames account-scoped', () => {
+	const uploader = randomUUID();
+	const reader = randomUUID();
 	const request = randomUUID();
-	const first = withAccount(account, () => {
+	const [first, second] = withAccount(uploader, () => {
 		const id = savePdfSet('cells.pdf', fixture, request);
 		expect(findPdfSetByRequest(request)).toBe(id);
 		expect(savePdfSet('retry.pdf', fixture, request)).toBe(id);
 		const second = savePdfSet('another.pdf', fixture, randomUUID());
-		expect(listPdfSets()).toEqual([
-			{ id: second, sourceName: 'another.pdf', title: fixture.title, count: 2 },
-			{ id, sourceName: 'cells.pdf', title: fixture.title, count: 2 }
+		expect(listPdfSets().filter((entry) => entry.id === id || entry.id === second)).toEqual([
+			{ id: second, sourceName: 'another.pdf', title: fixture.title, count: 2, isShared: true },
+			{ id, sourceName: 'cells.pdf', title: fixture.title, count: 2, isShared: true }
 		]);
+		expect(pdfPracticeView(id, null, 'en')).toMatchObject({ id, sourceName: 'cells.pdf', isShared: true });
+		return [id, second];
+	});
+	const third = withAccount(reader, () => {
+		expect(listPdfSets().filter((entry) => entry.id === first || entry.id === second)).toEqual([
+			{ id: second, sourceName: null, title: fixture.title, count: 2, isShared: true },
+			{ id: first, sourceName: null, title: fixture.title, count: 2, isShared: true }
+		]);
+		expect(findPdfSetByRequest(request)).toBeNull();
+		expect(pdfPracticeView(first, null, 'ko')).toMatchObject({
+			id: first, title: fixture.title.ko, sourceName: null, isShared: true
+		});
+		const id = savePdfSet('reader-notes.pdf', fixture, request);
+		expect(id).not.toBe(first);
+		expect(findPdfSetByRequest(request)).toBe(id);
 		return id;
 	});
-	withAccount(randomUUID(), () => {
-		expect(listPdfSets()).toEqual([]);
-		expect(findPdfSetByRequest(request)).toBeNull();
-		expect(pdfPracticeView(first, null, 'en')).toBeNull();
-		expect(answerPdfQuestion(first, 0, 1)).toBe('missing');
-		expect(savePdfSet('cells.pdf', fixture, request)).not.toBe(first);
+	withAccount(uploader, () => {
+		expect(findPdfSetByRequest(request)).toBe(first);
+		expect(listPdfSets().find((entry) => entry.id === third)).toMatchObject({ sourceName: null, isShared: true });
 	});
 });
 
@@ -99,6 +113,107 @@ it('shares a question and its timer across locales and releases only submitted a
 		expect(pdfPracticeView(id, 1, 'en')?.question?.feedback).toMatchObject({ selected: 0, correct: 0, late: true });
 		expect(pdfPracticeView(id, null, 'en')).toMatchObject({
 			progress: [true, true], answered: 2, correct: 1, resume: -1, question: null
+		});
+	});
+});
+
+it('keeps progress, timers, scores and feedback separate across accounts on the same set', () => {
+	const uploader = randomUUID();
+	const learner = randomUUID();
+	const id = withAccount(uploader, () => {
+		const id = savePdfSet('cells.pdf', fixture, randomUUID());
+		expect(pdfPracticeView(id, 0, 'en', 1000)?.question?.startedAt).toBe(1000);
+		expect(answerPdfQuestion(id, 0, 1, 2000)).toBe('answered');
+		expect(pdfPracticeView(id, 1, 'en', 3000)?.question?.startedAt).toBe(3000);
+		expect(answerPdfQuestion(id, 1, 0, 4000)).toBe('answered');
+		expect(pdfPracticeView(id, null, 'en')).toMatchObject({ answered: 2, correct: 2, resume: -1 });
+		return id;
+	});
+	withAccount(learner, () => {
+		expect(answerPdfQuestion(id, 0, 0, 5000)).toBe('unopened');
+		expect(pdfPracticeView(id, null, 'ko', 6000)).toMatchObject({
+			progress: [false, false], answered: 0, correct: null, resume: 0,
+			question: { index: 0, startedAt: 6000, feedback: null }
+		});
+		expect(answerPdfQuestion(id, 0, 0, 127000)).toBe('answered');
+		expect(pdfPracticeView(id, 0, 'ko')?.question?.feedback).toEqual({
+			selected: 0, correct: 1, explanation: fixture.questions[0].explanation.ko, late: true
+		});
+		expect(pdfPracticeView(id, null, 'en', 128000)).toMatchObject({
+			progress: [true, false], answered: 1, correct: null, resume: 1,
+			question: { index: 1, startedAt: 128000, feedback: null }
+		});
+		expect(answerPdfQuestion(id, 1, 1, 129000)).toBe('answered');
+		expect(pdfPracticeView(id, null, 'ko')).toMatchObject({ answered: 2, correct: 0, resume: -1 });
+	});
+	withAccount(uploader, () => {
+		expect(pdfPracticeView(id, 0, 'en')).toMatchObject({
+			answered: 2, correct: 2,
+			question: { startedAt: 1000, feedback: { selected: 1, correct: 1, late: false } }
+		});
+	});
+});
+
+it('keeps legacy sets private until their owner publishes them with the same ID and progress', () => {
+	const owner = randomUUID();
+	const reader = randomUUID();
+	const id = randomUUID();
+	const request = randomUUID();
+	const accountDirectory = join(directory, 'users', owner);
+	mkdirSync(accountDirectory, { recursive: true });
+	const legacy = new DatabaseSync(join(accountDirectory, 'trainer.db'));
+	legacy.exec(`
+		CREATE TABLE pdf_sets (
+			id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, source_name TEXT NOT NULL, content TEXT NOT NULL
+		);
+		CREATE TABLE pdf_question_attempts (
+			set_id TEXT NOT NULL REFERENCES pdf_sets(id) ON DELETE CASCADE,
+			question_index INTEGER NOT NULL CHECK (question_index >= 0),
+			started_at INTEGER NOT NULL, answered_at INTEGER, selected INTEGER,
+			CHECK ((answered_at IS NULL) = (selected IS NULL)),
+			PRIMARY KEY (set_id, question_index)
+		);
+	`);
+	legacy.prepare('INSERT INTO pdf_sets VALUES (?, ?, ?, ?)').run(id, request, 'private-notes.pdf', JSON.stringify(fixture));
+	legacy.prepare('INSERT INTO pdf_question_attempts VALUES (?, 0, 1000, 3000, 1), (?, 1, 4000, NULL, NULL)').run(id, id);
+	legacy.close();
+
+	withAccount(reader, () => {
+		expect(listPdfSets().some((entry) => entry.id === id)).toBe(false);
+		expect(pdfPracticeView(id, null, 'en')).toBeNull();
+		expect(answerPdfQuestion(id, 0, 1)).toBe('missing');
+		expect(publishPdfSet(id)).toBe(false);
+	});
+	withAccount(owner, () => {
+		expect(findPdfSetByRequest(request)).toBe(id);
+		expect(listPdfSets().find((entry) => entry.id === id)).toMatchObject({ isShared: false, sourceName: 'private-notes.pdf' });
+		const answered = pdfPracticeView(id, 0, 'ko', 5000);
+		const open = pdfPracticeView(id, null, 'en', 6000);
+		expect(answered?.question?.feedback).toMatchObject({ selected: 1, correct: 1, late: false });
+		expect(open).toMatchObject({
+			isShared: false, progress: [true, false], answered: 1, resume: 1,
+			question: { index: 1, startedAt: 4000, feedback: null }
+		});
+		expect(publishPdfSet(id)).toBe(true);
+		expect(publishPdfSet(id)).toBe(true);
+		expect(listPdfSets().filter((entry) => entry.id === id)).toEqual([
+			{ id, sourceName: 'private-notes.pdf', title: fixture.title, count: 2, isShared: true }
+		]);
+		expect(pdfPracticeView(id, 0, 'ko', 7000)).toEqual({ ...answered, isShared: true });
+		expect(pdfPracticeView(id, null, 'en', 8000)).toEqual({ ...open, isShared: true });
+		expect(findPdfSetByRequest(request)).toBe(id);
+		expect(answerPdfQuestion(id, 1, 0, 9000)).toBe('answered');
+		expect(pdfPracticeView(id, null, 'en')).toMatchObject({ answered: 2, correct: 2 });
+	});
+	withAccount(reader, () => {
+		expect(listPdfSets().filter((entry) => entry.id === id)).toEqual([
+			{ id, sourceName: null, title: fixture.title, count: 2, isShared: true }
+		]);
+		expect(findPdfSetByRequest(request)).toBeNull();
+		expect(publishPdfSet(id)).toBe(false);
+		expect(pdfPracticeView(id, null, 'en', 10000)).toMatchObject({
+			id, isShared: true, sourceName: null, progress: [false, false], answered: 0, resume: 0,
+			question: { index: 0, startedAt: 10000, feedback: null }
 		});
 	});
 });

@@ -50,10 +50,31 @@
 <main class="body library">
 	<header class="intro">
 		<h1>{t('PDF 문제집', 'PDF sets')}</h1>
-		<p>{t('읽고 있는 PDF로 나만의 문제집을 만드세요.', 'Turn a PDF you’re studying into a private practice set.')}</p>
 	</header>
 
 	<div class="library-grid">
+		<section aria-labelledby="sets-title" class="sets">
+			<h2 id="sets-title">{t('문제집 목록', 'Practice sets')}</h2>
+			{#if data.sets.length === 0}
+				<p class="empty">{t('아직 공유된 문제집이 없습니다.', 'No sets have been shared yet.')}</p>
+			{:else}
+				<ul>
+					{#each data.sets as set (set.id)}
+						<li>
+							<a class="set" href="/library/{set.id}" data-sveltekit-preload-data="off">
+								<div>
+									<strong>{t(set.title.ko, set.title.en)}</strong>
+									{#if !set.isShared}<span class="source">{t('비공개', 'Private')}</span>{/if}
+									{#if set.sourceName}<span class="source">{set.sourceName}</span>{/if}
+								</div>
+								<span class="count">{t(`${set.count}문제`, `${set.count} questions`)} <span aria-hidden="true">→</span></span>
+							</a>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+
 		<section class="upload" aria-labelledby="upload-title">
 			<h2 id="upload-title">{t('PDF로 생성', 'Create from a PDF')}</h2>
 			<p>{t('AI가 영어와 한국어로 객관식 문제 3~5개를 만듭니다.', 'AI generates 3–5 multiple-choice questions in English and Korean.')}</p>
@@ -61,6 +82,7 @@
 			{#if data.backends.length}
 				<form method="POST" enctype="multipart/form-data" use:enhance={submit} aria-busy={busy}>
 					<input type="hidden" name="requestId" value={form?.requestId ?? data.requestId} />
+					<input type="hidden" name="visibility" value="members" />
 					<fieldset disabled={busy}>
 						<div class="file-field">
 							<label for="pdf-file">{t('PDF 파일', 'PDF file')}</label>
@@ -77,12 +99,12 @@
 						</div>
 						<p id="pdf-privacy" class="help">
 							{t(
-								`선택한 제공자에게 PDF의 처음 ${PDF_SOURCE_MAX_PAGES}쪽에서 쪽당 최대 ${PDF_PAGE_TEXT_LIMIT.toLocaleString('ko-KR')}자를 추출해 보냅니다. 원본 PDF는 저장하지 않습니다.`,
-								`The selected provider receives up to ${PDF_PAGE_TEXT_LIMIT.toLocaleString('en-US')} characters per page from the first ${PDF_SOURCE_MAX_PAGES} pages. The original PDF isn’t saved.`
+								`선택한 제공자에게 PDF의 처음 ${PDF_SOURCE_MAX_PAGES}쪽에서 쪽당 최대 ${PDF_PAGE_TEXT_LIMIT.toLocaleString('ko-KR')}자를 추출해 보냅니다. 생성된 문제집은 로그인한 모든 회원에게 공개됩니다. 원본 PDF는 저장하지 않으며, 풀이 기록은 비공개입니다.`,
+								`The selected provider receives up to ${PDF_PAGE_TEXT_LIMIT.toLocaleString('en-US')} characters per page from the first ${PDF_SOURCE_MAX_PAGES} pages. All signed-in members can use the generated set. The original PDF is discarded, and your progress is private.`
 							)}
 						</p>
 						<button class="btn" type="submit" aria-describedby="pdf-privacy">
-							{busy ? t('문제 생성 중…', 'Generating questions…') : t('문제 생성', 'Generate questions')}
+							{busy ? t('문제 생성 중…', 'Generating questions…') : t('문제집 생성 및 공개', 'Generate and share')}
 						</button>
 					</fieldset>
 				</form>
@@ -99,27 +121,6 @@
 				<p class="err" role="alert">{t(error.ko, error.en)}</p>
 			{/if}
 		</section>
-
-		<section aria-labelledby="sets-title" class="sets">
-			<h2 id="sets-title">{t('내 문제집', 'My practice sets')}</h2>
-			{#if data.sets.length === 0}
-				<p class="empty">{t('아직 만든 문제집이 없습니다.', 'Your practice sets will appear here.')}</p>
-			{:else}
-				<ul>
-					{#each data.sets as set (set.id)}
-						<li>
-							<a class="set" href="/library/{set.id}" data-sveltekit-preload-data="off">
-								<div>
-									<strong>{t(set.title.ko, set.title.en)}</strong>
-									<span class="source">{set.sourceName}</span>
-								</div>
-								<span class="count">{t(`${set.count}문제`, `${set.count} questions`)} <span aria-hidden="true">→</span></span>
-							</a>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
 	</div>
 </main>
 
@@ -129,7 +130,7 @@
 	h1 { margin: 0; font: 600 clamp(32px, 6vw, 55px)/1.05 var(--f-display); letter-spacing: -.045em; }
 	h2 { margin: 0; font: 600 clamp(20px, 4vw, 25px)/1.2 var(--f-display); letter-spacing: -.025em; }
 	p { margin: 0; }
-	.intro p, .upload > p:not(.err) { margin-top: 7px; color: var(--muted); }
+	.upload > p:not(.err) { margin-top: 7px; color: var(--muted); }
 	.library-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(18px, 3vw, 32px); align-items: start; }
 	.upload { min-width: 0; padding: clamp(16px, 3vw, 24px); border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
 	fieldset { display: grid; gap: 16px; margin: 20px 0 0; padding: 0; border: 0; min-inline-size: 0; }

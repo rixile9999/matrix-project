@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { BiText, PdfSetContent } from '#lib/pdf-sets.ts';
 import type { Locale } from '#lib/locale.ts';
-import { db } from './db.ts';
+import { accountId, db } from './db.ts';
 
 export const PDF_QUESTION_LIMIT_SEC = 120;
 
-type PdfSetRow = { source_name: string; content: string };
+type PdfSetRow = { sourceName: string | null; content: string; isShared: number };
 type PdfAttempt = {
 	question_index: number;
 	started_at: number;
@@ -14,31 +14,62 @@ type PdfAttempt = {
 };
 
 export function findPdfSetByRequest(requestId: string): string | null {
-	const set = db().prepare('SELECT id FROM pdf_sets WHERE request_id = ?').get(requestId);
+	const set = db().prepare(`
+		SELECT id FROM main.pdf_sets WHERE request_id = ?
+		UNION ALL
+		SELECT id FROM catalog.pdf_sets WHERE account_id = ? AND request_id = ?
+		LIMIT 1
+	`).get(requestId, accountId(), requestId);
 	return (set?.id as string | undefined) ?? null;
 }
 
 export function savePdfSet(sourceName: string, content: PdfSetContent, requestId: string): string {
+	const existing = findPdfSetByRequest(requestId);
+	if (existing !== null) return existing;
 	const id = randomUUID();
 	const saved = db().prepare(`
-		INSERT INTO pdf_sets (id, request_id, source_name, content) VALUES (?, ?, ?, ?)
-		ON CONFLICT (request_id) DO NOTHING
-	`).run(id, requestId, sourceName, JSON.stringify(content));
+		INSERT INTO catalog.pdf_sets (id, account_id, request_id, source_name, content) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (account_id, request_id) DO NOTHING
+	`).run(id, accountId(), requestId, sourceName, JSON.stringify(content));
 	return saved.changes ? id : findPdfSetByRequest(requestId)!;
 }
 
-export function listPdfSets(): { id: string; title: BiText; sourceName: string; count: number }[] {
+export function publishPdfSet(id: string): boolean {
+	const owner = accountId();
+	const published = db().prepare(`
+		INSERT INTO catalog.pdf_sets (id, account_id, request_id, source_name, content)
+		SELECT id, ?, request_id, source_name, content FROM main.pdf_sets WHERE id = ?
+		ON CONFLICT DO NOTHING
+	`).run(owner, id);
+	return published.changes > 0 || Boolean(db().prepare(`
+		SELECT 1 FROM catalog.pdf_sets WHERE id = ? AND account_id = ?
+	`).get(id, owner));
+}
+
+const visiblePdfSets = `
+	SELECT id, CASE WHEN account_id = ? THEN source_name END AS sourceName,
+		content, 1 AS isShared, rowid AS position
+	FROM catalog.pdf_sets
+	UNION ALL
+	SELECT id, source_name, content, 0, rowid
+	FROM main.pdf_sets AS private
+	WHERE NOT EXISTS (SELECT 1 FROM catalog.pdf_sets AS shared WHERE shared.id = private.id)
+`;
+
+export function listPdfSets(): { id: string; title: BiText; sourceName: string | null; count: number; isShared: boolean }[] {
 	const rows = db().prepare(`
-		SELECT id, source_name AS sourceName, json_extract(content, '$.title') AS title,
-			json_array_length(content, '$.questions') AS count
-		FROM pdf_sets ORDER BY rowid DESC
-	`).all() as { id: string; sourceName: string; title: string; count: number }[];
-	return rows.map((row) => ({ ...row, title: JSON.parse(row.title) as BiText }));
+		SELECT id, sourceName, json_extract(content, '$.title') AS title,
+			json_array_length(content, '$.questions') AS count, isShared
+		FROM (${visiblePdfSets}) ORDER BY isShared DESC, position DESC
+	`).all(accountId()) as { id: string; sourceName: string | null; title: string; count: number; isShared: number }[];
+	return rows.map((row) => ({ ...row, title: JSON.parse(row.title) as BiText, isShared: row.isShared === 1 }));
 }
 
 function readPdfSet(id: string) {
-	const row = db().prepare('SELECT source_name, content FROM pdf_sets WHERE id = ?').get(id) as PdfSetRow | undefined;
-	return row ? { sourceName: row.source_name, content: JSON.parse(row.content) as PdfSetContent } : null;
+	const row = db().prepare(`
+		SELECT sourceName, content, isShared FROM (${visiblePdfSets}) WHERE id = ?
+	`).get(accountId(), id) as PdfSetRow | undefined;
+	return row ? { sourceName: row.sourceName, content: JSON.parse(row.content) as PdfSetContent, isShared: row.isShared === 1 } : null;
 }
 
 function openQuestion(id: string, index: number, now: number): number {
@@ -81,6 +112,7 @@ export function pdfPracticeView(id: string, index: number | null, locale: Locale
 		id,
 		title: set.content.title[locale],
 		sourceName: set.sourceName,
+		isShared: set.isShared,
 		progress,
 		answered,
 		correct: resume < 0 ? questions.filter((question, index) => byIndex.get(index)?.selected === question.correct).length : null,

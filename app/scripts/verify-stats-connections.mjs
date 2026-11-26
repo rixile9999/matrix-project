@@ -1,6 +1,6 @@
 // Run the built HTTP routes with a disposable learner and no production services.
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -43,6 +43,8 @@ try {
 	}
 	const password = randomBytes(24).toString('hex');
 	assert.equal((await request('/signup', { name: 'verify', password, confirm: password })).status, 303);
+	// An old, still-open upload form described its new set as private.
+	assert.equal((await request('/library', { requestId: randomUUID() })).status, 409);
 	const lesson = lessons[0];
 	assert.ok((await html('/stats')).includes('value="' + lesson.id + '"'));
 	const start = await request('/stats?/start', { lessonId: lesson.id });
