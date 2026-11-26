@@ -2,6 +2,7 @@
 // All timestamps are unix seconds.
 import type { Mode } from './core/select.ts';
 import type { Rating } from './core/rating.ts';
+import type { Day, ExperimentId, FocusFact, Observation, SelfState, Strip, Unknown } from './core/debrief.ts';
 
 export type Problem = {
 	id: string; // `${contestId}${index}`, e.g. "1850C"
@@ -152,6 +153,7 @@ export type LangSessionData = {
 	cheat: CheatEntry[]; // the whole cheat sheet (static), topic order; topics not written yet are absent
 	now: number;
 	nextId: string | null; // non-book: next non-book problem of the same level; book: next problem in book order (crosses chapters)
+	debrief: DebriefSessionCard | null; // the session strip and observations; only once the session is finished (never while the timer runs)
 };
 // `/lang/[id]` form actions: ?/restart (new session for this problem, same page), ?/reveal (give up -> finished.outcome 'revealed')
 // POST /lang/[id]/run     JSON body { code: string } -> LangRunResponse (judges, records the run; first pass finishes the session)
@@ -601,3 +603,56 @@ export type GardenData = {
 
 /** POST `/garden/reading` body `{ backend?: string }`. 200 { reading }; failures { error } (Korean, calm). */
 export type GardenReadingResponse = { reading: GardenReading } | { error: string };
+
+// ---------- Debrief ----------
+// /debrief: mistake patterns from the run log (classified by the verified catalog debrief/<lang>/patterns.json), the traces of attention
+// (facts, never a score), and coaching written on request. Recomputed from the records on each load (core/debrief.ts).
+export type { Day, FocusFact, Observation, SelfState, Strip, Unknown };
+
+export type DebriefSessionCard = {
+	id: number; problemId: string; title: string; startedAt: number; outcome: 'passed' | 'revealed' | null; elapsedSec: number; limitSec: number;
+	strip: Strip; observations: Observation[]; self: SelfState | null;
+};
+export type DebriefEvidence = { problemId: string; title: string; at: number } & (
+	| { kind: 'compile'; source: string; caretFrom: number; caretTo: number; head: string }
+	| { kind: 'failed'; code: string; cases: string[] }
+);
+export type DebriefNote = {
+	id: string; title: string; short: string;
+	runs: number; sessions: number; lastAt: number;
+	note: boolean; // reached the threshold (2 sessions or 3 runs); otherwise "emerging"
+	problems: { id: string; title: string }[];
+	evidence: DebriefEvidence[];
+	rule: string[]; // inline markdown
+	examples: { expr: string; value: string }[]; // verified by running (scripts/verify-debrief.ts)
+	mine: string | null; // the learner's own line
+	check: { id: string; prompt: string; code: string; options: { text: string; why: string }[]; answer: number } | null;
+	inDeck: boolean;
+	practice: { id: string; title: string; passed: boolean }[];
+	questions: { problemId: string; at: number; text: string }[]; // Operator questions in the sessions where it showed up
+};
+export type DebriefReading = { id: number; createdAt: number; backend: string; backendName: string; sentences: { text: string; facts: { id: string; text: string }[] }[] };
+export type DebriefExperiment = { id: ExperimentId; title: string; detail: string };
+export type DebriefData = {
+	notes: DebriefNote[]; // notes first (most runs first), then emerging patterns
+	unknown: Unknown[]; // repeated compile errors the catalog does not know
+	recent: DebriefSessionCard[]; // the latest finished sessions, newest first
+	days: string[]; // local dates with sessions, newest first
+	day: Day | null; // the selected day (default: the newest)
+	focus: FocusFact[];
+	reading: DebriefReading | null;
+	factCount: number; // facts a reading could cite; 0 = nothing to read
+	backends: { id: string; name: string }[];
+	defaultBackend: string;
+	experiments: DebriefExperiment[];
+	choice: (DebriefExperiment & { at: number; result: { label: string; before: string; after: string; afterSessions: number } }) | null;
+	warmup: { patternId: string; short: string; problemId: string; title: string } | null;
+};
+// POST /debrief/deck    { pattern } -> { ok: true } | { error }  (adds the note's check to the memo deck; append-only)
+// POST /debrief/mine    { pattern, text } -> { ok: true } | { error }  (text <= 200 chars; '' clears)
+// POST /debrief/choice  { choice: ExperimentId | '' } -> { ok: true } | { error }
+// POST /debrief/reading { backend? } -> { reading: DebriefReading } | { error }
+// POST /lang/[id]/mark  { kind: 'away' | 'back' | 'idle' | 'active' } -> { recorded: boolean }  (only while the latest session is open)
+// POST /lang/[id]/self  { sessionId, state: SelfState | 'none' } -> { recorded: boolean }  (only for a finished session)
+export type DebriefOk = { ok: true } | { error: string };
+export type DebriefReadingResponse = { reading: DebriefReading } | { error: string };

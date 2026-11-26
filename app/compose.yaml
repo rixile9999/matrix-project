@@ -20,6 +20,7 @@ services:
     security_opt: [no-new-privileges:true]
     environment:
       PORT: "3000"
+      TZ: ${MATRIX_TZ:-Asia/Seoul}
       ORIGIN: ${MATRIX_ORIGIN-http://localhost:5173}
       MATRIX_ALLOWED_ORIGINS: ${MATRIX_ALLOWED_ORIGINS:-}
       PROTOCOL_HEADER: x-matrix-proto

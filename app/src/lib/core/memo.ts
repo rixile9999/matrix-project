@@ -29,7 +29,10 @@ export type MemoCard = {
 /** memo/<lang>/patterns.json: pattern id -> a reusable solution shape. */
 export type Pattern = { title: string; when: string; steps: string[] };
 
-type CheckBase = { id: string; topic: TopicId; prompt: string; unlock: string[] };
+type CheckBase = {
+	id: string; topic: TopicId; prompt: string; unlock: string[];
+	debrief?: string; // a Debrief pattern id: the check exists for review only after that pattern's note was added to the deck
+};
 
 /** Arrange shuffled lines. The submitted order is judged for real against `problem`'s tests. */
 export type OrderCheck = CheckBase & {

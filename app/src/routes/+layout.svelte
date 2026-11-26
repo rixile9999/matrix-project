@@ -46,6 +46,7 @@
 			<a href="/lang" class:on={path === '/lang' || path.startsWith('/lang/')}>언어</a>
 			<a href="/memo" class:on={path.startsWith('/memo')}>암기</a>
 			<a href="/spar" class:on={path.startsWith('/spar')} aria-current={path.startsWith('/spar') ? 'page' : undefined}>Sparring</a>
+			<a href="/debrief" class:on={path.startsWith('/debrief')} aria-current={path.startsWith('/debrief') ? 'page' : undefined}>Debrief</a>
 			<a href="/garden" class:on={path.startsWith('/garden')} aria-current={path.startsWith('/garden') ? 'page' : undefined}>Garden</a>
 		</nav>
 		<div class="bar-tools">

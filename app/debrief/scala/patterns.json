@@ -1,0 +1,138 @@
+[
+	{
+		"id": "pair-lambda",
+		"title": "두 인자 람다는 원소가 쌍일 때만 풀린다",
+		"short": "이웃 비교는 짝부터",
+		"on": "compile",
+		"message": "Wrong number of parameters, expected: 1",
+		"caret": "^\\(\\s*\\w+\\s*,\\s*\\w+\\s*\\)\\s*=>",
+		"rule": [
+			"`List[Int]`의 `forall`·`map`은 원소 하나를 받습니다. `(a, b) =>`를 쓰려면 원소가 먼저 쌍이어야 합니다.",
+			"이웃끼리 비교할 때는 `xs.zip(xs.drop(1))`로 (앞, 뒤) 쌍을 만듭니다. Scala 3는 쌍을 `(a, b) =>`로 바로 풀어 줍니다.",
+			"같은 오류가 거듭 나면 괄호를 고칠 게 아니라 메시지의 `expected: 1`을 볼 때입니다."
+		],
+		"verify": "val xs = List(1, 2, 2, 5)\nxs.zip(xs.drop(1)) // => List((1,2), (2,2), (2,5))\nxs.zip(xs.drop(1)).forall((a, b) => a <= b) // => true\nxs.zip(xs.drop(1)).map((a, b) => b - a) // => List(1, 0, 3)",
+		"check": "debrief-pairs",
+		"practice": ["b-06-is-sorted", "006-arithmetic-progression", "002-longest-increasing-run"],
+		"samples": [
+			{ "message": "Wrong number of parameters, expected: 1", "source": "  xs.drop(1).forall((a, b) => a < b)", "caret": "(a, b) => a < b" },
+			{ "message": "Wrong number of parameters, expected: 1", "source": "def b1(xs: List[Int]) = xs.forall((a, b) => a <= b)", "caret": "(a, b) => a <= b" }
+		]
+	},
+	{
+		"id": "placeholder",
+		"title": "`_`는 쓸 때마다 새 인자다",
+		"short": "_는 쓸 때마다 새 인자",
+		"on": "compile",
+		"message": "value _\\d+ is not a member of|could not infer the type of the parameter _\\$\\d|Wrong number of parameters, expected|No given instance of type Ordering\\[Any\\]",
+		"source": "(^|[^\\w$])_([^\\w$]|$)",
+		"rule": [
+			"`_` 하나는 인자 하나입니다. `_ + _`는 인자 둘인 함수, `_._2 - _._1`도 인자 둘입니다.",
+			"`_` 혼자서는 “그 원소 그대로”가 되지 않습니다. 그럴 땐 `identity`나 `x => x`를 씁니다.",
+			"같은 값을 두 번 쓰려면 이름을 붙입니다: `p => p._2 - p._1`, 또는 `(a, b) => b - a`."
+		],
+		"verify": "List(3, 1, 2).sortBy(identity) // => List(1, 2, 3)\nList(1, 2, 3).scanLeft(0)(_ + _) // => List(0, 1, 3, 6)\nList(1, 3, 6).zip(List(1, 3, 6).drop(1)).map(p => p._2 - p._1) // => List(2, 3)\nList(\"a\", \"b\", \"a\").groupMapReduce(identity)(_ => 1)(_ + _) // => Map(a -> 2, b -> 1)",
+		"check": "debrief-placeholder",
+		"practice": ["b-08-running-total", "b-07-product-of-all", "b-09-word-count", "005-top-three-words"],
+		"samples": [
+			{ "message": "Missing parameter type\n\nI could not infer the type of the parameter _$1\nin expanded function:\n  _$1 => xs == xs.sortBy(_$1)", "source": "  xs == xs.sortBy(_)", "caret": "_" },
+			{ "message": "Missing parameter type\n\nI could not infer the type of the parameter _$3\nin expanded function:\n  (_$3, _$4) => _$3 + _$4", "source": "  xs.scanLeft(0)((_, _) => _ + _).drop(1)", "caret": "_" },
+			{ "message": "value _2 is not a member of Int", "source": "  val diffs = xs.zip(xs.drop(1)).map(_._2 - _._1)", "caret": "_._2" },
+			{ "message": "Wrong number of parameters, expected: 1", "source": "def a3(xs: List[Int]) = xs.map(_ * _)", "caret": "_ * _" },
+			{ "message": "No given instance of type Ordering[Any] was found for parameter ord of method sortBy in trait SeqOps.", "source": "def a1(xs: List[Int]) = xs.sortBy(_)", "caret": "" }
+		]
+	},
+	{
+		"id": "empty-parens",
+		"title": "괄호 없이 정의된 메서드는 괄호 없이 부른다",
+		"short": "sum·length에 () 붙이기",
+		"on": "compile",
+		"message": "missing argument for parameter \\w+ of method|does not take parameters",
+		"source": "\\.\\w+\\(\\)",
+		"rule": [
+			"`sum`, `length`, `head`, `sorted`처럼 괄호 없이 정의된 메서드는 `()` 없이 부릅니다.",
+			"`sum()`의 빈 괄호는 숨은 인자(`Numeric`) 자리를 비워 둔 것으로 읽혀 “missing argument”가 됩니다.",
+			"자바에서 온 메서드(`String`의 `trim()` 등)는 괄호가 있어도 되지만, 컬렉션 메서드는 대부분 괄호가 없습니다."
+		],
+		"verify": "List(1, 2, 3).sum // => 6\nList(1, 2, 3).length // => 3\nList(3, 1, 2).sorted.head // => 1",
+		"check": "debrief-parens",
+		"practice": ["001-sum-of-squares", "b-10-key-of-max"],
+		"samples": [
+			{ "message": "missing argument for parameter num of method sum in trait IterableOnceOps: (implicit num: Numeric[Int]): Int\nThis code can be rewritten automatically under -rewrite -source 3.7-migration.", "source": "  xs.filter(_ % 2 == 0).map(x => x*x).sum()", "caret": "xs.filter(_ % 2 == 0).map(x => x*x).sum()" },
+			{ "message": "method length in class List does not take parameters", "source": "def c2(xs: List[Int]): Int = xs.length()", "caret": "xs.length()" }
+		]
+	},
+	{
+		"id": "unit-result",
+		"title": "마지막 식이 결과다: `Unit`이 나오면 값이 없다",
+		"short": "결과가 Unit이 됨",
+		"on": "compile",
+		"message": "Found:\\s+Unit\\s*\\n\\s*Required:",
+		"rule": [
+			"함수의 결과는 마지막 식의 값입니다. `foreach`, `println`, 대입은 값이 없는 `Unit`입니다.",
+			"`else` 없는 `if`도 `Unit`입니다. 값을 돌려주려면 `else`까지 씁니다.",
+			"반복하며 모으려면 `foreach` 대신 `map`·`foldLeft`처럼 값을 돌려주는 메서드를 씁니다."
+		],
+		"verify": "def sign(x: Int): Int = if x > 0 then 1 else 0\nsign(5) // => 1\ndef total(xs: List[Int]): Int = xs.foldLeft(0)(_ + _)\ntotal(List(1, 2, 3)) // => 6",
+		"check": "debrief-unit",
+		"practice": ["b-20-sum-to", "b-19-count-until-negative", "008-collatz-steps"],
+		"samples": [
+			{ "message": "Found:    Unit\nRequired: Int\nMaybe you are missing an else part for the conditional?", "source": "def e1(x: Int): Int = if x > 0 then x", "caret": "if x > 0 then x" },
+			{ "message": "Found:    Unit\nRequired: Int", "source": "def e2(xs: List[Int]): Int = xs.foreach(println)", "caret": "xs.foreach(println)" }
+		]
+	},
+	{
+		"id": "reassign-val",
+		"title": "`val`은 다시 대입할 수 없다",
+		"short": "val에 다시 대입",
+		"on": "compile",
+		"message": "Reassignment to val",
+		"rule": [
+			"`val`은 한 번 정하면 바뀌지 않습니다. 바꿔 가며 쌓으려면 `foldLeft`로 새 값을 넘기거나, 꼭 필요할 때만 `var`를 씁니다.",
+			"`0 :: xs`처럼 “더하는” 연산은 xs를 바꾸지 않고 새 리스트를 만듭니다."
+		],
+		"verify": "var s = 0\ns = s + 5\ns // => 5\nList(1, 2, 3).foldLeft(0)(_ + _) // => 6\nval xs = List(1, 2)\n0 :: xs // => List(0, 1, 2)\nxs // => List(1, 2)",
+		"check": "debrief-val",
+		"practice": ["b-20-sum-to", "008-collatz-steps"],
+		"samples": [
+			{ "message": "Reassignment to val s", "source": "  s = s + 1", "caret": "s = s + 1" }
+		]
+	},
+	{
+		"id": "edge-empty",
+		"title": "빈 입력과 원소 하나부터 확인한다",
+		"short": "빈 입력과 원소 하나",
+		"on": "failed",
+		"cases": "빈 (리스트|목록|문자열|스트림|주문|입력|맵|줄|경우)|원소 하나|한 원소|잎 하나|비어",
+		"rule": [
+			"원소가 0개·1개면 이웃 쌍도, 차이 목록도 비어 있습니다. “모두 ~하다”는 비어 있을 때 참입니다(`forall`은 `true`, `exists`는 `false`).",
+			"`length == 1`처럼 “정확히 하나”를 요구하면 빈 경우가 빠집니다. `<= 1`인지 먼저 따져 봅니다.",
+			"쓰기 전에 빈 입력, 하나, 둘 세 경우를 머릿속으로 돌려 봅니다."
+		],
+		"verify": "List.empty[Int].forall(_ > 0) // => true\nList.empty[Int].exists(_ > 0) // => false\nList(7).zip(List(7).drop(1)) // => List()\nList.empty[Int].maxOption // => None",
+		"check": "debrief-empty",
+		"practice": ["006-arithmetic-progression", "004-average-of-positives", "b-10-key-of-max", "002-longest-increasing-run"],
+		"samples": [
+			{ "cases": ["빈 리스트", "원소 하나"], "code": "def isArithmetic(xs: List[Int]): Boolean =\n  val diffs = xs.zip(xs.drop(1)).map(_ - _)\n  diffs.distinct.length == 1" },
+			{ "cases": ["2단계 countByLevel › 빈 목록"] }
+		]
+	},
+	{
+		"id": "f-format",
+		"title": "`f` 보간자의 형식은 `%`로 시작한다",
+		"short": "f 보간 형식",
+		"on": "failed",
+		"cases": ".",
+		"code": "f\"[^\"]*\\$\\{?\\w+\\}?\\.\\d+f",
+		"rule": [
+			"`f\"$x%.2f\"`처럼 값 바로 뒤에 `%`로 형식을 붙입니다. `$x.2f`는 값 뒤에 글자 `.2f`가 붙을 뿐입니다.",
+			"식이면 중괄호로 감쌉니다: `f\"${a * b}%.1f\"`."
+		],
+		"verify": "val price = 3.5\nf\"$price%.2f원\" // => 3.50원\nf\"${price * 2}%.1f\" // => 7.0\ns\"$price.2f\" // => 3.5.2f",
+		"check": "debrief-format",
+		"practice": ["b-02-price-label", "c-02-order-report"],
+		"samples": [
+			{ "cases": ["소수 한 자리"], "code": "def label(name: String, price: Double): String =\n  f\"$name: $price.2f원\"" }
+		]
+	}
+]

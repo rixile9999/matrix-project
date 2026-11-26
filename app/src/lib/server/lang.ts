@@ -295,7 +295,7 @@ const revealExtras = (p: LangProblem, hintsUsed: number, finished: boolean) =>
 	hintsUsed > 0 || finished ? { refs: p.refs ?? [], intent: p.intent ?? null } : { refs: [], intent: null };
 
 /** Null when the problem is unknown or has no session. */
-export function sessionView(problemId: string): LangSessionData | null {
+export function sessionView(problemId: string): Omit<LangSessionData, 'debrief'> | null {
 	const p = findProblem(problemId);
 	if (!p) return null;
 	const s = latestSession(problemId);
@@ -365,6 +365,7 @@ export function useHint(problemId: string): { hints: string[]; refs: string[]; i
 	const s = openSession(problemId, '이미 끝난 세션에서는 힌트를 볼 수 없습니다.');
 	db().prepare('UPDATE lang_sessions SET hints_used = MIN(hints_used + 1, ?) WHERE id = ?').run(MAX_HINTS, s.id);
 	const used = getSession(s.id)!.hints_used;
+	if (used > s.hints_used) db().prepare("INSERT INTO lang_marks(session_id, at, kind) VALUES(?,?, 'hint')").run(s.id, now()); // Debrief: when the hint was taken
 	return { hints: p.hints.slice(0, used), ...revealExtras(p, used, false) };
 }
 

@@ -7,6 +7,7 @@
 	import Coach from '#lib/Coach.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
 	import TimeGlyph from '#lib/TimeGlyph.svelte';
+	import SessionCard from '#lib/debrief/SessionCard.svelte';
 	import { renderInline } from '#lib/inline.ts';
 	import { mmss } from '#lib/rank.ts';
 	import { COACH_NAME } from '#lib/core/coach.ts';
@@ -128,6 +129,51 @@
 			hinting = false;
 		}
 	}
+
+	// ---- Debrief marks: while the session is open, the page notes when it is hidden/shown and when input stops for a minute / resumes.
+	// Only times are sent, never what was typed.
+	const IDLE_MS = 60_000;
+	$effect(() => {
+		if (fin) return;
+		const pid = p.id;
+		const send = (kind: 'away' | 'back' | 'idle' | 'active') =>
+			fetch(`/lang/${pid}/mark`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind }), keepalive: true }).catch(() => {});
+		let last = Date.now();
+		let idle = false;
+		const input = () => {
+			last = Date.now();
+			if (idle) {
+				idle = false;
+				send('active');
+			}
+		};
+		const visibility = () => {
+			if (document.hidden) send('away');
+			else {
+				send('back');
+				idle = false;
+				last = Date.now();
+			}
+		};
+		const tick = setInterval(() => {
+			if (!document.hidden && !idle && Date.now() - last >= IDLE_MS) {
+				idle = true;
+				send('idle');
+			}
+		}, 5000);
+		const opts = { capture: true, passive: true };
+		window.addEventListener('keydown', input, opts);
+		window.addEventListener('pointerdown', input, opts);
+		window.addEventListener('wheel', input, opts);
+		document.addEventListener('visibilitychange', visibility);
+		return () => {
+			clearInterval(tick);
+			window.removeEventListener('keydown', input, opts);
+			window.removeEventListener('pointerdown', input, opts);
+			window.removeEventListener('wheel', input, opts);
+			document.removeEventListener('visibilitychange', visibility);
+		};
+	});
 
 	// ---- cheat sheet panel ----
 	const byId = $derived(new Map(data.cheat.map((e) => [e.id, e])));
@@ -283,6 +329,9 @@
 					</div>
 				{/if}
 				<p class="note" style="margin:0">찾아본 문법: {looked.length ? looked.join(', ') : '없음'}</p>
+				{#if data.debrief}
+					<div class="lang-debrief">{#key data.debrief.id}<SessionCard card={data.debrief} askSelf heading="이번 세션 · Debrief" />{/key}</div>
+				{/if}
 				{#if hints.length}
 					<details><summary class="note">힌트 다시 보기</summary>
 						{#each hints as h, i (i)}<div class="lang-hint" style="margin-top:6px">{@html renderInline(h)}</div>{/each}

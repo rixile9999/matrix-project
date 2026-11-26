@@ -92,6 +92,25 @@ CREATE TABLE IF NOT EXISTS garden_readings (
 	id INTEGER PRIMARY KEY AUTOINCREMENT, week_key TEXT NOT NULL, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS garden_readings_week ON garden_readings(week_key, id);
+-- Debrief (all append-only). lang_marks: what the problem page saw while a session was open (hint taken, tab hidden/shown, no input for a minute / input again).
+CREATE TABLE IF NOT EXISTS lang_marks (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL, at INTEGER NOT NULL,
+	kind TEXT NOT NULL CHECK (kind IN ('hint', 'away', 'back', 'idle', 'active'))
+);
+CREATE INDEX IF NOT EXISTS lang_marks_session ON lang_marks(session_id, id);
+-- One tap after a session (optional); the latest row per session counts, 'none' takes it back.
+CREATE TABLE IF NOT EXISTS lang_self (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL, at INTEGER NOT NULL,
+	state TEXT NOT NULL CHECK (state IN ('clear', 'fair', 'foggy', 'none'))
+);
+-- Pattern notes added to the review deck; the note's check becomes a memo check from then on.
+CREATE TABLE IF NOT EXISTS debrief_deck (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern_id TEXT NOT NULL, at INTEGER NOT NULL);
+-- The learner's own one-line version of a rule; the latest per pattern counts.
+CREATE TABLE IF NOT EXISTS debrief_mine (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern_id TEXT NOT NULL, at INTEGER NOT NULL, text TEXT NOT NULL);
+-- The experiment chosen under the coaching; the latest row counts, '' = none.
+CREATE TABLE IF NOT EXISTS debrief_choices (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, choice TEXT NOT NULL);
+-- Coaching written on request. body = JSON { sentences: [{ text, facts: [{ id, text }] }] }, the cited facts as they were when written.
+CREATE TABLE IF NOT EXISTS debrief_readings (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL);
 `);
 	// Seed the shared public catalogue from the old single-user file when present.
 	if (database.prepare("SELECT 1 FROM main.sqlite_schema WHERE type='table' AND name='problems'").get()) {

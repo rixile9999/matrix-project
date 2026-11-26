@@ -142,7 +142,12 @@ function mixBy<T>(list: T[], group: (x: T) => string): T[] {
 
 type World = { cards: AnyCard[]; checks: Check[]; memories: Map<string, Memory>; finished: Set<string>; at: Date };
 
+/** Debrief pattern ids whose note was added to the deck (append-only debrief_deck). */
+const deckPatterns = () => new Set((db().prepare('SELECT DISTINCT pattern_id FROM debrief_deck').all() as { pattern_id: string }[]).map((r) => r.pattern_id));
+
 function world(): World {
+	const deck = deckPatterns();
+	const inDeck = (id: string) => deck.has(id);
 	const finished = finishedProblems();
 	const cards: AnyCard[] = readValid<MemoCard>('cards', validCard).map((c) => ({
 		id: c.id, kind: c.kind, title: c.title, summary: c.summary, prompt: c.prompt, promptCode: c.promptCode ?? null, points: c.points, answerCode: c.answerCode ?? null,
@@ -158,7 +163,7 @@ function world(): World {
 			pattern: null, book: null, topic: e.topic, unlock: [], entry: e
 		});
 	}
-	return { cards: mixBy(cards, (c) => (c.kind === 'syntax' ? 'syntax' : 'file')), checks: readValid<Check>('checks', validCheck), memories: buildMemories(reviewLog()), finished, at: now() };
+	return { cards: mixBy(cards, (c) => (c.kind === 'syntax' ? 'syntax' : 'file')), checks: readValid<Check>('checks', validCheck).filter((c) => !c.debrief || inDeck(c.debrief)), memories: buildMemories(reviewLog()), finished, at: now() };
 }
 
 const open = (w: World, unlock: string[] | undefined) => !unlock || unlock.length === 0 || unlock.some((p) => w.finished.has(p));
