@@ -64,7 +64,7 @@ On a Mac already running the `matrix` Compose stack in `lima-matrix-workers`, in
 python3 ops/auto-deploy.py --install --builder desktop-linux
 ```
 
-While the user is logged in, the agent checks GitHub `main` every minute. It builds in a separate checkout, runs the type checker and tests, then updates the web container. Changes to worker sources or Compose also rebuild worker images. The job checks the production login page and restores the previous images and Compose configuration if the rollout fails. Database volumes persist across releases. Refresh an open browser tab after deployment.
+While the user is logged in, the agent checks GitHub `main` every minute. It builds in a separate checkout, runs the type checker and tests, checks the candidate login page in isolation, then updates the web container. Changes to worker sources or Compose also rebuild worker images. The job checks the production login page and restores the previous images and Compose configuration if the rollout fails. Database volumes persist across releases. Refresh an open browser tab after deployment.
 
 The command above uses Docker Desktop to build images for the same architecture as Lima. Omit `--builder desktop-linux` to build directly in Lima. Set `--health` to the login URL if it differs from `http://localhost:5173/login`. After editing the deployment script, rerun the install command. View deployments with `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`.
 

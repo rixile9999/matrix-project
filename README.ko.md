@@ -63,7 +63,7 @@ python3 scripts/admin.py create owner
 python3 ops/auto-deploy.py --install --builder desktop-linux
 ```
 
-사용자가 Mac에 로그인해 있는 동안 1분마다 GitHub `main`을 확인합니다. 새 커밋을 별도 작업 디렉터리에서 타입 검사·테스트·빌드한 뒤 웹 컨테이너를 교체합니다. 워커 소스나 Compose 정의가 바뀌면 워커 이미지도 빌드합니다. 배포 후 운영 로그인 페이지를 확인하며, 교체에 실패하면 직전 이미지와 Compose 설정을 복구합니다. 계정과 학습 기록은 기존 볼륨을 계속 사용합니다. 이미 열어 둔 브라우저 탭은 배포 후 새로고침하면 됩니다.
+사용자가 Mac에 로그인해 있는 동안 1분마다 GitHub `main`을 확인합니다. 새 커밋을 별도 작업 디렉터리에서 타입 검사·테스트·빌드하고, 격리된 후보 이미지에서 로그인 화면이 열리는지 확인한 뒤 웹 컨테이너를 교체합니다. 워커 소스나 Compose 정의가 바뀌면 워커 이미지도 빌드합니다. 배포 후 운영 로그인 페이지를 확인하며, 교체에 실패하면 직전 이미지와 Compose 설정을 복구합니다. 계정과 학습 기록은 기존 볼륨을 계속 사용합니다. 이미 열어 둔 브라우저 탭은 배포 후 새로고침하면 됩니다.
 
 위 명령은 Lima와 같은 아키텍처의 Docker Desktop에서 이미지를 빌드합니다. Lima에서 직접 빌드하려면 `--builder desktop-linux`를 생략하세요. 로그인 주소가 `http://localhost:5173/login`과 다르면 `--health`로 지정합니다. 배포 스크립트를 수정하면 설치 명령을 다시 실행하세요. 배포 로그는 `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`로 확인할 수 있습니다.
 

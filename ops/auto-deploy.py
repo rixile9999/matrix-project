@@ -102,6 +102,18 @@ def deploy():
                 if save.wait():
                     raise RuntimeError('Could not transfer ' + image)
 
+    # Exercise the runtime user and bundled application without production mounts.
+    run(*DOCKER, 'run', '--rm', '--read-only', '--network', 'none', '--tmpfs', '/tmp',
+        '-e', 'MATRIX_DATA=/tmp/accounts', '-e', 'ORIGIN=http://127.0.0.1:3000',
+        'matrix-web:candidate', 'node', '--input-type=module', '-e', '''
+            await import('./src/lib/server/auth.ts');
+            await import('./build/index.js');
+            const response = await fetch('http://127.0.0.1:3000/login', {
+                signal: AbortSignal.timeout(10000)
+            });
+            process.exit(response.status === 200 ? 0 : 1);
+        ''')
+
     # Capture the last deployed Compose definition and image tags before switching any service.
     old_config = STATE / 'previous.yaml'
     if known:
@@ -177,4 +189,6 @@ if __name__ == '__main__':
         if args.install:
             install(args)
         else:
+            # STATE is private. Build inputs inside it must remain readable by the image's node user.
+            os.umask(0o022)
             deploy()
