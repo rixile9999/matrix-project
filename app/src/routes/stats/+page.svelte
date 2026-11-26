@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Calculator from '#lib/stats/Calculator.svelte';
 	import { enhance } from '$app/forms';
 	import { t } from '#lib/i18n.svelte.ts';
 	import { mmss } from '#lib/rank.ts';
@@ -15,6 +16,7 @@
 <div class="body course">
 	<header class="course-header">
 		<h1>{t('확률과 통계', 'Probability & Statistics')}</h1>
+		<Calculator />
 		<p>{t('확률 모형부터 통계적 추론까지', 'From probability models to statistical inference')}</p>
 		<nav class="track-links" aria-label={t('확률·통계 활동', 'Statistics activities')}>
 			<a href="/spar#h-stats">{t('통계 스파링', 'Statistics sparring')}</a>

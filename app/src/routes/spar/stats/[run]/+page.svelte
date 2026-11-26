@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Calculator from '#lib/stats/Calculator.svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
@@ -102,6 +103,7 @@
 				<header>
 					<p class="a-small">{t(...topicNames[question.lesson.topic])} · {t(...modeNames[question.lesson.mode])}</p>
 					<h1 class="a-h">{t(...question.lesson.title)}</h1>
+					<Calculator fields={question.fields} insertAnswer={(index, value) => { draft[index] = value; }} />
 				</header>
 				<p class="a-p prompt">{t(...question.lesson.prompt)}</p>
 

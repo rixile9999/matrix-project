@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Calculator from '#lib/stats/Calculator.svelte';
 	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -83,6 +84,7 @@
 			<p class="label">{t(...topicNames[data.lesson.topic])} · {t(...modeNames[data.lesson.mode])}</p>
 			<div class="title-row">
 				<h1>{t(...data.lesson.title)}</h1>
+				{#key data.id}<Calculator fields={data.outcome ? [] : data.fields} insertAnswer={updateDraft} />{/key}
 				{#if ready}<button type="button" class="btn ghost small" aria-haspopup="dialog" onclick={openSheet}>{t('치트시트', 'Cheat sheet')}</button>{/if}
 			</div>
 		</div>
