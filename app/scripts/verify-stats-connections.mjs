@@ -65,6 +65,11 @@ try {
 		assert.ok((await html('/debrief')).includes('href="' + run + '"'));
 		assert.match(await html('/garden'), /id="statistics"/);
 		const course = await html('/stats');
+		assert.ok(course.includes('href="/library"'));
+		const library = await html('/library');
+		assert.match(library, locale === 'en' ? />PDF sets<\/h1>/ : />PDF 문제집<\/h1>/);
+		assert.ok(library.includes(locale === 'en' ? 'Open Coach settings' : '코치 설정 열기'));
+		assert.ok(library.includes('<html lang="' + locale + '"'));
 		const mapTitle = locale === 'en' ? 'Learning model' : '학습 구조';
 		assert.match(course, new RegExp(`<a\\b[^>]*href="/learning-map"[^>]*>\\s*${mapTitle}\\s*</a>`));
 		const learningMap = await html('/learning-map');
@@ -81,7 +86,7 @@ try {
 	assert.match(roundPath, /^\/spar\/stats\/\d+$/);
 	assert.match(await html(roundPath), /name="answer"/);
 	assert.ok((await html('/spar/records')).includes('href="' + roundPath + '"'));
-	console.log('Built routes verified: Statistics, Sparring, Debrief, Garden, Coach, Learning model (English and Korean).');
+	console.log('Built routes verified: Statistics, Sparring, Debrief, Garden, Coach, Learning model, PDF sets (English and Korean).');
 } finally {
 	server.closeAllConnections();
 	if (server.listening) await new Promise((resolve) => server.close(resolve));

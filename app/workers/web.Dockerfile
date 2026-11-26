@@ -1,5 +1,7 @@
 FROM node:26-bookworm-slim
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-data poppler-utils util-linux && rm -rf /var/lib/apt/lists/*
+ENV BODY_SIZE_LIMIT=9M
 # adapter-node can leave server dependencies external. Include production dependencies only.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN npm install -g pnpm@12.18.0 && pnpm install --prod --ignore-scripts --frozen-lockfile

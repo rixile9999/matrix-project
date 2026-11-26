@@ -120,6 +120,16 @@ CREATE TABLE IF NOT EXISTS spar_events (
 );
 CREATE INDEX IF NOT EXISTS spar_events_run ON spar_events(run_id, seq);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS pdf_sets (
+	id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, source_name TEXT NOT NULL, content TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pdf_question_attempts (
+	set_id TEXT NOT NULL REFERENCES pdf_sets(id) ON DELETE CASCADE,
+	question_index INTEGER NOT NULL CHECK (question_index >= 0),
+	started_at INTEGER NOT NULL, answered_at INTEGER, selected INTEGER,
+	CHECK ((answered_at IS NULL) = (selected IS NULL)),
+	PRIMARY KEY (set_id, question_index)
+);
 -- Garden: weekly readings written on request (append-only). body = JSON { sentences: [{ text, facts: [{ id, text }] }] }, the cited facts as they were when written.
 CREATE TABLE IF NOT EXISTS garden_readings (
 	id INTEGER PRIMARY KEY AUTOINCREMENT, week_key TEXT NOT NULL, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL

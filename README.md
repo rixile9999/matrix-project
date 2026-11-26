@@ -18,6 +18,7 @@ See [`notes/idea.md`](notes/idea.md) for the design rationale and [`CLAUDE.md`](
 | Memo | 208 mobile-friendly review cards and 100 problem checks, with FSRS scheduling. |
 | Sparring, Debrief, Garden | Timed coding and recall rounds, session review, and a visualization of your learning history. |
 | Operator | A post-problem question window for Claude Code, Codex, or Qwen Code CLI. It is locked while the timer runs. |
+| PDF sets (pilot) | Upload a text PDF of up to 8 MiB in **PDF sets**. Your connected AI provider uses text from the first 10 pages to generate 3–5 bilingual multiple-choice questions. The set and answers are saved in your private library. |
 | Probability & Statistics | 10 short quantitative lessons covering probability, inference, machine learning, and bioinformatics, with timed answers, hints, references, and review. |
 
 ## Run and manage accounts
@@ -39,6 +40,8 @@ python3 scripts/admin.py create owner
 ```
 
 The default address is `http://localhost:5173`. When using a private HTTPS proxy such as Tailscale Serve, set `MATRIX_ORIGIN` to the actual HTTPS origin when starting Compose. Compose binds the web port to loopback. Reuse the same Docker context and environment on subsequent starts.
+
+The web image includes Poppler for PDF extraction. To run the full test suite or use PDF sets outside Docker, install Poppler (including `pdftotext` and `pdfinfo`) and start the Node adapter with `BODY_SIZE_LIMIT=9M` for multipart uploads.
 
 ### Access without Tailscale
 
