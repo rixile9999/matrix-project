@@ -1,14 +1,15 @@
-import { tr, label } from './locale.ts';
+import { english, tr, label } from './locale.ts';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {runScala, askCoach, connectedCoaches} from './worker.ts';
 import { db, accountId } from './db.ts';
 import { coachBasis } from './lang.ts';
 import { coachCard } from './memo.ts';
+import { findLesson, runView, statsCoachSubmissions } from './stats.ts';
 
 import { scalaErrors } from './scala-run.ts';
-import { BACKENDS, langAccess, parseAnswer, type BackendId, type CoachAccess, type CoachContext } from '#lib/core/coach.ts';
-import { CODE_MAX, QUESTION_MAX, buildPrompt, langContext, memoContext, systemPrompt, type HistoryMessage } from '#lib/core/coach-prompt.ts';
+import { BACKENDS, isCoachKind, isCoachRunId, langAccess, parseAnswer, type BackendId, type CoachAccess, type CoachContext } from '#lib/core/coach.ts';
+import { CODE_MAX, QUESTION_MAX, buildPrompt, langContext, memoContext, statsContext, systemPrompt, type HistoryMessage } from '#lib/core/coach-prompt.ts';
 import type { CoachEvent, CoachMessage, CoachThreadResponse, CoachVerifyResponse } from '#lib/types.ts';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -27,15 +28,15 @@ function insert(m: { kind: CoachContext['kind']; id: string; sessionId: number |
 	return toMessage({ id: Number(res.lastInsertRowid), at, role: m.role, text: m.text, backend: m.backend, ms: m.ms, error: m.error ? 1 : 0 });
 }
 
-/** The thread of a context: a lang session's messages, or a memo card's messages of the last 24 hours. Oldest first. */
+/** Messages for a language session, a statistics run, or the last 24 hours of a memo card. Oldest first. */
 function thread(c: Resolved): CoachMessage[] {
 	const cols = 'id, at, role, text, backend, ms, error';
 	const rows =
-		c.kind === 'lang'
-			? c.sessionId === null
+		c.kind === 'memo'
+			? db().prepare(`SELECT ${cols} FROM coach_messages WHERE context_kind = 'memo' AND context_id = ? AND at >= ? ORDER BY id`).all(c.id, nowSec() - MEMO_WINDOW_SEC)
+			: c.sessionId === null
 				? []
-				: db().prepare(`SELECT ${cols} FROM coach_messages WHERE context_kind = 'lang' AND context_id = ? AND session_id = ? ORDER BY id`).all(c.id, c.sessionId)
-			: db().prepare(`SELECT ${cols} FROM coach_messages WHERE context_kind = 'memo' AND context_id = ? AND at >= ? ORDER BY id`).all(c.id, nowSec() - MEMO_WINDOW_SEC);
+				: db().prepare(`SELECT ${cols} FROM coach_messages WHERE context_kind = ? AND context_id = ? AND session_id = ? ORDER BY id`).all(c.kind, c.id, c.sessionId);
 	return (rows as Row[]).map(toMessage);
 }
 
@@ -52,9 +53,27 @@ type Resolved = {
 
 const SAFE_ID = /^[\w-]+$/;
 
-/** Decides access from the server's own state. Null = unknown item. */
-export function resolveContext(kind: unknown, id: unknown): Resolved | null {
-	if ((kind !== 'lang' && kind !== 'memo') || typeof id !== 'string' || !SAFE_ID.test(id)) return null;
+/** Decides access from the server's own state. Null for an unknown item. */
+export function resolveContext(kind: unknown, id: unknown, runId?: unknown): Resolved | null {
+	if (!isCoachKind(kind) || typeof id !== 'string' || !SAFE_ID.test(id)) return null;
+	if (kind === 'stats') {
+		if (!isCoachRunId(runId)) return null;
+		const lesson = findLesson(id);
+		if (!lesson) return null;
+		const run = runView(lesson, runId);
+		if (!run) return null;
+		const { outcome, elapsed, review } = run;
+		if (!outcome || elapsed === null || !review) {
+			return { kind, id, access: 'locked', sessionId: null, opensAt: null, material: () => null };
+		}
+		return {
+			kind, id, access: 'full', sessionId: runId, opensAt: null,
+			material: () => statsContext({
+				lesson, outcome, elapsed, usedHints: run.hints, usedReference: review.usedReference,
+				submissions: statsCoachSubmissions(runId)
+			}, english() ? 'en' : 'ko')
+		};
+	}
 	if (kind === 'memo') {
 		const card = coachCard(id);
 		if (!card) return null;
@@ -87,13 +106,17 @@ export function resolveContext(kind: unknown, id: unknown): Resolved | null {
 	};
 }
 
-export async function threadView(kind: unknown, id: unknown): Promise<CoachThreadResponse | null> {
-	const c = resolveContext(kind, id);
+export async function threadView(kind: unknown, id: unknown, runId?: unknown): Promise<CoachThreadResponse | null> {
+	const c = resolveContext(kind, id, runId);
 	if (!c) return null;
+	if (c.kind === 'stats' && c.access === 'locked') {
+		return { access: 'locked', opensAt: null, gets: [], backends: [], messages: [] };
+	}
+	const gets = c.material()?.gets ?? [];
 	return {
 		access: c.access,
 		opensAt: c.opensAt,
-		gets: c.material()?.gets.map(label) ?? [],
+		gets: c.kind === 'stats' ? gets : gets.map(label),
 		backends: (await connectedCoaches()).map((b) => ({ id: b, label: BACKENDS[b] })),
 		messages: thread(c)
 	};
@@ -117,11 +140,16 @@ export async function startAsk(body: Record<string, unknown>, signal?: AbortSign
 	if (!question) return { status: 400, error: tr('질문을 입력하세요.', 'Enter a question.') };
 	if (question.length > QUESTION_MAX) return { status: 400, error: tr(`질문이 너무 깁니다. (최대 ${QUESTION_MAX.toLocaleString('en-US')}자)`, `Question exceeds ${QUESTION_MAX.toLocaleString('en-US')} characters.`) };
 	if (code !== undefined && (typeof code !== 'string' || code.length > CODE_MAX)) return { status: 400, error: tr('코드가 올바르지 않거나 너무 깁니다.', 'Invalid code or length limit exceeded.') };
-	if (ctx.kind !== 'lang' && ctx.kind !== 'memo') return { status: 400, error: tr('질문할 대상이 올바르지 않습니다.', 'Invalid coaching context.') };
+	if (!isCoachKind(ctx.kind) || (ctx.kind === 'stats' && !isCoachRunId(ctx.runId))) return { status: 400, error: tr('질문할 대상이 올바르지 않습니다.', 'Invalid coaching context.') };
 
-	const c = resolveContext(ctx.kind, ctx.id);
+	const c = resolveContext(ctx.kind, ctx.id, ctx.runId);
 	if (!c) return { status: 404, error: tr('질문할 대상을 찾을 수 없습니다.', 'Coaching context not found.') };
-	if (c.access === 'locked') return { status: 403, error: tr('지금은 질문할 수 없습니다. 제한시간이 지나거나 세션이 끝나면 열립니다.', 'Questions open when the timer expires or the session ends.') };
+	if (c.access === 'locked') return {
+		status: 403,
+		error: c.kind === 'stats'
+			? tr('연습이 끝나면 질문할 수 있습니다.', 'Questions open when the practice run ends.')
+			: tr('지금은 질문할 수 없습니다. 제한시간이 지나거나 세션이 끝나면 열립니다.', 'Questions open when the timer expires or the session ends.')
+	};
 	const access = c.access;
 	if (!(await connectedCoaches()).includes(backendId as BackendId)) return {status:503,error:tr('코치 연결 설정에서 이 제공자를 먼저 연결하세요.', 'Connect this provider in Coach settings first.')};
 	const key = accountId();
@@ -258,7 +286,7 @@ export async function verifyTrace(setup: string, steps: Step[]): Promise<CoachVe
 /** Verifies the `block`-th trace segment of a stored coach answer. Null for an unknown message or block. Results are cached in memory. */
 export async function verifyMessage(messageId: unknown, block: unknown): Promise<CoachVerifyResponse | null> {
 	if (!Number.isInteger(messageId) || !Number.isInteger(block) || (block as number) < 0) return null;
-	const row = db().prepare("SELECT text FROM coach_messages WHERE id = ? AND role = 'coach' AND error = 0").get(messageId as number) as { text: string } | undefined;
+	const row = db().prepare("SELECT text FROM coach_messages WHERE id = ? AND context_kind <> 'stats' AND role = 'coach' AND error = 0").get(messageId as number) as { text: string } | undefined;
 	if (!row) return null;
 	const traces = parseAnswer(row.text).flatMap((s) => (s.type === 'trace' ? [s.block] : []));
 	const t = traces[block as number];

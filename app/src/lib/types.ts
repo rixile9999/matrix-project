@@ -269,12 +269,12 @@ export type CoachMessage = {
 	error: boolean; // coach message that failed (text = the reason, shown as such)
 };
 
-/** GET /coach/thread?kind=lang|memo&id=…  (400 bad params, 404 unknown item). The thread is the messages of the current
- *  language session (lang) or of the last 24 hours on that card (memo), oldest first. */
+/** GET /coach/thread?kind=lang|memo|stats&id=… (&run=… for stats). Messages from the language session, the last 24 hours
+ *  on the memo card, or the completed statistics run. Oldest first. */
 export type CoachThreadResponse = {
 	access: CoachAccess;
 	opensAt: number | null; // lang + locked + open session: unix seconds when the limit ends (the panel unlocks itself then)
-	gets: string[]; // what the backend is given at this access level, Korean labels, e.g. ["문제", "내 코드", "채점 결과"]
+	gets: string[]; // localized labels for the information sent to the backend
 	backends: { id: BackendId; label: string }[];
 	messages: CoachMessage[];
 };
@@ -319,13 +319,14 @@ export type CoachVerifyResponse = {
 //    (the single index `highlight`) and the explanations only by `/spar/run/[run]` once the run is over.
 import type { SparKind, SparStatus } from './core/spar.ts';
 export type { SparKind, SparStatus };
+export type SparMode = SparKind | 'stats';
 
 export type SparError = { error: string; over?: boolean; runUrl?: string };
 
 /** One line of the records list, and the summary shape used on the home page. Computed from the run's events. */
 export type SparRecordRow = {
 	id: number;
-	kind: SparKind;
+	kind: SparMode;
 	startedAt: number;
 	status: SparStatus; // 'running' only for the active run (its label is "진행 중")
 	// Short label for the list: sprint finished without skip "6:27" (m:ss); sprint finished with skips "건너뜀 1";
@@ -356,7 +357,8 @@ export type SparKindHome = {
 export type SparHomeData = {
 	sprint: SparKindHome;
 	recall: SparKindHome;
-	active: { id: number; kind: SparKind; startedAt: number; url: string } | null; // a running run, to offer "이어서"; url = its run page
+	stats: SparKindHome;
+	active: { id: number; kind: SparMode; startedAt: number; url: string } | null; // a running run, to offer "이어서"; url = its run page
 	runs: number; // all recorded runs, abandoned included ("기록 23회")
 };
 // `/spar` form actions (POST forms; 303 redirect on success):
@@ -551,14 +553,17 @@ export type GardenKind = 'unknown' | 'wide' | 'straight' | 'even';
 /** The numbers behind each part of the form, shown in the "읽는 법" legend. */
 export type GardenNumbers = {
 	langPassed: number; // passed language sessions (volume)
+	statsRuns: number; // ended probability and statistics sessions
+	statsPassed: number; // passed probability and statistics sessions (volume)
+	statsDepthPassed: number; // distinct depth lessons passed (roots)
 	memoReviews: number; // memo reviews, cards and checks (volume)
 	sparRuns: number; // finished Sparring runs (volume)
 	topics: number; // distinct topics practised (breadth)
-	topicsTotal: number; // topics that exist
+	topicsTotal: number; // catalogue topics in the tracks represented in the form
 	stableCards: number; // cards that are stable now (leaves)
 	deepPassed: number; // distinct level-3 or book problems passed (roots)
 	overtimeMin: number; // minutes spent past the limit on problems that were later passed (roots)
-	medianRatio: number | null; // median elapsed / limit of passed language sessions (pace); null with fewer than 3
+	medianRatio: number | null; // median elapsed / limit of passed coding and statistics speed sessions (pace); null with fewer than 3
 	mended: number; // problems that once ended revealed, abandoned or past the limit and were later passed
 	bests: number; // new Sparring bests
 	firstLevel3: number; // first passes of level-3 problems

@@ -5,6 +5,8 @@ import { english, tr } from './locale.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { db, accountId } from './db.ts';
+import { findLesson, statsHistory } from './stats.ts';
+import type { Copy } from '#lib/stats/types.ts';
 import { findProblem } from './lang.ts';
 import { askCoach } from './worker.ts';
 import { listChecks } from './memo-content.ts';
@@ -12,7 +14,7 @@ import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import type { JudgeResult } from '#lib/core/lang.ts';
 import type { TraceCheck } from '#lib/core/memo.ts';
 import {
-	COACH_SYSTEM, COACH_SYSTEM_EN, EXPERIMENTS, IDLE_AFTER_SEC, activeDays, coachingFacts, coachingPrompt, dayView, examplesOf, experimentCopy, experimentResult, focusFacts, isExperiment,
+	COACH_SYSTEM, COACH_SYSTEM_EN, EXPERIMENTS, IDLE_AFTER_SEC, activeDays, localDate, WEEK_SEC, coachingFacts, coachingPrompt, dayView, examplesOf, experimentCopy, experimentResult, focusFacts, isExperiment,
 	observe, parseCoaching, patternStats, sessionStrip, unknownRepeats,
 	type CoachFact, type DebriefLog, type Hit, type DebriefPattern, type DMark, type DRun, type DSession, type DSelf, type ExperimentId, type MarkKind, type PatternStat, type SelfState
 } from '#lib/core/debrief.ts';
@@ -171,14 +173,46 @@ const experimentList = (locale: Locale) => (Object.keys(EXPERIMENTS) as Experime
 const RECENT = 4;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function debriefData(date: string | null): DebriefData {
+type StatsHistory = ReturnType<typeof statsHistory>;
+
+function statsPatterns(history: StatsHistory) {
+	const fields = new Map<string, { lessonId: string; title: Copy; field: Copy; count: number; latestId: number }>();
+	for (const run of history) {
+		for (const index of run.missedFields) {
+			const field = findLesson(run.lessonId)?.fields[index];
+			if (!field) continue;
+			const key = run.lessonId + '/' + index;
+			const previous = fields.get(key);
+			if (previous) previous.count++;
+			else fields.set(key, { lessonId: run.lessonId, title: run.title, field: field.label, count: 1, latestId: run.id });
+		}
+	}
+	return [...fields.values()].filter((field) => field.count >= 2).sort((a, b) => b.count - a.count);
+}
+
+function statsWeek(history: StatsHistory, now: number) {
+	const recent = history.filter((run) => run.endedAt >= now - WEEK_SEC && run.endedAt <= now);
+	const passed = recent.filter((run) => run.outcome === 'passed').length;
+	const references = recent.filter((run) => run.usedReference).length;
+	const facts: CoachFact[] = recent.length ? [{
+		id: 'stats:week',
+		text: tr(`최근 7일 확률·통계 세션 ${recent.length}개 중 ${passed}개 정답. 치트시트를 사용한 세션은 ${references}개.`,
+			`Statistics over the last seven days: ${passed} of ${recent.length} completed attempts solved. The cheat sheet was used in ${references}.`)
+	}] : [];
+	return { total: recent.length, passed, references, facts };
+}
+
+export function debriefData(date: string | null) {
 	const locale = english() ? 'en' : 'ko';
 	const log = loadLog();
 	const cat = catalog();
 	const now = nowSec();
 	const { stats, hitsByRun } = patternStats(log, cat);
 	const ns = notes(stats, cat);
-	const days = activeDays(log);
+	const history = statsHistory();
+	const statsDays = history.map((run) => localDate(run.startedAt));
+	const days = [...new Set([...activeDays(log), ...statsDays])].sort().reverse().slice(0, 21);
+	const week = statsWeek(history, Date.now() / 1000);
 	const pick = date && DATE.test(date) && days.includes(date) ? date : (days[0] ?? null);
 	const recent = log.sessions.filter((s) => s.endedAt !== null).sort((a, b) => b.endedAt! - a.endedAt! || b.id - a.id).slice(0, RECENT).map((s) => card(log, s, stats, hitsByRun, cat, locale));
 	const ch = latestChoice();
@@ -189,10 +223,16 @@ export function debriefData(date: string | null): DebriefData {
 		unknown: unknownRepeats(log, cat).slice(0, 6),
 		recent,
 		days,
-		day: pick ? dayView(log, pick) : null,
+		day: pick ? dayView(log, pick, history.filter((run) => localDate(run.startedAt) === pick).map((run) => ({
+			id: 'stats-' + run.id, problemId: run.lessonId, title: tr(...run.title), from: run.startedAt, to: run.endedAt,
+			outcome: run.outcome, runs: run.submissions, silentLong: false
+		}))) : null,
+		statsReviews: history.slice(0, 5),
+		statsPatterns: statsPatterns(history),
+		statsWeek: { total: week.total, passed: week.passed, references: week.references },
 		focus: focusFacts(log, now, locale),
 		reading: latestReading(locale),
-		factCount: coachingFacts(log, stats, cat, now, locale).length,
+		factCount: coachingFacts(log, stats, cat, now, locale).length + week.facts.length,
 		backends: (Object.keys(BACKENDS) as BackendId[]).map((id) => ({ id, name: BACKENDS[id] })),
 		defaultBackend: DEFAULT_BACKEND,
 		experiments,
@@ -265,7 +305,7 @@ export async function createReading(backendId: unknown): Promise<{ status: numbe
 	const log = loadLog();
 	const cat = catalog();
 	const now = nowSec();
-	const facts: CoachFact[] = coachingFacts(log, patternStats(log, cat).stats, cat, now, locale);
+	const facts = [...coachingFacts(log, patternStats(log, cat).stats, cat, now, locale), ...statsWeek(statsHistory(), Date.now() / 1000).facts];
 	if (!facts.length) return { status: 409, body: { error: tr('읽을 기록이 아직 없습니다.', 'No records to review yet.') } };
 	busy.add(key);
 	try {

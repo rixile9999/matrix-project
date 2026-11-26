@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, expect, it } from 'vitest';
 import { db, withAccount } from './db.ts';
-import { act, courseView, findLesson, parseNumber, recentStatsReviews, runView, startRun } from './stats.ts';
+import { act, courseView, findLesson, parseNumber, statsHistory, runView, startRun } from './stats.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'matrix-stats-'));
 const previous = process.env.MATRIX_DATA;
@@ -38,7 +38,7 @@ it('opens support step by step, retains partial feedback, and records timeouts',
 	const expires = 20_000 + lesson.seconds * 1000;
 	expect(act(lesson, next, 'check', ['6.8%', '19/68'], expires)).toBeNull();
 	expect(runView(lesson, next, expires)).toMatchObject({ outcome: 'timeout', elapsed: lesson.seconds });
-	expect(recentStatsReviews(expires)).toMatchObject([
+	expect(statsHistory(expires)).toMatchObject([
 		{ id: next, usedReference: false }, { id, usedReference: true }
 	]);
 	expect(courseView(expires).catalogue.find(({ id }) => id === lesson.id)).toMatchObject({ best: 5, status: 'timeout' });

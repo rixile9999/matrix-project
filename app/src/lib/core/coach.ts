@@ -7,8 +7,12 @@ export const COACH_NAME = 'Operator';
 export const BACKENDS = { claude: 'Claude Code', codex: 'Codex', qwen: 'Qwen Code' } as const;
 export type BackendId = keyof typeof BACKENDS;
 
-/** What a question is about. `id` is a language problem id or a memo card id. */
-export type CoachContext = { kind: 'lang'; id: string } | { kind: 'memo'; id: string };
+/** What a question is about. Statistics threads belong to a specific lesson run. */
+export type CoachContext = { kind: 'lang'; id: string } | { kind: 'memo'; id: string } | { kind: 'stats'; id: string; runId: number };
+
+export const isCoachKind = (value: unknown): value is CoachContext['kind'] => value === 'lang' || value === 'memo' || value === 'stats';
+
+export const isCoachRunId = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 
 /**
  * locked  = no questions (the timer is running: the result must be the learner's own);

@@ -18,7 +18,7 @@
 		const [, m, d] = cur.date.split('-').map(Number);
 		return `${m}${t('월', '/')} ${d}${t('일', '')}`;
 	});
-	const label = $derived(`${t('기록에서 자란 모양', 'A shape grown from your record')}. ${form.kindLabel}. ${t('통과한 문제', 'Problems passed')} ${form.numbers.langPassed}, ${t('복습', 'reviews')} ${form.numbers.memoReviews}, ${t('잎', 'leaves')} ${form.leafCount}.`);
+	const label = $derived(`${t('기록에서 자란 모양', 'A shape grown from your record')}. ${form.kindLabel}. ${t('통과한 코딩 문제', 'Coding problems passed')} ${form.numbers.langPassed}, ${t('복습', 'reviews')} ${form.numbers.memoReviews}, ${t('잎', 'leaves')} ${form.leafCount}.${form.numbers.statsRuns ? ` ${t('푼 확률·통계 세션', 'Statistics sessions solved')} ${form.numbers.statsPassed}.` : ''}`);
 </script>
 
 <svelte:head><title>Garden · Matrix</title></svelte:head>
@@ -40,7 +40,7 @@
 			</div>
 			<div class="side">
 				<div class="time">
-						<h2>{t('날짜 되돌리기', 'Revisit a date')}</h2>
+					<h2>{t('날짜 되돌리기', 'Revisit a date')}</h2>
 					{#if last > 0}
 						<label class="slide">
 							<span class="sr">{t('날짜', 'Date')}</span>
@@ -55,6 +55,15 @@
 						<p class="a-small">{form.day ? t('오늘이 첫날.', 'Today is day one.') : t('아직 씨앗.', 'Still a seed.')}</p>
 					{/if}
 				</div>
+				{#if form.numbers.statsRuns}
+					<div class="statistics" id="statistics">
+						<h2><a href="/stats">{t('확률과 통계', 'Probability & Statistics')}</a></h2>
+						<dl>
+							<div><dt>{t('세션', 'Sessions')}</dt><dd class="a-num">{form.numbers.statsRuns}</dd></div>
+							<div><dt>{t('정답', 'Solved')}</dt><dd class="a-num">{form.numbers.statsPassed}</dd></div>
+						</dl>
+					</div>
+				{/if}
 			</div>
 		</section>
 
@@ -83,6 +92,12 @@
 	.slide input { width: 100%; accent-color: var(--a-warm); margin: 6px 0 2px; min-height: 28px; }
 	.when { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--a-ink); min-height: 40px; }
 	.ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--a-dim); }
+	.statistics { padding-top: 12px; border-top: 1px solid var(--a-faint); }
+	.statistics h2 a { color: inherit; }
+	.statistics dl { display: flex; flex-wrap: wrap; gap: 16px 30px; margin: 0; }
+	.statistics dl div { display: flex; align-items: baseline; gap: 8px; }
+	.statistics dt { font-size: 13px; color: var(--a-dim); }
+	.statistics dd { margin: 0; color: var(--a-ink); }
 	.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 	.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px 36px; }
 	.cols > div { min-width: 0; }

@@ -67,6 +67,12 @@ python3 ops/auto-deploy.py --install --builder desktop-linux
 
 위 명령은 Lima와 같은 아키텍처의 Docker Desktop에서 이미지를 빌드합니다. Lima에서 직접 빌드하려면 `--builder desktop-linux`를 생략하세요. 로그인 주소가 `http://localhost:5173/login`과 다르면 `--health`로 지정합니다. 배포 스크립트를 수정하면 설치 명령을 다시 실행하세요. 배포 로그는 `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`로 확인할 수 있습니다.
 
+## 연결된 수업 추가하기
+
+확률·통계 수업은 [수업 목록](app/src/lib/server/stats-content.ts)에 추가하고, 독립적으로 계산한 답을 [채점 테스트](app/src/lib/server/stats.test.ts)에 넣습니다. 일반 연습과 통계 스파링은 이 목록에서 출제합니다. 종료된 시도는 복기의 세션·오답 패턴·시간대 기록, 정원의 성장·주간 해석, 시도별 코치 대화에 연결됩니다.
+
+[연결 테스트](app/src/lib/server/stats-connectivity.test.ts)는 임시 계정으로 등록된 수업 전체를 검사합니다. 푸시 전에 `pnpm -C app test`를 실행하세요. 운영 자동 배포도 같은 테스트를 실행합니다. `pnpm -C app build`는 빌드 후 앱을 루프백에서 띄우고 임시 계정으로 다섯 화면과 API를 한영 양쪽에서 검사합니다. 개발 시 확인할 항목은 [에이전트 지침](CLAUDE.md#publishing-connected-content)에 있습니다.
+
 ## 콘텐츠 검증
 
 콘텐츠 검증 스크립트에서 문제 채점은 연결된 브로커를 사용합니다. 저장소에 포함된 치트시트·암기 예제의 오프라인 유지보수 검증에는 로컬 scala-cli도 필요합니다.

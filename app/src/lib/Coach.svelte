@@ -52,7 +52,7 @@
 		}
 	}
 
-	async function load(kind: string, id: string, keep = false) {
+	async function load(target: CoachContext, keep = false) {
 		const seq = ++loadSeq;
 		if (!keep) {
 			loading = true;
@@ -61,7 +61,9 @@
 		}
 		missing = loadError = false;
 		try {
-			const res = await fetch(`/coach/thread?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`);
+			const query = new URLSearchParams({ kind: target.kind, id: target.id });
+			if (target.kind === 'stats') query.set('run', String(target.runId));
+			const res = await fetch(`/coach/thread?${query}`);
 			if (seq !== loadSeq) return;
 			if (res.status === 404) {
 				missing = true;
@@ -83,16 +85,20 @@
 
 	let lastKind = '';
 	let lastId = '';
+	let lastRunId: number | null = null;
 	$effect(() => {
-		const { kind, id } = context;
+		const target = context;
+		const { kind, id } = target;
+		const runId = target.kind === 'stats' ? target.runId : null;
 		void refreshKey;
 		void page.data.locale;
 		untrack(() => {
 			live = null;
 			notice = '';
-			load(kind, id, kind === lastKind && id === lastId);
+			load(target, kind === lastKind && id === lastId && runId === lastRunId);
 			lastKind = kind;
 			lastId = id;
+			lastRunId = runId;
 		});
 	});
 
@@ -101,7 +107,7 @@
 		const at = thread?.access === 'locked' ? thread.opensAt : null;
 		if (at == null) return;
 		const ms = Math.min(Math.max(at * 1000 - Date.now(), 0) + 700, 2 ** 31 - 1);
-		const h = setTimeout(() => load(context.kind, context.id, true), ms);
+		const h = setTimeout(() => load(context, true), ms);
 		return () => clearTimeout(h);
 	});
 
@@ -151,8 +157,10 @@
 			});
 			if (!res.ok) {
 				if (res.status === 403) {
-					fail(t('지금은 묻을 수 없습니다. 제한 시간이 끝나면 열립니다.', 'You cannot ask yet. It opens when the time limit ends.'));
-					load(context.kind, context.id, true);
+					fail(context.kind === 'stats'
+						? t('연습이 끝나면 질문할 수 있습니다.', 'Questions open when the practice run ends.')
+						: t('지금은 묻을 수 없습니다. 제한 시간이 끝나면 열립니다.', 'You cannot ask yet. It opens when the time limit ends.'));
+					load(context, true);
 				} else if (res.status === 409) fail(t('아직 앞의 질문에 답하는 중입니다. 잠시 뒤에 다시 묻어 보세요.', 'The previous question is still being answered. Try again shortly.'));
 				else if (res.status === 404) fail(t('이 항목에는 물을 수 없습니다.', 'You cannot ask about this item.'));
 				else fail(`${t('질문을 보내지 못했습니다', 'Could not send the question')} (${res.status}).`);
@@ -171,7 +179,7 @@
 			if (!finished) {
 				notice = t('답이 중간에 끊겼습니다. 기록을 다시 불러옵니다.', 'The answer stopped midway. Reloading the record.');
 				live = null;
-				await load(context.kind, context.id, true);
+				await load(context, true);
 				messages = thread?.messages ?? messages;
 			}
 		} catch {
@@ -210,7 +218,11 @@
 		return list[(list.findIndex((b) => b.id === m.backend) + 1) % list.length].label;
 	};
 	const QUICK = $derived(
-		context.kind === 'lang' ? [t('단계별로 보여 줘', 'Show step by step'), t('모범답안과 비교', 'Compare with the model answer'), t('비슷한 문제는?', 'Anything similar?')] : [t('단계별로 보여 줘', 'Show step by step')]
+		context.kind === 'lang'
+			? [t('단계별로 보여 줘', 'Show step by step'), t('모범답안과 비교', 'Compare with the model answer'), t('비슷한 문제는?', 'Anything similar?')]
+			: context.kind === 'stats'
+				? [t('단계별로 설명해 줘', 'Explain step by step'), t('내 답을 검토해 줘', 'Review my answers'), t('비슷한 문제를 내 줘', 'Give me a similar problem')]
+				: [t('단계별로 보여 줘', 'Show step by step')]
 	);
 	const secs = (ms: number | null) => (ms === null ? '' : `${(ms / 1000).toFixed(1)}${t('초', 's')}`);
 </script>
@@ -223,7 +235,7 @@
 	{:else if loadError || !thread}
 		<div class="co-locked">
 			<b>{t('불러오지 못했습니다', 'Could not load')}</b>
-			<button class="co-again" type="button" onclick={() => load(context.kind, context.id)}>{t('다시 시도', 'Try again')}</button>
+			<button class="co-again" type="button" onclick={() => load(context)}>{t('다시 시도', 'Try again')}</button>
 		</div>
 	{:else if thread.access === 'locked'}
 		<div class="co-locked">
@@ -251,7 +263,7 @@
 						{#if m.error}
 							<p class="co-errtext">{backendLabel(m.backend)} {t('가 답하지 못했습니다.', 'could not answer.')} {m.text}</p>
 						{:else}
-							<Answer text={m.text} messageId={m.id} />
+							<Answer text={m.text} messageId={context.kind === 'stats' ? null : m.id} />
 						{/if}
 						{#if nextLabel(m)}
 							<button class="co-again" type="button" disabled={busy} onclick={() => reask(k)}>{t('다른', 'Ask another')} {COACH_NAME} ({nextLabel(m)})</button>

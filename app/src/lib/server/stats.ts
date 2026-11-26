@@ -52,6 +52,11 @@ function storage() {
 			submitted_ms INTEGER NOT NULL, values_json TEXT NOT NULL, checks_json TEXT NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS stats_submissions_run ON stats_submissions(run_id, id);
+		CREATE TABLE IF NOT EXISTS stats_spar_items (
+			round_id INTEGER NOT NULL, position INTEGER NOT NULL,
+			run_id INTEGER NOT NULL UNIQUE REFERENCES stats_runs(id), abandoned_ms INTEGER,
+			PRIMARY KEY (round_id, position)
+		);
 	`);
 	return database;
 }
@@ -60,6 +65,7 @@ function expireRuns(now: number) {
 	db().prepare(`
 		UPDATE stats_runs SET outcome = 'timeout', ended_ms = deadline_ms
 		WHERE outcome IS NULL AND deadline_ms <= ?
+			AND NOT EXISTS (SELECT 1 FROM stats_spar_items WHERE run_id = stats_runs.id AND abandoned_ms IS NOT NULL)
 	`).run(now);
 }
 
@@ -79,7 +85,11 @@ function publicLesson(lesson: Lesson) {
 export function courseView(now = Date.now()) {
 	const database = storage();
 	expireRuns(now);
-	const runs = database.prepare('SELECT * FROM stats_runs ORDER BY id DESC').all() as Run[];
+	const runs = database.prepare(`
+		SELECT stats_runs.* FROM stats_runs LEFT JOIN stats_spar_items ON run_id = stats_runs.id
+		WHERE run_id IS NULL OR outcome IS NOT NULL
+		ORDER BY (outcome IS NULL) DESC, stats_runs.id DESC
+	`).all() as Run[];
 	const catalogue = lessons.map((lesson) => {
 		const attempts = runs.filter((run) => run.lesson_id === lesson.id);
 		const latest = attempts[0];
@@ -105,20 +115,34 @@ export function courseView(now = Date.now()) {
 		selected.add(lesson.id);
 		return true;
 	}).slice(0, 3);
-	return { catalogue, recommendation };
+	return { catalogue, recommendation, hasReviews: runs.some((run) => run.outcome !== null) };
 }
 
-export function recentStatsReviews(now = Date.now()) {
+/** Account-local, completed attempts. Accuracy describes the last submitted answers. */
+export function statsHistory(now = Date.now()) {
 	const database = storage();
 	expireRuns(now);
 	const rows = database.prepare(`
-		SELECT id, lesson_id, ended_ms, looked_up FROM stats_runs
-		WHERE outcome IS NOT NULL ORDER BY ended_ms DESC, id DESC LIMIT 5
-	`).all() as Pick<Run, 'id' | 'lesson_id' | 'ended_ms' | 'looked_up'>[];
+		SELECT r.*,
+			(SELECT COUNT(*) FROM stats_submissions WHERE run_id = r.id) AS submissions,
+			(SELECT checks_json FROM stats_submissions WHERE run_id = r.id ORDER BY id DESC LIMIT 1) AS last_checks,
+			(SELECT json_group_array(DISTINCT j.key) FROM stats_submissions s, json_each(s.checks_json) j
+			 WHERE s.run_id = r.id AND j.value = 0) AS missed
+		FROM stats_runs r WHERE r.outcome IS NOT NULL ORDER BY r.ended_ms DESC, r.id DESC
+	`).all() as (Run & { submissions: number; last_checks: string | null; missed: string })[];
 	return rows.flatMap((row) => {
 		const lesson = findLesson(row.lesson_id);
-		if (!lesson || row.ended_ms === null) return [];
-		return [{ id: row.id, lessonId: lesson.id, title: lesson.title, endedAt: row.ended_ms / 1000, usedReference: Boolean(row.looked_up) }];
+		if (!lesson || row.ended_ms === null || !row.outcome) return [];
+		const checks: boolean[] = JSON.parse(row.last_checks ?? '[]');
+		const missedFields: number[] = JSON.parse(row.missed);
+		return [{
+			id: row.id, lessonId: lesson.id, title: lesson.title, topic: lesson.topic, mode: lesson.mode,
+			seconds: (row.deadline_ms - row.started_ms) / 1000,
+			startedAt: row.started_ms / 1000, endedAt: row.ended_ms / 1000, outcome: row.outcome,
+			hints: row.hints, usedReference: Boolean(row.looked_up),
+			submissions: row.submissions, correctFields: checks.filter(Boolean).length, totalFields: lesson.fields.length,
+			missedFields
+		}];
 	});
 }
 
@@ -126,20 +150,37 @@ export function startRun(lesson: Lesson, now = Date.now()) {
 	const database = storage();
 	return tx(() => {
 		expireRuns(now);
-		const active = database.prepare('SELECT id FROM stats_runs WHERE lesson_id = ? AND outcome IS NULL ORDER BY id DESC LIMIT 1')
-			.get(lesson.id);
+		const active = database.prepare(`
+			SELECT id FROM stats_runs WHERE lesson_id = ? AND outcome IS NULL
+				AND NOT EXISTS (SELECT 1 FROM stats_spar_items WHERE run_id = stats_runs.id)
+			ORDER BY id DESC LIMIT 1
+		`).get(lesson.id);
 		if (active) return Number(active.id);
-		const result = database.prepare('INSERT INTO stats_runs (lesson_id, started_ms, deadline_ms) VALUES (?, ?, ?)')
-			.run(lesson.id, now, now + lesson.seconds * 1000);
-		return Number(result.lastInsertRowid);
+		return insertRun(lesson, now);
 	});
 }
 
-export function runView(lesson: Lesson, id: number, now = Date.now()) {
+function insertRun(lesson: Lesson, now: number) {
+	const result = db().prepare('INSERT INTO stats_runs (lesson_id, started_ms, deadline_ms) VALUES (?, ?, ?)')
+		.run(lesson.id, now, now + lesson.seconds * 1000);
+	return Number(result.lastInsertRowid);
+}
+
+/** Starts a lesson for the given round slot inside the caller's transaction. */
+export function startSparLesson(lesson: Lesson, roundId: number, position: number, now: number) {
+	const id = insertRun(lesson, now);
+	db().prepare('INSERT INTO stats_spar_items (round_id, position, run_id) VALUES (?, ?, ?)').run(roundId, position, id);
+	return id;
+}
+
+export function runView(lesson: Lesson, id: number, now = Date.now(), roundId: number | null = null) {
 	const database = storage();
 	expireRuns(now);
-	const run = database.prepare('SELECT * FROM stats_runs WHERE id = ? AND lesson_id = ?')
-		.get(id, lesson.id) as Run | undefined;
+	const run = database.prepare(`
+		SELECT stats_runs.* FROM stats_runs LEFT JOIN stats_spar_items ON run_id = id
+		WHERE id = ? AND lesson_id = ?
+			AND (round_id = ? OR (? IS NULL AND (round_id IS NULL OR outcome IS NOT NULL)))
+	`).get(id, lesson.id, roundId, roundId) as Run | undefined;
 	if (!run) return null;
 	const last = database.prepare('SELECT values_json, checks_json FROM stats_submissions WHERE run_id = ? ORDER BY id DESC LIMIT 1')
 		.get(id) as Submission | undefined;
@@ -166,38 +207,62 @@ export function runView(lesson: Lesson, id: number, now = Date.now()) {
 export function act(
 	lesson: Lesson, id: number, operation: Operation, values: string[] = [], now = Date.now()
 ): 'unavailable' | 'hints' | 'invalid' | null {
-	const database = storage();
-	return tx(() => {
-		expireRuns(now);
-		const run = database.prepare('SELECT * FROM stats_runs WHERE id = ? AND lesson_id = ?')
-			.get(id, lesson.id) as Run | undefined;
-		if (!run) return 'unavailable';
-		if (run.outcome) return null;
-		switch (operation) {
-			case 'hint':
-				database.prepare('UPDATE stats_runs SET hints = MIN(hints + 1, 2) WHERE id = ?').run(id);
-				break;
-			case 'reference':
-				database.prepare('UPDATE stats_runs SET looked_up = 1 WHERE id = ?').run(id);
-				break;
-			case 'reveal':
-				if (run.hints < 2) return 'hints';
-				finish(id, 'revealed', now);
-				break;
-			case 'check': {
-				const numbers = values.map(parseNumber);
-				if (numbers.length !== lesson.fields.length || numbers.some((number) => !Number.isFinite(number))) return 'invalid';
-				const checks = lesson.fields.map(({ answer }, index) => {
-					const number = numbers[index];
-					if (number === undefined) return false;
-					const tolerance = Math.min(0.00005, Math.abs(answer) / 1000);
-					return Math.abs(number - answer) <= Math.max(1e-12, tolerance);
-				});
-				database.prepare('INSERT INTO stats_submissions (run_id, submitted_ms, values_json, checks_json) VALUES (?, ?, ?, ?)')
-					.run(id, now, JSON.stringify(values), JSON.stringify(checks));
-				if (checks.every(Boolean)) finish(id, 'passed', now);
-			}
+	storage();
+	return tx(() => actOnRun(lesson, id, operation, values, now, null));
+}
+
+/** Applies the same grading and support rules to a lesson inside its round transaction. */
+export function actOnRun(
+	lesson: Lesson, id: number, operation: Operation, values: string[], now: number, roundId: number | null
+): 'unavailable' | 'hints' | 'invalid' | null {
+	expireRuns(now);
+	const database = db();
+	const run = database.prepare(`
+		SELECT stats_runs.* FROM stats_runs LEFT JOIN stats_spar_items ON run_id = id
+		WHERE id = ? AND lesson_id = ? AND round_id IS ? AND abandoned_ms IS NULL
+	`).get(id, lesson.id, roundId) as Run | undefined;
+	if (!run) return 'unavailable';
+	if (run.outcome) return null;
+	switch (operation) {
+		case 'hint':
+			database.prepare('UPDATE stats_runs SET hints = MIN(hints + 1, 2) WHERE id = ?').run(id);
+			break;
+		case 'reference':
+			database.prepare('UPDATE stats_runs SET looked_up = 1 WHERE id = ?').run(id);
+			break;
+		case 'reveal':
+			if (run.hints < 2) return 'hints';
+			finish(id, 'revealed', now);
+			break;
+		case 'check': {
+			if (values.length !== lesson.fields.length) return 'invalid';
+			const numbers = values.map(parseNumber);
+			if (numbers.some((number) => !Number.isFinite(number))) return 'invalid';
+			const checks = lesson.fields.map(({ answer }, index) => {
+				const number = numbers[index];
+				if (number === undefined) return false;
+				const tolerance = Math.min(0.00005, Math.abs(answer) / 1000);
+				return Math.abs(number - answer) <= Math.max(1e-12, tolerance);
+			});
+			database.prepare('INSERT INTO stats_submissions (run_id, submitted_ms, values_json, checks_json) VALUES (?, ?, ?, ?)')
+				.run(id, now, JSON.stringify(values), JSON.stringify(checks));
+			if (checks.every(Boolean)) finish(id, 'passed', now);
 		}
-		return null;
-	});
+	}
+	return null;
+}
+
+/** Recent accepted submissions for a completed run in the signed-in account. Oldest first. */
+export function statsCoachSubmissions(id: number) {
+	const rows = db().prepare(`
+		SELECT values_json, checks_json
+		FROM stats_submissions
+		JOIN stats_runs ON stats_runs.id = stats_submissions.run_id
+		WHERE stats_runs.id = ? AND stats_runs.ended_ms IS NOT NULL
+		ORDER BY stats_submissions.id DESC LIMIT 8
+	`).all(id) as Submission[];
+	return rows.reverse().map(({ values_json, checks_json }) => ({
+		values: JSON.parse(values_json) as string[],
+		checks: JSON.parse(checks_json) as boolean[]
+	}));
 }

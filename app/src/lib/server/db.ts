@@ -33,6 +33,37 @@ export function db() {
 	return account.database;
 }
 
+const coachMessages = `
+CREATE TABLE IF NOT EXISTS coach_messages (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, context_kind TEXT NOT NULL CHECK (context_kind IN ('lang', 'memo', 'stats')), context_id TEXT NOT NULL,
+	session_id INTEGER, backend TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('user', 'coach')), text TEXT NOT NULL, ms INTEGER,
+	access TEXT NOT NULL CHECK (access IN ('limited', 'full')), error INTEGER NOT NULL DEFAULT 0
+);`;
+const coachMessagesIndex = 'CREATE INDEX IF NOT EXISTS coach_messages_ctx ON coach_messages(context_kind, context_id, id);';
+
+function migrateCoachMessages(database: DatabaseSync) {
+	const current = () => database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'coach_messages'").get()?.sql;
+	if (String(current()).includes("'stats'")) return;
+	database.exec('BEGIN IMMEDIATE');
+	try {
+		if (!String(current()).includes("'stats'")) {
+			database.exec(`
+				ALTER TABLE coach_messages RENAME TO coach_messages_previous;
+				${coachMessages}
+				INSERT INTO coach_messages (id, at, context_kind, context_id, session_id, backend, role, text, ms, access, error)
+				SELECT id, at, context_kind, context_id, session_id, backend, role, text, ms, access, error
+				FROM coach_messages_previous;
+				DROP TABLE coach_messages_previous;
+				${coachMessagesIndex}
+			`);
+		}
+		database.exec('COMMIT');
+	} catch (error) {
+		database.exec('ROLLBACK');
+		throw error;
+	}
+}
+
 function initialize(database: DatabaseSync) {
 	database.prepare('ATTACH DATABASE ? AS catalog').run(join(accountRoot(), 'catalog.db'));
 	database.exec(`
@@ -69,13 +100,9 @@ CREATE TABLE IF NOT EXISTS memo_reviews (
 	at INTEGER NOT NULL, rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4), elapsed_ms INTEGER NOT NULL, detail TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS memo_reviews_item ON memo_reviews(item_type, item_id);
--- Operator (question-answering panel): every question and answer, append-only. session_id = the lang session the thread belongs to.
-CREATE TABLE IF NOT EXISTS coach_messages (
-	id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, context_kind TEXT NOT NULL CHECK (context_kind IN ('lang', 'memo')), context_id TEXT NOT NULL,
-	session_id INTEGER, backend TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('user', 'coach')), text TEXT NOT NULL, ms INTEGER,
-	access TEXT NOT NULL CHECK (access IN ('limited', 'full')), error INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS coach_messages_ctx ON coach_messages(context_kind, context_id, id);
+-- Operator: every question and answer, append-only. session_id refers to a language session or a statistics run.
+${coachMessages}
+${coachMessagesIndex}
 -- Sparring: append-only. A run fixes its item ids at the start; everything else (totals, splits, best, labels) is recomputed from the events.
 CREATE TABLE IF NOT EXISTS spar_runs (
 	id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('sprint', 'recall')),
@@ -113,6 +140,7 @@ CREATE TABLE IF NOT EXISTS debrief_choices (id INTEGER PRIMARY KEY AUTOINCREMENT
 -- Coaching written on request. body = JSON { sentences: [{ text, facts: [{ id, text }] }] }, the cited facts as they were when written.
 CREATE TABLE IF NOT EXISTS debrief_readings (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL, backend TEXT NOT NULL, body TEXT NOT NULL);
 `);
+	migrateCoachMessages(database);
 	// Seed the shared public catalogue from the old single-user file when present.
 	if (database.prepare("SELECT 1 FROM main.sqlite_schema WHERE type='table' AND name='problems'").get()) {
 		database.exec('INSERT OR IGNORE INTO catalog.problems SELECT * FROM main.problems');

@@ -25,7 +25,7 @@
 		return out;
 	});
 	const restText = (sec: number) => (sec >= 3600 ? `${t('쉼', 'Rest')} ${Math.floor(sec / 3600)}${t('시간', 'h')}${Math.round((sec % 3600) / 60) ? ` ${Math.round((sec % 3600) / 60)}${t('분', 'm')}` : ''}` : `${t('쉼', 'Rest')} ${Math.round(sec / 60)}${t('분', 'm')}`);
-	const OUT = $derived({ passed: t('통과', 'Passed'), revealed: t('답 공개', 'Answer revealed'), open: t('끝내지 않음', 'Unfinished') } as const);
+	const OUT = $derived({ passed: t('통과', 'Passed'), revealed: t('답 공개', 'Answer revealed'), open: t('끝내지 않음', 'Unfinished'), timeout: t('시간 초과', 'Time expired') } as const);
 	const mins = (s: number) => Math.round(s / 60);
 </script>
 
@@ -43,15 +43,16 @@
 		{@const x = X(s.from)}
 		{@const w = Math.max(3, X(s.to) - x)}
 		<rect {x} y="54" width={w} height="26" rx="3" class="s {s.outcome}" class:long={s.silentLong} fill={s.silentLong ? `url(#d-${uid})` : undefined}>
-			<title>{clock(s.from)}–{clock(s.to)} · {s.title} · {OUT[s.outcome]} · {t('실행', 'runs')} {s.runs}{s.silentLong ? ` · ${t('10분 넘게 실행 없음', 'no run for 10+ minutes')}` : ''}</title>
+			<title>{clock(s.from)}–{clock(s.to)} · {s.title} · {OUT[s.outcome]} · {typeof s.id === 'string' ? t('제출', 'submissions') : t('실행', 'runs')} {s.runs}{s.silentLong ? ` · ${t('10분 넘게 실행 없음', 'no run for 10+ minutes')}` : ''}</title>
 		</rect>
-		{#if s.silentLong && w > 70}<text x={x + w / 2} y="98" text-anchor="middle" class="cool">{s.problemId.split('-')[0]} · {mins(s.to - s.from)}{t('분', 'm')} · {t('실행', 'runs')} {s.runs}</text>{/if}
+		{#if s.silentLong && w > 70}<text x={x + w / 2} y="98" text-anchor="middle" class="cool">{s.problemId.split('-')[0]} · {mins(s.to - s.from)}{t('분', 'm')} · {typeof s.id === 'string' ? t('제출', 'submissions') : t('실행', 'runs')} {s.runs}</text>{/if}
 	{/each}
 	<g class="legend">
 		<rect x="0" y="136" width="12" height="10" rx="2" class="s passed" /><text x="18" y="145">{t('통과', 'Passed')}</text>
 		<rect x="90" y="136" width="12" height="10" rx="2" class="s revealed" /><text x="108" y="145">{t('답 공개', 'Answer revealed')}</text>
 		<rect x="190" y="136" width="12" height="10" rx="2" fill="url(#d-{uid})" class="s long" /><text x="208" y="145">{t('10분 넘게 실행 없음', 'No run for 10+ minutes')}</text>
 		<rect x="360" y="136" width="12" height="10" rx="2" class="s open" /><text x="378" y="145">{t('끝내지 않음', 'Unfinished')}</text>
+		{#if day.sessions.some((s) => s.outcome === 'timeout')}<rect x="490" y="136" width="12" height="10" rx="2" class="s timeout" /><text x="508" y="145">{t('시간 초과', 'Time expired')}</text>{/if}
 	</g>
 </svg>
 
@@ -63,6 +64,7 @@
 	.hatch { stroke: var(--rk-blue); stroke-opacity: .5; }
 	.s.passed { fill: var(--ok); fill-opacity: .8; }
 	.s.revealed { fill: var(--bad); fill-opacity: .8; }
+	.s.timeout { fill: var(--warn); stroke: var(--muted); }
 	.s.open { fill: none; stroke: var(--muted); stroke-dasharray: 2 2; }
 	.s.long { fill-opacity: 1; stroke: var(--rk-blue); stroke-opacity: .7; }
 	.cool { fill: var(--rk-blue); }

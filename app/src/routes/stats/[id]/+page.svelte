@@ -3,7 +3,9 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
+	import Coach from '#lib/Coach.svelte';
 	import LanguageSwitch from '#lib/LanguageSwitch.svelte';
+	import { COACH_NAME } from '#lib/core/coach.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 	import { mmss } from '#lib/rank.ts';
 	import { actionErrors, modeNames, referenceUsage, statuses, topicNames } from '#lib/stats/labels.ts';
@@ -13,6 +15,8 @@
 	let now = $state(0);
 	let expiredRun = 0;
 	let ready = $state(false);
+	let coachRun = $state<number | null>(null);
+	let draft = $state<{ runId: number; values: Record<number, string> } | null>(null);
 	let sheet: HTMLDialogElement;
 	let lookup: HTMLButtonElement;
 	const sections = [
@@ -60,6 +64,11 @@
 	function action(name: string) {
 		return `?run=${data.id}&/${name}`;
 	}
+
+	function updateDraft(index: number, value: string) {
+		if (draft?.runId !== data.id) draft = { runId: data.id, values: {} };
+		draft.values[index] = value;
+	}
 </script>
 
 <svelte:head><title>{t(...data.lesson.title)} · Matrix</title></svelte:head>
@@ -103,7 +112,8 @@
 							type="text"
 							autocomplete="off"
 							maxlength="80"
-							value={form?.values?.[index] ?? field.value}
+							value={(draft?.runId === data.id ? draft.values[index] : undefined) ?? form?.values?.[index] ?? field.value}
+							oninput={(event) => updateDraft(index, event.currentTarget.value)}
 							aria-describedby={field.correct !== null ? `stats-feedback-${index}` : 'stats-answer-format'}
 						/>
 						{#if field.correct !== null}
@@ -174,6 +184,16 @@
 			<p>{t(...data.review.intent)}</p>
 			<p class="note">{t(...referenceUsage(data.review.usedReference))}</p>
 		</section>
+		{#key data.id}
+			<details class="support stats-coach" ontoggle={(event) => { if (event.currentTarget.open) coachRun = data.id; }}>
+				<summary>{t(`${COACH_NAME}에게 풀이 질문하기`, `Ask ${COACH_NAME} about this attempt`)}</summary>
+				{#if coachRun === data.id}
+					<div class="coach-panel">
+						<Coach context={{ kind: 'stats', id: data.lesson.id, runId: data.id }} placeholder={t('이 연습에 대해 묻기', 'Ask about this practice run')} />
+					</div>
+				{/if}
+			</details>
+		{/key}
 	{/if}
 </div>
 
@@ -203,6 +223,8 @@
 	.support ol { margin: 0; padding-inline-start: 22px; }
 	.support li + li, .support p + p { margin-top: 7px; }
 	.review { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+	.stats-coach > summary { cursor: pointer; font-weight: 700; }
+	.coach-panel { height: min(32rem, 75dvh); margin-top: 10px; min-height: 20rem; }
 	.title-row, .sheet-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 	.lookup-fallback[hidden] { display: none; }
 	dialog { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(26rem, 100%); max-width: 100%; height: 100dvh; max-height: 100%; padding: clamp(18px, 3vw, 32px); border: 0; border-inline-start: 1px solid var(--line); background: var(--bg); color: var(--ink); overflow-y: auto; overscroll-behavior: contain; }

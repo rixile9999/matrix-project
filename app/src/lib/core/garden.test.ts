@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	GAP_NEED, MIN_PER_HOUR, activeDays, bestAndShaky, createGarden, dayNumber, dayStart, firstAttempts, gapFacts, hourly, kindOf, mendedProblems, median, normalisedEntropy, paceOf,
-	parseReading, rhythmOf, sparBestMoments, weekKeyOf, weekStartOf, weeklyFacts, type GardenRecords, type LangRec, type MemoRec, type SparRec
+	parseReading, rhythmOf, sparBestMoments, speedSamples, weekKeyOf, weekStartOf, weeklyFacts, type GardenRecords, type LangRec, type MemoRec, type SparRec, type StatsRec
 } from './garden.ts';
 import { TOPICS } from './lang.ts';
 
@@ -19,7 +19,12 @@ const L = (p: Partial<LangRec> & { day: number }): LangRec => {
 	};
 };
 const M = (day: number, hour: number, rating: 1 | 2 | 3 | 4 = 3, id = 'c' + (++n), topic: string | null = 'folds', itemType: 'card' | 'check' = 'card'): MemoRec => ({ itemType, itemId: id, at: at(day, hour), rating, topic });
-const rec = (p: Partial<GardenRecords> = {}): GardenRecords => ({ lang: [], memo: [], spar: [], sprintSpeeds: [], cards: [], topicsTotal: TOTAL, ...p });
+const S = (endedAt: number, r: Partial<StatsRec> = {}): StatsRec => ({
+	id: ++n, lessonId: 'sample-space', title: ['표본공간 세기', 'Counting Outcomes'], topic: 'probability', mode: 'speed',
+	seconds: 100, startedAt: endedAt - 25, endedAt, outcome: 'passed',
+	hints: 0, usedReference: false, submissions: 1, correctFields: 1, totalFields: 1, ...r
+});
+const rec = (p: Partial<GardenRecords> = {}): GardenRecords => ({ lang: [], memo: [], spar: [], sprintSpeeds: [], stats: [], cards: [], topicsTotal: TOTAL, statsTopicsTotal: 4, ...p });
 
 describe('small maths', () => {
 	it('median', () => {
@@ -201,11 +206,41 @@ describe('form', () => {
 		expect(ds[1].form.volume).toBe(ds[0].form.volume); // resting changes nothing
 		expect(createGarden(rec()).days(at(7))).toHaveLength(1);
 	});
+
+	it('grows from solved statistics sessions as of their end, with distinct depth lessons feeding roots', () => {
+		const depth = { lessonId: 'bayes-depth', topic: 'inference', mode: 'depth' } as const;
+		const g = createGarden(rec({ stats: [
+			S(at(2, 0) - 0.001),
+			S(at(2), { outcome: 'timeout', submissions: 0, correctFields: 0 }),
+			S(at(3), depth),
+			S(at(4), depth)
+		] }));
+		expect(g.days(at(1))[0].form.numbers.statsRuns).toBe(0);
+		const [first, second, third, fourth] = g.days(at(4));
+		expect(first.form.numbers).toMatchObject({ statsRuns: 1, statsPassed: 1, langPassed: 0, topics: 1, topicsTotal: 4 });
+		expect(first.form.volume).toBeGreaterThan(0);
+		expect(second.form.numbers).toMatchObject({ statsRuns: 2, statsPassed: 1 });
+		expect(second.form.volume).toBe(first.form.volume);
+		expect(third.form.breadth).toBeGreaterThan(first.form.breadth);
+		expect(third.form.roots).toBeGreaterThan(first.form.roots);
+		expect(fourth.form.roots).toBe(third.form.roots);
+		expect(fourth.form.numbers).toMatchObject({ statsDepthPassed: 1, statsPassed: 3 });
+	});
+
+	it('keeps the earlier coding form when a statistics pass is still in the future', () => {
+		const lang = [L({ day: 1 }), L({ day: 2, topic: 'folds' })];
+		const before = at(2, 23);
+		const coding = createGarden(rec({ lang })).formAt(before);
+		const mixed = createGarden(rec({ lang, stats: [S(at(3))] }));
+		expect(mixed.formAt(before)).toEqual(coding);
+		expect(mixed.formAt(at(3)).numbers).toMatchObject({ langPassed: 2, statsPassed: 1, topics: 3, topicsTotal: TOTAL + 4 });
+	});
 });
 
 describe('rhythm', () => {
 	it('first attempts: reviews by rating, language by first session within the limit without hints', () => {
 		const out = firstAttempts({
+			stats: [],
 			memo: [M(1, 9, 1), M(1, 9, 2), M(1, 9, 3)],
 			lang: [
 				L({ day: 1, problemId: 'a' }), // ok
@@ -219,6 +254,43 @@ describe('rhythm', () => {
 		});
 		expect(out.filter((o) => o.ok)).toHaveLength(2 + 1);
 		expect(out).toHaveLength(3 + 5);
+	});
+
+	it('counts the first ended statistics session by its starting hour, with success on its first unassisted submission', () => {
+		const retry = S(at(2, 18), { lessonId: 'retried' });
+		const timeout = S(at(1, 9, 1), { lessonId: 'retried', outcome: 'timeout', submissions: 0 });
+		const records = rec({ stats: [
+			retry,
+			S(at(1, 9, 6), { lessonId: 'reference', usedReference: true }),
+			S(at(1, 9, 5), { lessonId: 'hint', hints: 1 }),
+			S(at(1, 9, 4), { lessonId: 'multiple-submissions', submissions: 2 }),
+			S(at(1, 9, 3), { lessonId: 'depth', mode: 'depth' }),
+			S(at(1, 9, 2), { lessonId: 'accuracy', mode: 'accuracy' }),
+			timeout
+		] });
+		const rhythm = rhythmOf(records, 'en');
+		expect(rhythm.total).toBe(6);
+		expect(rhythm.hours[9]).toMatchObject({ n: 6, ok: 2, enough: true });
+		expect(rhythm.hours[18].n).toBe(0);
+	});
+
+	it('uses only solved statistics speed lessons for pace against their own limit', () => {
+		const records = rec({ stats: [
+			S(at(1), { mode: 'depth' }),
+			S(at(2), { mode: 'accuracy' }),
+			S(at(3), { outcome: 'timeout' }),
+			S(at(4)),
+			S(at(5), { seconds: 50 }),
+			S(at(6), { seconds: 200 })
+		] });
+		expect(speedSamples(records)).toEqual([
+			{ at: at(4), ratio: 0.25 },
+			{ at: at(5), ratio: 0.5 },
+			{ at: at(6), ratio: 0.125 }
+		]);
+		const garden = createGarden(records);
+		expect(garden.formAt(at(5)).numbers.medianRatio).toBeNull();
+		expect(garden.formAt(at(6)).numbers.medianRatio).toBe(0.25);
 	});
 
 	it('hourly counts by local hour; hours under the threshold are not enough', () => {
@@ -262,7 +334,9 @@ describe('rhythm', () => {
 	});
 
 	it('activeDays unites every kind of record', () => {
-		expect(activeDays({ lang: [L({ day: 2 })], memo: [M(5, 9)], spar: [] })).toEqual([dayNumber(at(2)), dayNumber(at(5))]);
+		const midnight = at(4, 0);
+		expect(activeDays(rec({ lang: [L({ day: 2 })], memo: [M(5, 9)], stats: [S(midnight)] })))
+			.toEqual([2, 3, 4, 5].map((day) => dayNumber(at(day))));
 	});
 });
 
@@ -296,6 +370,29 @@ describe('week', () => {
 		expect(f.find((x) => x.id === 'memo')!.text).toContain('75%');
 		expect(new Set(ids).size).toBe(ids.length);
 		expect(f.every((x) => x.text.length > 0)).toBe(true);
+	});
+
+	it('summarizes a statistics-only week in both locales, counting unchecked outcomes without treating empty fields as wrong', () => {
+		const stats = [
+			S(at(4)),
+			S(at(5)),
+			S(at(6), { lessonId: 'standard-error', title: ['표준오차', 'Standard Error'], topic: 'inference', outcome: 'revealed', hints: 2, usedReference: true, correctFields: 1, totalFields: 3 }),
+			S(at(6), { lessonId: 'standard-error', title: ['표준오차', 'Standard Error'], topic: 'inference', outcome: 'timeout', submissions: 0, correctFields: 0, totalFields: 2 }),
+			S(at(8) + 0.5)
+		];
+		const records = rec({ stats });
+		const start = weekStartOf(at(8));
+		const en = Object.fromEntries(weeklyFacts(records, start, at(8), undefined, 'en').map(({ id, text }) => [id, text]));
+		expect(en.days).toContain('2 of 4 days');
+		expect(en.stats).toContain('3 sessions this week (1 solved, 1 solution viewed, 1 timed out)');
+		expect(en['stats-topics']).toContain('Probability, Statistical Inference');
+		expect(en['stats-lessons']).toContain('2 statistics lessons included Counting Outcomes, Standard Error');
+		expect(en['stats-checks']).toContain('2 of 4 answer fields');
+		expect(en['stats-help']).toContain('1 statistics session');
+		const ko = Object.fromEntries(weeklyFacts(records, start, at(8)).map(({ id, text }) => [id, text]));
+		expect(ko.stats).toContain('정답 1회, 답안 열람 1회, 시간 초과 1회');
+		expect(ko['stats-topics']).toContain('확률, 통계적 추론');
+		expect(ko['stats-lessons']).toContain('표본공간 세기, 표준오차');
 	});
 });
 

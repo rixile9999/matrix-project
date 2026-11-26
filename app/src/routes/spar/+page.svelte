@@ -5,24 +5,27 @@
 	$effect(() => { stage.scene = 'home'; stage.progress = undefined; });
 	import Spark from '#lib/spar/Spark.svelte';
 	import { fmtMs } from '#lib/core/spar.ts';
-	import type { SparHomeData, SparKindHome } from '#lib/types.ts';
+	import type { SparHomeData, SparKindHome, SparMode } from '#lib/types.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data, form }: { data: SparHomeData; form: { error?: string } | null } = $props();
 
-	let which = $state<'sprint' | 'recall' | null>(null);
+	let which = $state<SparMode | null>(null);
 	let busy = $state(false);
 
 	const chal = $derived([
-		{ kind: 'sprint' as const, name: 'Sprint', about: t('통과한 기본 문제 다섯 개를 이어서 풉니다. 시계는 하나입니다.', 'Solve five passed basics in a row. One clock.'), k: data.sprint, action: '?/startSprint', unit: 'Sprint' },
-		{ kind: 'recall' as const, name: 'Recall', about: t('90초 동안 코드 점검을 최대한 많이 맞힙니다.', 'Answer as many code checks as possible in 90 seconds.'), k: data.recall, action: '?/startRecall', unit: 'Recall' }
+		{ kind: 'sprint' as const, name: 'Sprint', about: t('통과한 기본 문제 다섯 개를 이어서 풉니다. 시계는 하나입니다.', 'Solve five passed basics in a row. One clock.'), k: data.sprint, action: '?/startSprint' },
+		{ kind: 'recall' as const, name: 'Recall', about: t('90초 동안 코드 점검을 최대한 많이 맞힙니다.', 'Answer as many code checks as possible in 90 seconds.'), k: data.recall, action: '?/startRecall' },
+		{ kind: 'stats' as const, name: t('확률·통계', 'Statistics'), about: t('제한 시간 안에 확률·통계 문제 세 개를 풉니다.', 'Solve three timed probability and statistics problems.'), k: data.stats, action: '?/startStats' }
 	]);
 
-	const reason = (kind: 'sprint' | 'recall', k: SparKindHome) =>
+	const reason = (kind: SparMode, k: SparKindHome) =>
 		kind === 'sprint'
 			? `${t('통과한 기본 문제가', 'You need at least')} ${k.needed} ${t('개 이상 있어야 합니다. 지금', 'passed basics. You have')} ${k.eligible}.`
-			: `${t('열린 점검이', 'You need at least')} ${k.needed} ${t('개 이상 있어야 합니다. 지금', 'open checks. You have')} ${k.eligible}.`;
-	const trendValues = (kind: 'sprint' | 'recall', k: SparKindHome) => k.trend.map((r) => (kind === 'sprint' ? (r.totalMs ?? 0) : r.correct));
+			: kind === 'recall'
+				? `${t('열린 점검이', 'You need at least')} ${k.needed} ${t('개 이상 있어야 합니다. 지금', 'open checks. You have')} ${k.eligible}.`
+				: t('풀 수 있는 통계 문제가 부족합니다.', 'There are not enough statistics problems.');
+	const trendValues = (kind: SparMode, k: SparKindHome) => k.trend.map((r) => (kind === 'sprint' ? (r.totalMs ?? 0) : r.correct));
 	const trendBest = (k: SparKindHome) => k.trend.findIndex((r) => r.best);
 	const mark = (r: { label: string } | null) => (r ? r.label : t('없음', 'None'));
 </script>
@@ -36,7 +39,7 @@
 
 	{#if data.active}
 		<div class="a-chal">
-			<p class="a-p">{data.active.kind === 'sprint' ? 'Sprint' : 'Recall'} {t('진행 중입니다.', 'is in progress.')}</p>
+			<p class="a-p">{chal.find((c) => c.kind === data.active?.kind)?.name} {t('진행 중입니다.', 'is in progress.')}</p>
 			<div class="a-row"><a class="a-btn" href={data.active.url}>{t('이어서 하기', 'Continue')}</a></div>
 		</div>
 	{/if}

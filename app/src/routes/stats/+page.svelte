@@ -16,6 +16,13 @@
 	<header class="course-header">
 		<h1>{t('확률과 통계', 'Probability & Statistics')}</h1>
 		<p>{t('확률 모형부터 통계적 추론까지', 'From probability models to statistical inference')}</p>
+		<nav class="track-links" aria-label={t('확률·통계 활동', 'Statistics activities')}>
+			<a href="/spar#h-stats">{t('통계 스파링', 'Statistics sparring')}</a>
+			{#if data.hasReviews}
+				<a href="/debrief#stats-reviews">{t('풀이 복기', 'Review attempts')}</a>
+				<a href="/garden#statistics">{t('정원에서 보기', 'View in Garden')}</a>
+			{/if}
+		</nav>
 	</header>
 
 	{#if form?.error}<p class="err" role="alert">{t(...actionErrors[form.error])}</p>{/if}
@@ -102,4 +109,6 @@
 		.suggestion small { grid-area: 2 / 2; }
 		.lessons li { gap: 10px; }
 	}
+	.track-links { display: flex; gap: 8px 16px; flex-wrap: wrap; margin-top: 12px; font-size: 14px; }
+	.track-links a { color: var(--accent); text-underline-offset: 3px; }
 </style>

@@ -1,11 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as s from '#lib/server/spar.ts';
-import type { SparHomeData } from '#lib/types.ts';
+import type { SparHomeData, SparMode } from '#lib/types.ts';
 
 export const load = async (): Promise<SparHomeData> => s.homeData();
 
 /** Starting while a run is active redirects to that run; not enough material -> 409 { error }. */
-const starter = (start: () => { id: number; kind: 'sprint' | 'recall' }) => async () => {
+const starter = (start: () => { id: number; kind: SparMode }) => async () => {
 	let run;
 	try {
 		run = start();
@@ -16,4 +16,4 @@ const starter = (start: () => { id: number; kind: 'sprint' | 'recall' }) => asyn
 	redirect(303, `/spar/${run.kind}/${run.id}`);
 };
 
-export const actions = { startSprint: starter(s.startSprint), startRecall: starter(s.startRecall) };
+export const actions = { startSprint: starter(s.startSprint), startRecall: starter(s.startRecall), startStats: starter(s.startStats) };

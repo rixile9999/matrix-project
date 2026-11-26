@@ -379,18 +379,17 @@ export const clock = (sec: number) => {
 	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-export type DaySession = { id: number; problemId: string; title: string; from: number; to: number; outcome: 'passed' | 'revealed' | 'open'; runs: number; silentLong: boolean };
+export type DaySession = { id: number | string; problemId: string; title: string; from: number; to: number; outcome: 'passed' | 'revealed' | 'timeout' | 'open'; runs: number; silentLong: boolean };
 export type Day = { date: string; start: number; sessions: DaySession[]; rests: { from: number; to: number }[] /* gaps >= SITTING_GAP_SEC between sessions */ };
 
 const endOf = (s: DSession, runs: DRun[], lookups: DLookup[]) =>
 	s.endedAt ?? Math.max(s.startedAt + 60, ...runs.filter((r) => r.sessionId === s.id).map((r) => r.at), ...lookups.filter((l) => l.sessionId === s.id).map((l) => l.at));
 
 /** Sessions that started on `date` (local), on a time axis. */
-export function dayView(log: DebriefLog, date: string): Day {
+export function dayView(log: DebriefLog, date: string, otherSessions: DaySession[] = []): Day {
 	const start = dayStartOf(date);
 	const sessions = log.sessions
 		.filter((s) => localDate(s.startedAt) === date)
-		.sort((a, b) => a.startedAt - b.startedAt)
 		.map((s): DaySession => {
 			const strip = sessionStrip(s, log);
 			return {
@@ -399,10 +398,13 @@ export function dayView(log: DebriefLog, date: string): Day {
 				silentLong: !!strip.silent && strip.silent.to - strip.silent.from >= LONG_SILENT_SEC
 			};
 		});
+	for (const session of otherSessions) sessions.push(session);
+	sessions.sort((a, b) => a.from - b.from);
 	const rests: Day['rests'] = [];
-	for (let i = 1; i < sessions.length; i++) {
-		const gap = sessions[i].from - Math.max(...sessions.slice(0, i).map((x) => x.to));
-		if (gap >= SITTING_GAP_SEC) rests.push({ from: sessions[i].from - gap, to: sessions[i].from });
+	let lastEnd = sessions[0]?.to ?? start;
+	for (const session of sessions.slice(1)) {
+		if (session.from - lastEnd >= SITTING_GAP_SEC) rests.push({ from: lastEnd, to: session.from });
+		lastEnd = Math.max(lastEnd, session.to);
 	}
 	return { date, start, sessions, rests };
 }

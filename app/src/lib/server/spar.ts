@@ -8,6 +8,7 @@ import { judge } from './judge.ts';
 import { cheatEntries, findProblem, isCheatEntry, passedBasics } from './lang.ts';
 import { answerCheck, checkKey, recallPool, recallView } from './memo.ts';
 import { allRuns, appendEvent, createRun, eventsOf, getRun, isOpen, settleAll, settleOne, type RunRow, type RunWithEvents } from './spar-log.ts';
+import { activeStatsRound, createStatsRound, sparStatsPool, STATS_ROUND_SIZE, statsRecords } from './spar-stats.ts';
 import {
 	MIN_ITEMS, RECALL_MS, SPRINT_SIZE, bestRecall, bestSprint, orderRecall, pickSprint, recallLabel, recallSummary, sprintExtremes, sprintLabel, sprintSummary,
 	type RecallSummary, type SparKind, type SparStatus, type SprintSummary
@@ -15,7 +16,7 @@ import {
 import { TOPICS, type JudgeResult } from '#lib/core/lang.ts';
 import type {
 	SparAbandonResponse, SparHomeData, SparKindHome, SparRecallAnswerResponse, SparRecallAnswerRow, SparRecallData, SparRecallDetail, SparRecordRow, SparRecordsData,
-	SparRunDetail, SparSprintData, SparSprintDetail, SparSprintDone, SparSprintResultRow, SparSprintRunResponse, SparSprintSkipResponse
+	SparMode, SparRunDetail, SparSprintData, SparSprintDetail, SparSprintDone, SparSprintResultRow, SparSprintRunResponse, SparSprintSkipResponse
 } from '#lib/types.ts';
 
 const LANG = 'scala';
@@ -35,7 +36,7 @@ export class SparFail extends Error {
 export const failure = (e: unknown): SparFail => (e instanceof SparFail ? e : new SparFail(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : String(e)));
 
 const runUrl = (id: number) => `/spar/run/${id}`;
-const screenUrl = (r: { kind: SparKind; id: number }) => `/spar/${r.kind}/${r.id}`;
+const screenUrl = (r: { kind: SparMode; id: number }) => `/spar/${r.kind}/${r.id}`;
 
 /** The run for a URL parameter if it exists and has that kind. */
 export function findRun(param: string, kind: SparKind): RunRow | null {
@@ -51,8 +52,8 @@ export function findAnyRun(param: string): RunRow | null {
 type Judged = RunWithEvents & { status: SparStatus; sprint: SprintSummary | null; recall: RecallSummary | null };
 
 /** Settles what must be settled, then every run with its status and summary, oldest first. */
-function judgedRuns(): Judged[] {
-	const st = settleAll();
+function judgedRuns(now = Date.now()): Judged[] {
+	const st = settleAll(now);
 	return allRuns().map((r) => ({
 		...r,
 		status: st.get(r.id) ?? 'running',
@@ -91,44 +92,52 @@ function rowsOf(runs: Judged[]): SparRecordRow[] {
 
 // ---------- home and records ----------
 export function homeData(): SparHomeData {
-	const runs = judgedRuns();
-	const rows = rowsOf(runs);
-	const kindHome = (kind: SparKind, eligible: number): SparKindHome => {
+	const rows = [...rowsOf(judgedRuns()), ...statsRecords()];
+	const kindHome = (kind: SparMode, eligible: number, needed = MIN_ITEMS): SparKindHome => {
 		const mine = rows.filter((r) => r.kind === kind);
 		const done = mine.filter((r) => r.status === 'finished');
-		return { eligible, needed: MIN_ITEMS, startable: eligible >= MIN_ITEMS, best: mine.find((r) => r.best) ?? null, last: done.at(-1) ?? null, trend: done.slice(-TREND) };
+		return { eligible, needed, startable: eligible >= needed, best: mine.find((r) => r.best) ?? null, last: done.at(-1) ?? null, trend: done.slice(-TREND) };
 	};
 	const active = rows.find((r) => r.status === 'running');
 	return {
 		sprint: kindHome('sprint', passedBasics().length),
 		recall: kindHome('recall', recallPool().length),
+		stats: kindHome('stats', sparStatsPool().length, STATS_ROUND_SIZE),
 		active: active ? { id: active.id, kind: active.kind, startedAt: active.startedAt, url: screenUrl(active) } : null,
 		runs: rows.length
 	};
 }
 
 export function recordsData(): SparRecordsData {
-	const rows = rowsOf(judgedRuns()).reverse();
+	const rows = [...rowsOf(judgedRuns()), ...statsRecords()].sort((a, b) => b.startedAt - a.startedAt || b.id - a.id);
 	return { rows: rows.slice(0, MAX_ROWS), total: rows.length, truncated: rows.length > MAX_ROWS };
 }
 
 // ---------- start ----------
 /** Starts a run, or returns the active one (any kind). Throws SparFail(409) when there is not enough material. */
-function start(kind: SparKind): { id: number; kind: SparKind } {
-	const active = judgedRuns().find((r) => r.status === 'running');
-	if (active) return { id: active.id, kind: active.kind };
-	if (kind === 'sprint') {
-		const pool = passedBasics();
-		if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`통과한 기본 문제가 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Pass at least ${MIN_ITEMS} basic problems to start. Currently ${pool.length}.`));
-		const recent = new Set(allRuns('sprint').slice(-2).flatMap((r) => r.items));
-		return { id: createRun('sprint', pickSprint(pool.map((p) => ({ id: p.id, topic: p.topic })), recent, Math.random, SPRINT_SIZE)), kind };
-	}
-	const pool = recallPool();
-	if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`열린 점검이 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Unlock at least ${MIN_ITEMS} checks to start. Currently ${pool.length}.`));
-	return { id: createRun('recall', orderRecall(pool)), kind };
+function start(kind: SparMode, now = Date.now()): { id: number; kind: SparMode } {
+	return tx(() => {
+		const active = activeStatsRound(now) ?? judgedRuns(now).find((r) => r.status === 'running');
+		if (active) return { id: active.id, kind: active.kind };
+		if (kind === 'stats') {
+			const pool = sparStatsPool(now);
+			if (pool.length < STATS_ROUND_SIZE) throw new SparFail(409, tr('풀 수 있는 통계 문제가 부족합니다.', 'There are not enough statistics problems.'));
+			return { id: createStatsRound(pool, now), kind };
+		}
+		if (kind === 'sprint') {
+			const pool = passedBasics();
+			if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`통과한 기본 문제가 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Pass at least ${MIN_ITEMS} basic problems to start. Currently ${pool.length}.`));
+			const recent = new Set(allRuns('sprint').slice(-2).flatMap((r) => r.items));
+			return { id: createRun('sprint', pickSprint(pool.map((p) => ({ id: p.id, topic: p.topic })), recent, Math.random, SPRINT_SIZE), now), kind };
+		}
+		const pool = recallPool();
+		if (pool.length < MIN_ITEMS) throw new SparFail(409, tr(`열린 점검이 ${MIN_ITEMS}개 이상 있어야 합니다. 지금 ${pool.length}개입니다.`, `Unlock at least ${MIN_ITEMS} checks to start. Currently ${pool.length}.`));
+		return { id: createRun('recall', orderRecall(pool), now), kind };
+	});
 }
 export const startSprint = () => start('sprint');
 export const startRecall = () => start('recall');
+export const startStats = (now?: number) => start('stats', now);
 
 // ---------- Sprint ----------
 const bestSprintRun = (runs: Judged[], before?: number) => {

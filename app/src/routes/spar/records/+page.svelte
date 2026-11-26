@@ -19,10 +19,10 @@
 		<div class="a-row"><a class="a-btn" href="/spar">{t('Sparring 홈', 'Sparring home')}</a></div>
 	{:else}
 		<div>
-			{#each data.rows as r (r.id)}
-				<a class="a-rec" href="/spar/run/{r.id}">
+			{#each data.rows as r (`${r.kind}-${r.id}`)}
+				<a class="a-rec" href={r.kind === 'stats' ? `/spar/stats/${r.id}` : `/spar/run/${r.id}`}>
 					<span class="a-small a-num">{fmtDate(r.startedAt)}</span>
-					<span>{r.kind === 'sprint' ? 'Sprint' : 'Recall'}{#if r.best} <span class="a-warm" style="font-size:12.5px">· {t('최고 기록', 'best')}</span>{/if}</span>
+					<span>{r.kind === 'sprint' ? 'Sprint' : r.kind === 'recall' ? 'Recall' : t('확률·통계', 'Statistics')}{#if r.best} <span class="a-warm" style="font-size:12.5px">· {t('최고 기록', 'best')}</span>{/if}</span>
 					<span class="a-num" class:a-dim={r.status !== 'finished'}>{r.label}</span>
 				</a>
 			{/each}

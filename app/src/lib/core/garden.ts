@@ -4,6 +4,8 @@
 // Time zone: the process's local time. Timestamps are unix seconds. I/O (reading the tables) lives in src/lib/server/garden.ts.
 import { TOPICS } from './lang.ts';
 import { noteStatus, replayEach, type Rating } from './memo-sched.ts';
+import { topicNames as statsTopicNames } from '../stats/labels.ts';
+import type { Copy, Mode as StatsMode, Outcome as StatsOutcome, Topic as StatsTopic } from '../stats/types.ts';
 import type { Locale } from '../locale.ts';
 import type { GardenForm, GardenHour, GardenKind, GardenNumbers, GardenRhythmFact } from '../types.ts';
 
@@ -21,20 +23,26 @@ export type SparRec = {
 };
 /** How long a solved problem took relative to its limit (1 = exactly the limit): sprint splits. */
 export type SpeedRec = { at: number; ratio: number };
+export type StatsRec = {
+	id: number; lessonId: string; title: Copy; topic: StatsTopic; mode: StatsMode;
+	seconds: number; startedAt: number; endedAt: number; outcome: StatsOutcome;
+	hints: number; usedReference: boolean; submissions: number; correctFields: number; totalFields: number;
+};
 export type GardenRecords = {
-	lang: LangRec[]; memo: MemoRec[]; spar: SparRec[]; sprintSpeeds: SpeedRec[];
+	lang: LangRec[]; memo: MemoRec[]; spar: SparRec[]; sprintSpeeds: SpeedRec[]; stats: StatsRec[];
 	cards: string[]; // ids of the cards that can be leaves (file cards that are open)
 	topicsTotal: number;
+	statsTopicsTotal: number;
 };
 
 // ---------- constants (see the report for why) ----------
-/** Weight of one record in "how much practice": a passed language session 1, a memo review 0.2 (about 20 s), a finished Sparring run 2. */
-export const W = { lang: 1, memo: 0.2, spar: 2 } as const;
+/** Passed language and statistics sessions each count 1, a memo review 0.2 (about 20 s), a finished Sparring run 2. */
+export const W = { lang: 1, memo: 0.2, spar: 2, stats: 1 } as const;
 /** x -> 1 - exp(-x / scale): rises fast at first, never reaches 1. Scale = the amount that gives 0.63. */
 export const SCALE = { volume: 120, leaves: 40, roots: 60 } as const;
-/** Roots: a level-3 or book problem passed counts 3; a minute spent past the limit on a problem that was passed in the end counts 0.25. */
+/** Roots: a distinct level-3, book or depth-mode problem passed counts 3; a minute spent past the limit on a language problem that was passed in the end counts 0.25. */
 export const ROOTS = { perProblem: 3, perOvertimeMin: 0.25 } as const;
-/** Pace: the median elapsed/limit of passed sessions maps 0.2 -> 1 (fast, dry) … 1.1 -> 0 (slow, wet). Needs this many passed sessions. */
+/** Pace: the median elapsed/limit of passed coding or statistics speed sessions maps 0.2 -> 1 (fast, dry) … 1.1 -> 0 (slow, wet). */
 export const PACE = { fast: 0.2, slow: 1.1, min: 3 } as const;
 export const KIND = { seedling: 0.18, wide: 0.62, straight: 0.36 } as const;
 export const MIN_PER_HOUR = 6;
@@ -202,12 +210,12 @@ const stableCountAt = (tl: Map<string, StableStep[]>, asOf: number) => {
 };
 
 const emptyNumbers = (topicsTotal: number): GardenNumbers => ({
-	langPassed: 0, memoReviews: 0, sparRuns: 0, topics: 0, topicsTotal, stableCards: 0, deepPassed: 0, overtimeMin: 0, medianRatio: null, mended: 0, bests: 0, firstLevel3: 0
+	langPassed: 0, statsRuns: 0, statsPassed: 0, statsDepthPassed: 0, memoReviews: 0, sparRuns: 0, topics: 0, topicsTotal, stableCards: 0, deepPassed: 0, overtimeMin: 0, medianRatio: null, mended: 0, bests: 0, firstLevel3: 0
 });
 
 export function firstRecordAt(rec: GardenRecords): number | null {
-	const all = [...rec.lang.map((s) => s.startedAt), ...rec.memo.map((r) => r.at), ...rec.spar.map((r) => r.startedAt)];
-	return all.length ? Math.min(...all) : null;
+	const all = [...rec.lang.map((s) => s.startedAt), ...rec.memo.map((r) => r.at), ...rec.spar.map((r) => r.startedAt), ...rec.stats.map((r) => r.endedAt)];
+	return all.length ? all.reduce((earliest, at) => Math.min(earliest, at)) : null;
 }
 
 /** A garden over a set of records. `formAt(t)` is the form from the records up to t (inclusive). */
@@ -229,24 +237,34 @@ export function createGarden(rec: GardenRecords, locale: Locale = 'ko') {
 		const passed = sessions.filter(isPassed);
 		const memo = rec.memo.filter((r) => r.at <= asOf);
 		const spar = rec.spar.filter((r) => r.status === 'finished' && r.endedAt !== null && r.endedAt <= asOf);
+		const stats = rec.stats.filter((r) => r.endedAt <= asOf);
+		const statsPassed = stats.filter((r) => r.outcome === 'passed');
 
-		const volume = sat(passed.length * W.lang + memo.length * W.memo + spar.length * W.spar, SCALE.volume);
+		const volume = sat(passed.length * W.lang + memo.length * W.memo + spar.length * W.spar + statsPassed.length * W.stats, SCALE.volume);
 
 		const byTopic = new Map<string, number>();
 		for (const s of passed) byTopic.set(s.topic, (byTopic.get(s.topic) ?? 0) + W.lang);
 		for (const r of memo) if (r.topic) byTopic.set(r.topic, (byTopic.get(r.topic) ?? 0) + W.memo);
-		const breadth = normalisedEntropy([...byTopic.values()], rec.topicsTotal);
+		const byStatsTopic = new Map<StatsTopic, number>();
+		for (const r of statsPassed) byStatsTopic.set(r.topic, (byStatsTopic.get(r.topic) ?? 0) + W.stats);
+		// Add a track's full catalogue to the denominator when it has a topic in the form.
+		const topicsTotal = (byTopic.size > 0 || byStatsTopic.size === 0 ? rec.topicsTotal : 0) + (byStatsTopic.size ? rec.statsTopicsTotal : 0);
+		const breadth = normalisedEntropy([...byTopic.values(), ...byStatsTopic.values()], topicsTotal);
 
 		const stable = stableCountAt(timeline, asOf);
 		const leaves = sat(stable, SCALE.leaves);
 
 		const passedIds = new Set(passed.map((s) => s.problemId));
 		const deep = new Set(passed.filter((s) => s.level === 3 || s.book).map((s) => s.problemId)).size;
+		const statsDeep = new Set(statsPassed.filter((s) => s.mode === 'depth').map((s) => s.lessonId)).size;
 		const overSec = sessions.filter((s) => passedIds.has(s.problemId) && overLimit(s)).reduce((a, s) => a + (s.elapsedSec! - s.limitSec), 0);
 		const overtimeMin = Math.round(overSec / 60);
-		const roots = sat(deep * ROOTS.perProblem + (overSec / 60) * ROOTS.perOvertimeMin, SCALE.roots);
+		const roots = sat((deep + statsDeep) * ROOTS.perProblem + (overSec / 60) * ROOTS.perOvertimeMin, SCALE.roots);
 
-		const ratios = passed.filter((s) => s.limitSec > 0).map((s) => (s.elapsedSec ?? 0) / s.limitSec);
+		const ratios = [
+			...passed.filter((s) => s.limitSec > 0).map((s) => (s.elapsedSec ?? 0) / s.limitSec),
+			...statsSpeeds(statsPassed).map((s) => s.ratio)
+		];
 		const medianRatio = ratios.length >= PACE.min ? median(ratios) : null;
 
 		const mended = mendedProblems(sessions).length;
@@ -258,7 +276,8 @@ export function createGarden(rec: GardenRecords, locale: Locale = 'ko') {
 		return {
 			day: dayNumber(asOf) - dayNumber(first) + 1, volume, breadth, leaves, roots, pace: paceOf(medianRatio), leafCount: stable, mended, flowers: mine.length, kind, kindLabel: kindLabels[kind], seed,
 			numbers: {
-				langPassed: passed.length, memoReviews: memo.length, sparRuns: spar.length, topics: byTopic.size, topicsTotal: rec.topicsTotal, stableCards: stable, deepPassed: deep, overtimeMin,
+				langPassed: passed.length, statsRuns: stats.length, statsPassed: statsPassed.length, statsDepthPassed: statsDeep,
+				memoReviews: memo.length, sparRuns: spar.length, topics: byTopic.size + byStatsTopic.size, topicsTotal, stableCards: stable, deepPassed: deep, overtimeMin,
 				medianRatio, mended, bests, firstLevel3
 			}
 		};
@@ -267,9 +286,9 @@ export function createGarden(rec: GardenRecords, locale: Locale = 'ko') {
 	/** One form per local day from the first record's day to the day of `now` (the last one is as of `now`). */
 	function days(now: number): { date: string; form: GardenForm }[] {
 		const to = dayNumber(now);
-		if (first === null) return [{ date: dateString(to), form: formAt(now) }];
+		if (first === null || first > now) return [{ date: dateString(to), form: formAt(now) }];
 		const out: { date: string; form: GardenForm }[] = [];
-		for (let d = dayNumber(first); d <= to; d++) out.push({ date: dateString(d), form: formAt(d === to ? now : dayStart(d + 1) - 1) });
+		for (let d = dayNumber(first); d <= to; d++) out.push({ date: dateString(d), form: formAt(d === to ? now : dayStart(d + 1) - 0.001) });
 		return out;
 	}
 	return { formAt, days, first, moments, stableCountAt: (t: number) => stableCountAt(timeline, t), stableTimeline: timeline };
@@ -279,10 +298,10 @@ export function createGarden(rec: GardenRecords, locale: Locale = 'ko') {
 export type Outcome = { at: number; ok: boolean };
 
 /**
- * First-attempt outcomes: memo reviews (rating >= 2 is ok, 1 is not) and, for each problem, its first language session
- * (ok = passed within the limit without hints; a session left open and replaced counts as not ok; one still open is left out).
+ * First-attempt outcomes: memo reviews, each language problem's first session, and each statistics lesson's first ended session.
+ * A statistics success is a solve on the first submission with no hint or reference.
  */
-export function firstAttempts(rec: Pick<GardenRecords, 'lang' | 'memo'>): Outcome[] {
+export function firstAttempts(rec: Pick<GardenRecords, 'lang' | 'memo' | 'stats'>): Outcome[] {
 	const out: Outcome[] = rec.memo.map((r) => ({ at: r.at, ok: r.rating >= 2 }));
 	for (const list of byProblem([...rec.lang].sort((a, b) => a.startedAt - b.startedAt || a.id - b.id)).values()) {
 		const s = list[0];
@@ -291,6 +310,12 @@ export function firstAttempts(rec: Pick<GardenRecords, 'lang' | 'memo'>): Outcom
 			continue;
 		}
 		out.push({ at: s.startedAt, ok: s.outcome === 'passed' && (s.elapsedSec ?? 0) <= s.limitSec && s.hintsUsed === 0 });
+	}
+	const seen = new Set<string>();
+	for (const s of [...rec.stats].sort((a, b) => a.startedAt - b.startedAt || a.id - b.id)) {
+		if (seen.has(s.lessonId)) continue;
+		seen.add(s.lessonId);
+		out.push({ at: s.startedAt, ok: s.outcome === 'passed' && s.submissions === 1 && s.hints === 0 && !s.usedReference });
 	}
 	return out;
 }
@@ -322,15 +347,21 @@ export function bestAndShaky(hours: GardenHour[]): { best: GardenHour; shaky: Ga
 
 export type Gap = { returnDay: number; after: SpeedRec[] };
 
-/** All speeds as (calendar day, ratio): passed language sessions and sprint splits. */
-export function speedSamples(rec: Pick<GardenRecords, 'lang' | 'sprintSpeeds'>): SpeedRec[] {
+function statsSpeeds(runs: StatsRec[]): SpeedRec[] {
+	return runs.filter((r) => r.mode === 'speed' && r.outcome === 'passed' && r.seconds > 0)
+		.map((r) => ({ at: r.endedAt, ratio: (r.endedAt - r.startedAt) / r.seconds }));
+}
+
+/** Passed language sessions, sprint splits, and solved statistics speed lessons. */
+export function speedSamples(rec: Pick<GardenRecords, 'lang' | 'sprintSpeeds' | 'stats'>): SpeedRec[] {
 	return [
 		...rec.lang.filter((s) => isPassed(s) && s.limitSec > 0).map((s) => ({ at: s.endedAt!, ratio: (s.elapsedSec ?? 0) / s.limitSec })),
-		...rec.sprintSpeeds
+		...rec.sprintSpeeds,
+		...statsSpeeds(rec.stats)
 	].sort((a, b) => a.at - b.at);
 }
 
-export function activeDays(rec: Pick<GardenRecords, 'lang' | 'memo' | 'spar'>): number[] {
+export function activeDays(rec: Pick<GardenRecords, 'lang' | 'memo' | 'spar' | 'stats'>): number[] {
 	const days = new Set<number>();
 	for (const s of rec.lang) {
 		days.add(dayNumber(s.startedAt));
@@ -338,6 +369,10 @@ export function activeDays(rec: Pick<GardenRecords, 'lang' | 'memo' | 'spar'>): 
 	}
 	for (const r of rec.memo) days.add(dayNumber(r.at));
 	for (const r of rec.spar) days.add(dayNumber(r.startedAt));
+	for (const r of rec.stats) {
+		days.add(dayNumber(r.startedAt));
+		days.add(dayNumber(r.endedAt));
+	}
 	return [...days].sort((a, b) => a - b);
 }
 
@@ -452,11 +487,13 @@ export function weeklyFacts(rec: GardenRecords, start: number, now: number, gard
 	const memoWeek = rec.memo.filter((r) => inWeek(r.at, start, end));
 	const memoPrev = rec.memo.filter((r) => inWeek(r.at, prevStart, start));
 	const sparWeek = rec.spar.filter((r) => r.status === 'finished' && r.endedAt !== null && inWeek(r.endedAt, start, end));
-	const anyWeek = passedWeek.length + memoWeek.length + sparWeek.length + sessions.filter((s) => inWeek(s.startedAt, start, end)).length;
+	const stats = rec.stats.filter((r) => r.endedAt <= now);
+	const statsWeek = stats.filter((r) => inWeek(r.endedAt, start, end));
+	const anyWeek = passedWeek.length + memoWeek.length + sparWeek.length + statsWeek.length + sessions.filter((s) => inWeek(s.startedAt, start, end)).length;
 	if (anyWeek === 0) return [];
 
 	// days with a record
-	const dayset = new Set(activeDays({ lang: rec.lang, memo: rec.memo, spar: rec.spar }).filter((d) => inWeek(dayStart(d), start, end)));
+	const dayset = new Set(activeDays({ ...rec, stats }).filter((d) => inWeek(dayStart(d), start, end)));
 	const elapsedDays = Math.min(7, dayNumber(now) - dayNumber(start) + 1);
 	add('days', t(`이번 주 ${elapsedDays}일 가운데 기록이 있는 날은 ${dayset.size}일입니다.`, `Practice is recorded on ${dayset.size} of ${count(elapsedDays, 'day')} so far this week.`));
 
@@ -482,7 +519,7 @@ export function weeklyFacts(rec: GardenRecords, start: number, now: number, gard
 		if (ratios.length >= PACE.min && all.length >= 2 * PACE.min) {
 			const recent = pct(median(ratios)!);
 			const overall = pct(median(all)!);
-			add('pace', t(`이번 주 통과 문제는 제한 시간의 ${recent}(중앙값)를 썼습니다. 지금까지 전체는 ${overall}입니다.`, `This week’s passes used a median of ${recent} of the time limit, compared with ${overall} across all passes.`));
+			add('pace', t(`이번 주 통과한 코딩 문제는 제한 시간의 ${recent}(중앙값)를 썼습니다. 지금까지 전체는 ${overall}입니다.`, `This week’s coding passes used a median of ${recent} of the time limit, compared with ${overall} across all coding passes.`));
 		}
 	}
 
@@ -517,6 +554,38 @@ export function weeklyFacts(rec: GardenRecords, start: number, now: number, gard
 			`${count(sparWeek.length, 'Sparring run')} finished this week.${bests.length ? ` They included ${count(bests.length, 'new best')}.` : ''}`
 		));
 	}
+	if (statsWeek.length) {
+		const passed = statsWeek.filter((r) => r.outcome === 'passed').length;
+		const revealed = statsWeek.filter((r) => r.outcome === 'revealed').length;
+		const timedOut = statsWeek.length - passed - revealed;
+		add('stats', t(
+			`이번 주 확률·통계 세션은 ${statsWeek.length}회입니다. 정답 ${passed}회, 답안 열람 ${revealed}회, 시간 초과 ${timedOut}회입니다.`,
+			`Probability & Statistics had ${count(statsWeek.length, 'session')} this week (${passed} solved, ${count(revealed, 'solution')} viewed, ${timedOut} timed out).`
+		));
+		const topics = [...new Set(statsWeek.map((r) => r.topic))].map((topic) => t(...statsTopicNames[topic])).join(', ');
+		add('stats-topics', t(`이번 주 확률·통계에서 다룬 주제입니다. (${topics})`, `Topics practiced in Probability & Statistics (${topics}).`));
+		const practiced = new Map(statsWeek.map((r) => [r.lessonId, t(...r.title)]));
+		const titles = [...practiced.values()].slice(0, 3).join(', ');
+		add('stats-lessons', t(
+			`이번 주 확률·통계 문제 ${practiced.size}개를 연습했습니다. (${titles}${practiced.size > 3 ? ' 외' : ''})`,
+			`This week’s ${count(practiced.size, 'statistics lesson')} included ${titles}.`
+		));
+		const checked = statsWeek.filter((r) => r.submissions > 0);
+		if (checked.length) {
+			const correct = checked.reduce((total, r) => total + r.correctFields, 0);
+			const fields = checked.reduce((total, r) => total + r.totalFields, 0);
+			add('stats-checks', t(
+				`답안을 제출한 확률·통계 세션 ${checked.length}회의 마지막 제출에서 ${fields}칸 중 ${correct}칸이 맞았습니다.`,
+				`Across the last submission in each of ${count(checked.length, 'checked statistics session')}, ${correct} of ${fields} answer fields were correct.`
+			));
+		}
+		const hinted = statsWeek.filter((r) => r.hints > 0).length;
+		const referenced = statsWeek.filter((r) => r.usedReference).length;
+		if (hinted || referenced) add('stats-help', t(
+			`확률·통계 세션 중 ${hinted}회에서 힌트를, ${referenced}회에서 치트시트를 사용했습니다.`,
+			`Hints were opened in ${count(hinted, 'statistics session')} and the cheat sheet in ${referenced}.`
+		));
+	}
 	const l3 = firstLevel3Moments(sessions).filter((m) => inWeek(m.at, start, end));
 	if (l3.length) {
 		const titles = l3.slice(0, 3).map((moment) => sessions.find((s) => s.problemId === moment.problemId)?.title ?? moment.problemId).join(', ');
@@ -524,15 +593,15 @@ export function weeklyFacts(rec: GardenRecords, start: number, now: number, gard
 	}
 
 	const hoursWeek = new Map<string, number>();
-	for (const o of [...memoWeek.map((r) => r.at), ...passedWeek.map((s) => s.endedAt!)]) hoursWeek.set(String(hourOf(o)), (hoursWeek.get(String(hourOf(o))) ?? 0) + 1);
+	for (const o of [...memoWeek.map((r) => r.at), ...passedWeek.map((s) => s.endedAt!), ...statsWeek.map((r) => r.endedAt)]) hoursWeek.set(String(hourOf(o)), (hoursWeek.get(String(hourOf(o))) ?? 0) + 1);
 	const [h1] = top(hoursWeek, 1);
 	if (h1 && h1[1] >= 4) add('hour', t(`이번 주 기록이 가장 몰린 시간은 ${h1[0]}시대입니다. (${h1[1]}건)`, `The busiest hour this week was ${hour(Number(h1[0]))} (${count(h1[1], 'record')}).`));
 
-	const rhythm = bestAndShaky(hourly(firstAttempts(rec)));
+	const rhythm = bestAndShaky(hourly(firstAttempts({ ...rec, stats })));
 	if (typeof rhythm === 'object') {
 		const best = hourText(rhythm.best, locale);
 		const shaky = hourText(rhythm.shaky, locale);
-		add('rhythm', t(`전체 기록에서 정답률이 가장 높은 시간은 ${best}, 가장 낮은 시간은 ${shaky}입니다.`, `Across all records, the highest accuracy was at ${best} and the lowest at ${shaky}.`));
+		add('rhythm', t(`전체 기록에서 첫 시도 성공률이 가장 높은 시간은 ${best}, 가장 낮은 시간은 ${shaky}입니다.`, `Across all records, first-attempt success was highest at ${best} and lowest at ${shaky}.`));
 	}
 	return facts;
 }

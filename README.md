@@ -68,6 +68,12 @@ While the user is logged in, the agent checks GitHub `main` every minute. It bui
 
 The command above uses Docker Desktop to build images for the same architecture as Lima. Omit `--builder desktop-linux` to build directly in Lima. Set `--health` to the login URL if it differs from `http://localhost:5173/login`. After editing the deployment script, rerun the install command. View deployments with `tail -f "$HOME/Library/Application Support/MatrixDeploy/deploy.log"`.
 
+## Adding connected lessons
+
+Add statistics lessons to the [lesson catalogue](app/src/lib/server/stats-content.ts) and include independently computed answers in the [grading tests](app/src/lib/server/stats.test.ts). The course and Statistics Sparring draw from this catalogue. Completed attempts supply Debrief's review, error patterns and timeline, Garden's growth and weekly readings, and Coach's per-attempt conversation.
+
+The [integration tests](app/src/lib/server/stats-connectivity.test.ts) exercise every published lesson using temporary accounts. Run `pnpm -C app test` before pushing. The production deployment job runs the same suite. After compiling, `pnpm -C app build` starts the built application on loopback and verifies the five HTTP entry points using a disposable account in both languages. See the [agent instructions](CLAUDE.md#publishing-connected-content) for the publishing checklist.
+
 ## Verify content
 
 Problem verification uses a connected broker. Offline maintenance checks for the bundled cheatsheet and memo examples also require local scala-cli.

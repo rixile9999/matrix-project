@@ -7,7 +7,7 @@
 	import DayStrip from '#lib/debrief/DayStrip.svelte';
 	import Coaching from '#lib/debrief/Coaching.svelte';
 	import type { PageProps } from './$types';
-	import { referenceUsage } from '#lib/stats/labels.ts';
+	import { referenceUsage, statuses } from '#lib/stats/labels.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 
 	let { data }: PageProps = $props();
@@ -46,7 +46,7 @@
 		return `${m}${t('월', '/')} ${d}${t('일', '')} (${w})`;
 	};
 	let recentOpen = $state(0);
-	const LABEL = $derived<Record<string, string>>({ sessions: t('세션', 'Sessions'), quick: t('즉시 재실행', 'Quick reruns'), reveal: t('맨손 공개', 'Answer reveal'), silent: t('긴 정적', 'Long silence'), away: t('이탈 / 정지', 'Away / paused'), fatigue: t('1시간 전후', 'Around one hour'), self: t('상태', 'State') });
+	const LABEL = $derived<Record<string, string>>({ sessions: t('Scala 세션', 'Scala sessions'), quick: t('즉시 재실행', 'Quick reruns'), reveal: t('맨손 공개', 'Answer reveal'), silent: t('긴 정적', 'Long silence'), away: t('이탈 / 정지', 'Away / paused'), fatigue: t('1시간 전후', 'Around one hour'), self: t('상태', 'State') });
 </script>
 
 <svelte:head><title>Debrief · Matrix</title></svelte:head>
@@ -77,12 +77,12 @@
 			<p class="empty">{t('아직 없음.', 'Nothing yet.')}</p>
 		{/if}
 		{#if data.statsReviews.length}
-			<h3>{t('확률과 통계', 'Probability & Statistics')}</h3>
+			<h3 id="stats-reviews">{t('확률과 통계', 'Probability & Statistics')}</h3>
 			<ul class="stats-reviews">
 				{#each data.statsReviews as run (run.id)}
 					<li>
 						<a href="/stats/{run.lessonId}?run={run.id}">{t(...run.title)}</a>
-						<span>{date(run.endedAt)} · {t(...referenceUsage(run.usedReference))}</span>
+						<span>{date(run.endedAt)} · {t(...statuses[run.outcome])} · {t(...referenceUsage(run.usedReference))}</span>
 					</li>
 				{/each}
 			</ul>
@@ -116,8 +116,17 @@
 					{#key current.id}<NoteView note={current} />{/key}
 				</div>
 			</div>
-		{:else}
+		{:else if !data.statsPatterns.length}
 			<p class="empty">{t('아직 없음.', 'Nothing yet.')}</p>
+		{/if}
+		{#if data.statsPatterns.length}
+			<h3>{t('반복해서 틀린 통계 항목', 'Recurring statistics errors')}</h3>
+			<ul class="stats-reviews">
+				{#each data.statsPatterns as pattern}
+					<li><a href="/stats/{pattern.lessonId}?run={pattern.latestId}">{t(...pattern.title)} · {t(...pattern.field)}</a>
+						<span>{t(`${pattern.count}개 세션에서 오답`, `Incorrect in ${pattern.count} sessions`)}</span></li>
+				{/each}
+			</ul>
 		{/if}
 		{#if data.unknown.length}
 			<details class="unknown">
@@ -146,6 +155,11 @@
 			{/if}
 			<h3 class="wk">{t('7일', '7 days')}</h3>
 			<div class="facts">
+				{#if data.statsWeek.total}
+					<div class="fact"><span class="lab">{t('확률·통계 정답 / 종료 세션', 'Statistics solved / finished')}</span>
+						<span class="big">{data.statsWeek.passed} / {data.statsWeek.total}</span>
+						<p>{t(`치트시트 사용 ${data.statsWeek.references}회`, `Cheat sheet used in ${data.statsWeek.references} ${data.statsWeek.references === 1 ? 'session' : 'sessions'}`)}</p></div>
+				{/if}
 				{#each data.focus as f (f.id)}
 					<div class="fact">
 						<span class="lab">{LABEL[f.id] ?? f.label}</span>

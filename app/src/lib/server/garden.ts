@@ -5,6 +5,8 @@ import { english, tr } from './locale.ts';
 import { findProblem } from './lang.ts';
 import { gardenMemo } from './memo.ts';
 import { allRuns } from './spar-log.ts';
+import { statsHistory } from './stats.ts';
+import { lessons } from './stats-content.ts';
 import { askCoach, connectedCoaches } from './worker.ts';
 import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import {
@@ -17,6 +19,7 @@ import type { GardenData, GardenReading, GardenReadingResponse } from '#lib/type
 import type { Locale } from '#lib/locale.ts';
 
 const LANG = 'scala';
+const STATS_TOPICS_TOTAL = new Set(lessons.map((lesson) => lesson.topic)).size;
 const nowSec = () => Math.floor(Date.now() / 1000);
 export const DEFAULT_BACKEND: BackendId = 'claude';
 
@@ -59,7 +62,10 @@ export function loadRecords(): GardenRecords {
 			spar.push({ id: r.id, kind: 'recall', startedAt: r.startedAt, endedAt, status: st.status, totalMs: null, skipped: 0, correct: sum.correct, accuracy: sum.accuracy });
 		}
 	}
-	return { lang, memo: m.reviews, spar, sprintSpeeds, cards: m.cards, topicsTotal: Object.keys(TOPICS).length };
+	return {
+		lang, memo: m.reviews, spar, sprintSpeeds, stats: statsHistory(now), cards: m.cards,
+		topicsTotal: Object.keys(TOPICS).length, statsTopicsTotal: STATS_TOPICS_TOTAL
+	};
 }
 
 // ---------- readings ----------
@@ -87,7 +93,7 @@ export async function gardenData(): Promise<GardenData> {
 	const locale = english() ? 'en' : 'ko';
 	const rec = loadRecords();
 	const g = createGarden(rec, locale);
-	const now = nowSec();
+	const now = Date.now() / 1000;
 	const start = weekStartOf(now);
 	const key = weekKeyOf(start);
 	const available = await connectedCoaches();
@@ -110,7 +116,7 @@ export async function createReading(backendId: unknown): Promise<{ status: numbe
 	const id = (typeof backendId === 'string' && backendId in BACKENDS ? backendId : DEFAULT_BACKEND) as BackendId;
 	if (busy.has(accountId())) return { status: 409, body: { error: tr('이미 풀이를 쓰는 중입니다. 잠시 기다려 주세요.', 'A reading is already being written. Please wait.') } };
 	const rec = loadRecords();
-	const now = nowSec();
+	const now = Date.now() / 1000;
 	const start = weekStartOf(now);
 	const key = weekKeyOf(start);
 	const facts = weeklyFacts(rec, start, now, undefined, locale);

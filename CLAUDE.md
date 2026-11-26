@@ -7,6 +7,13 @@
 - Both languages share the same exercise IDs, timers, attempts and review history. Check an English → Korean → English switch during an active exercise when changing learning flows.
 - Keep the English [README](README.md) and [한국어 README](README.ko.md) in sync, including setup commands and links.
 
+## Publishing connected content
+
+- For a new lesson, extend the track's canonical catalogue. Give it a stable ID and bilingual learning targets, answer fields, feedback, hints, solution, and cheat sheet. Keep published IDs and the meaning/order of stored answers stable. Migrate or version existing attempts when those meanings change.
+- Trace an attempt through the learner-facing course, the Sparring question pool, Debrief, Garden, and Coach. Reuse the same account-scoped attempt and server-side deadline. Count a completed attempt once and keep live answers, private history, and post-session coaching behind the appropriate access checks.
+- New tracks must implement those entry points and provide their own catalogue-wide integration test. For Statistics, the executable example is [stats-connectivity.test.ts](app/src/lib/server/stats-connectivity.test.ts). It discovers lessons from the catalogue. Also add independently checked sample answers to [stats.test.ts](app/src/lib/server/stats.test.ts).
+- Before publishing, run `pnpm -C app check`, `pnpm -C app test`, and `pnpm -C app build`. The build also runs [HTTP route checks](app/scripts/verify-stats-connections.mjs) against a disposable account. Update these checks when adding a learning route. When changing a learner flow, exercise the real route in both languages with a temporary account. Report which connections were tested and whether a provider response was live or simulated.
+
 문제·기능·콘텐츠를 만드는 에이전트는 아래 원칙을 따른다.
 원칙과 어긋나는 작업은 진행하기 전에 사용자에게 알린다.
 
