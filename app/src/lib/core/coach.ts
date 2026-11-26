@@ -6,6 +6,7 @@ export const COACH_NAME = 'Operator';
 
 export const BACKENDS = { claude: 'Claude Code', codex: 'Codex', qwen: 'Qwen Code' } as const;
 export type BackendId = keyof typeof BACKENDS;
+export type CoachMethod = 'cli' | 'api';
 
 /** What a question is about. Statistics threads belong to a specific lesson run. */
 export type CoachContext = { kind: 'lang'; id: string } | { kind: 'memo'; id: string } | { kind: 'stats'; id: string; runId: number };

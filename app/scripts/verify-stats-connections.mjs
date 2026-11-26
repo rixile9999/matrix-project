@@ -6,6 +6,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { withAccount } from '../src/lib/server/db.ts';
+import { savePdfSet } from '../src/lib/server/pdf-sets.ts';
 import { lessons } from '../src/lib/server/stats-content.ts';
 
 const root = await mkdtemp(join(tmpdir(), 'matrix-routes-'));
@@ -45,6 +47,7 @@ try {
 	assert.equal((await request('/signup', { name: 'verify', password, confirm: password })).status, 303);
 	// An old, still-open upload form described its new set as private.
 	assert.equal((await request('/library', { requestId: randomUUID() })).status, 409);
+	assert.equal((await request('/library', { requestId: randomUUID(), visibility: 'members' })).status, 409);
 	const lesson = lessons[0];
 	assert.ok((await html('/stats')).includes('value="' + lesson.id + '"'));
 	const start = await request('/stats?/start', { lessonId: lesson.id });
@@ -82,6 +85,56 @@ try {
 		}
 		assert.match(await html('/spar'), /action="\?\/startStats"/);
 	}
+	const pdfId = withAccount(randomUUID(), () => savePdfSet('fixture.pdf', {
+		title: { en: 'Cell functions', ko: '세포의 기능' },
+		concepts: [
+			{ id: 'membranes', title: { en: 'Membranes', ko: '세포막' }, objective: { en: 'Describe membrane transport.', ko: '막을 통한 물질 이동을 설명한다.' }, prerequisites: [], page: 8 },
+			{ id: 'translation', title: { en: 'Translation', ko: '번역' }, objective: { en: 'Describe how proteins are made.', ko: '단백질 합성 과정을 설명한다.' }, prerequisites: ['membranes'], page: 9 }
+		],
+		questions: [
+			{
+				page: 8, conceptId: 'membranes', kind: 'recall',
+				prompt: { en: 'Which structure controls cell entry?', ko: '어떤 구조가 세포로 들어오는 물질을 조절하나요?' },
+				choices: [{ en: 'Membrane', ko: '세포막' }, { en: 'Ribosome', ko: '리보솜' }],
+				correct: 0, explanation: { en: 'Membranes regulate passage.', ko: '세포막은 물질의 통과를 조절합니다.' }
+			},
+			{
+				page: 9, conceptId: 'translation', kind: 'apply',
+				prompt: { en: 'Which structure reads messenger RNA?', ko: '어떤 구조가 전령 RNA를 읽나요?' },
+				choices: [{ en: 'Membrane', ko: '세포막' }, { en: 'Ribosome', ko: '리보솜' }],
+				correct: 1, explanation: { en: 'Ribosomes translate RNA.', ko: '리보솜은 RNA를 번역합니다.' }
+			}
+		]
+	}, randomUUID()));
+	const book = '/library/' + pdfId;
+	const exercise = book + '?question=1';
+	assert.ok((await html('/library')).includes(`href="${book}"`));
+	assert.doesNotMatch(await html(book), /name="answer"/);
+	assert.equal((await request(exercise + '&/answer', { answer: '0' })).status, 409);
+	for (const locale of ['en', 'ko', 'en']) {
+		assert.equal((await request('/locale', { locale })).status, 303);
+		const overview = await html(book);
+		assert.ok(overview.includes(locale === 'en' ? 'Concept map' : '개념 지도'));
+		assert.ok(overview.includes(locale === 'en' ? 'Concept index' : '개념 목차'));
+		assert.ok(overview.includes(locale === 'en' ? 'Prerequisites' : '선행 개념'));
+		assert.ok(overview.includes(locale === 'en' ? 'Describe membrane transport.' : '막을 통한 물질 이동을 설명한다.'));
+		assert.ok(overview.includes(`href="${book}#concept-membranes"`));
+		assert.ok(overview.includes(`href="${exercise}"`));
+		assert.doesNotMatch(overview, /name="answer"/);
+		const active = await request(exercise);
+		assert.equal(active.status, 200);
+		const body = await active.text();
+		assert.ok(body.includes(locale === 'en' ? 'Which structure controls cell entry?' : '어떤 구조가 세포로 들어오는 물질을 조절하나요?'));
+		assert.doesNotMatch(body, /Membranes regulate passage|세포막은 물질의 통과를 조절합니다|Ribosomes translate RNA|리보솜은 RNA를 번역합니다/);
+	}
+	const submitted = await request(exercise + '&/answer', { answer: '0' });
+	assert.equal(submitted.status, 303);
+	assert.equal(submitted.headers.get('location'), exercise);
+	assert.match(await html(exercise), /Membranes regulate passage/);
+	assert.match(await html(book), /1 of 2 answered/);
+	assert.match(await html(book + '?question=2'), /Which structure reads messenger RNA/);
+	assert.equal((await request(book + '?question=2&/answer', { answer: '1' })).status, 303);
+	assert.match(await html(book), /2 of 2 correct/);
 	const round = await request('/spar?/startStats', {});
 	assert.equal(round.status, 303);
 	const roundPath = round.headers.get('location');

@@ -1,8 +1,9 @@
 import { tr } from './locale.ts';
 import {request} from 'node:http';
+import { setTimeout as delay } from 'node:timers/promises';
 import {resolve} from 'node:path';
 import { accountId } from './db.ts';
-import { BACKENDS, type BackendId } from '../core/coach.ts';
+import { BACKENDS, type BackendId, type CoachMethod } from '../core/coach.ts';
 
 const workerErrors: Record<string, string> = {
 	'요청 형식 오류': 'Invalid request.',
@@ -22,6 +23,7 @@ const workerErrors: Record<string, string> = {
 };
 
 export class WorkerUnavailable extends Error {}
+class WorkerBusy extends WorkerUnavailable {}
 
 type ScalaResult = { stdout:string; stderr:string; code:number; timedOut:boolean };
 type ConnectionStatus = {allowCli:boolean;providers:Record<BackendId,{cli:boolean;api:boolean}>};
@@ -43,7 +45,11 @@ async function job(path:string, body:object, receive:(event:Reply)=>void, signal
 		while ((end=buffer.indexOf('\n'))!==-1) {
 			const event:Reply=JSON.parse(buffer.slice(0,end));
 			buffer=buffer.slice(end+1);
-			if (event.error) throw new WorkerUnavailable(tr(event.error, workerErrors[event.error] ?? event.error));
+			if (event.error) {
+				const message = tr(event.error, workerErrors[event.error] ?? event.error);
+				if (event.error === '워커 사용 중입니다. 잠시 후 다시 시도하세요.') throw new WorkerBusy(message);
+				throw new WorkerUnavailable(message);
+			}
 			receive(event);
 		}
 	}
@@ -54,12 +60,23 @@ export async function runScala(files:Record<string,string>, owner = accountId())
 	if (!result) throw new WorkerUnavailable(tr('채점 결과를 받지 못했습니다.', 'The grader returned no result.'));
 	return result;
 }
-export async function askCoach(backend:BackendId,prompt:string,system:string,onDelta:(s:string)=>void,signal?:AbortSignal) {
+export async function askCoach(backend:BackendId,prompt:string,system:string,onDelta:(s:string)=>void,signal?:AbortSignal, waitForSlot = false) {
 	let text='';
-	await job('/coach',{owner:accountId(),backend,prompt,system},e=>{
-		if (e.delta) onDelta(e.delta);
-		if (e.text) text=e.text;
-	},signal);
+	const owner = accountId();
+	const waitUntil = Date.now() + 150_000;
+	for (;;) {
+		try {
+			await job('/coach',{owner,backend,prompt,system},e=>{
+				if (e.delta) onDelta(e.delta);
+				if (e.text) text=e.text;
+			},signal);
+			break;
+		} catch (error) {
+			// A busy broker rejected this request before starting or billing a provider call.
+			if (!waitForSlot || !(error instanceof WorkerBusy) || Date.now() >= waitUntil) throw error;
+			await delay(3000, undefined, { signal });
+		}
+	}
 	if (!text) throw Error(tr('코칭 결과를 받지 못했습니다.', 'The coach returned no answer.'));
 	return text;
 }
@@ -70,11 +87,19 @@ export async function coachStatus() {
 	if (!status) throw new WorkerUnavailable(tr('코치 연결 상태를 확인할 수 없습니다.', 'Could not check the coach connection.'));
 	return status;
 }
-export async function connectedCoaches():Promise<BackendId[]> {
+export async function coachConnections(): Promise<{ allowCli: boolean; methods: Partial<Record<BackendId, CoachMethod>> }> {
 	try {
-		const {providers}=await coachStatus();
-		return (Object.keys(BACKENDS) as BackendId[]).filter(id=>providers[id].cli || providers[id].api);
-	} catch { return []; }
+		const { allowCli, providers } = await coachStatus();
+		const methods: Partial<Record<BackendId, CoachMethod>> = {};
+		for (const id of Object.keys(BACKENDS) as BackendId[]) {
+			if (allowCli && providers[id]?.cli) methods[id] = 'cli';
+			else if (providers[id]?.api) methods[id] = 'api';
+		}
+		return { allowCli, methods };
+	} catch { return { allowCli: false, methods: {} }; }
+}
+export async function connectedCoaches(): Promise<BackendId[]> {
+	return Object.keys((await coachConnections()).methods) as BackendId[];
 }
 export async function setCoachKey(backend: BackendId, key:string|null) {
 	let saved=false;

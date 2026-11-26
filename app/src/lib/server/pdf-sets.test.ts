@@ -117,6 +117,66 @@ it('shares a question and its timer across locales and releases only submitted a
 	});
 });
 
+it('opens the localized concept map without starting a timer and records practice by concept', () => {
+	const concepts: NonNullable<PdfSetContent['concepts']> = [
+		{
+			id: 'membranes', title: { en: 'Membranes', ko: '세포막' },
+			objective: { en: 'Describe transport across a membrane.', ko: '막을 통한 물질 이동을 설명한다.' },
+			prerequisites: [], page: 6
+		},
+		{
+			id: 'translation', title: { en: 'Translation', ko: '번역' },
+			objective: { en: 'Trace the path from RNA to a protein.', ko: 'RNA에서 단백질까지의 과정을 설명한다.' },
+			prerequisites: ['membranes'], page: 7
+		}
+	];
+	const content: PdfSetContent = {
+		...fixture,
+		concepts,
+		questions: [
+			{
+				...fixture.questions[0], conceptId: 'membranes', kind: 'apply',
+				intent: { en: 'Connect selective transport to the cell boundary.', ko: '선택적 이동과 세포의 경계를 연결한다.' }
+			},
+			{ ...fixture.questions[1], conceptId: 'translation', kind: 'integrate' }
+		]
+	};
+	const account = randomUUID();
+	const id = withAccount(account, () => {
+		const id = savePdfSet('cells.pdf', content, randomUUID());
+		const map = pdfPracticeView(id, null, 'ko', 1000)!;
+		expect(map).toMatchObject({
+			question: null, progress: [false, false], resume: 0,
+			concepts: [
+				{ id: 'membranes', title: concepts[0].title.ko, objective: concepts[0].objective.ko, page: 6, prerequisites: [], exercises: [{ index: 0, kind: 'apply', answered: false }] },
+				{ id: 'translation', title: concepts[1].title.ko, objective: concepts[1].objective.ko, page: 7, prerequisites: ['membranes'], exercises: [{ index: 1, kind: 'integrate', answered: false }] }
+			]
+		});
+		expect(JSON.stringify(map)).not.toContain(content.questions[0].explanation.ko);
+		expect(answerPdfQuestion(id, 0, 1, 2000)).toBe('unopened');
+		expect(pdfPracticeView(id, 0, 'en', 3000)?.question).toMatchObject({
+			index: 0, startedAt: 3000, limitSec: 300, feedback: null, conceptId: 'membranes', kind: 'apply'
+		});
+		expect(pdfPracticeView(id, 0, 'ko', 4000)?.question).toMatchObject({ startedAt: 3000, feedback: null });
+		expect(answerPdfQuestion(id, 0, 1, 250000)).toBe('answered');
+		expect(pdfPracticeView(id, 0, 'en')?.question?.feedback).toMatchObject({
+			correct: 1, late: false, intent: content.questions[0].intent?.en
+		});
+		expect(pdfPracticeView(id, null, 'en')?.concepts[0].exercises).toEqual([{ index: 0, kind: 'apply', answered: true }]);
+		expect(pdfPracticeView(id, 1, 'en', 251000)?.question).toMatchObject({ startedAt: 251000, limitSec: 900, feedback: null });
+		expect(answerPdfQuestion(id, 1, 0, 1151001)).toBe('answered');
+		expect(pdfPracticeView(id, 1, 'en')?.question?.feedback?.late).toBe(true);
+		expect(pdfPracticeView(id, null, 'en')).toMatchObject({ answered: 2, correct: 2, resume: -1, question: null });
+		return id;
+	});
+	withAccount(randomUUID(), () => {
+		const map = pdfPracticeView(id, null, 'en')!;
+		expect(map.concepts.flatMap((concept) => concept.exercises.map((exercise) => exercise.answered)))
+			.toEqual([false, false]);
+		expect(pdfPracticeView(id, 0, 'en')?.question?.feedback).toBeNull();
+	});
+});
+
 it('keeps progress, timers, scores and feedback separate across accounts on the same set', () => {
 	const uploader = randomUUID();
 	const learner = randomUUID();

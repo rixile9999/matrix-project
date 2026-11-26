@@ -4,6 +4,7 @@ import type { Locale } from '#lib/locale.ts';
 import { accountId, db } from './db.ts';
 
 export const PDF_QUESTION_LIMIT_SEC = 120;
+const limitByKind = { recall: PDF_QUESTION_LIMIT_SEC, apply: 300, integrate: 900 };
 
 type PdfSetRow = { sourceName: string | null; content: string; isShared: number };
 type PdfAttempt = {
@@ -90,29 +91,46 @@ export function pdfPracticeView(id: string, index: number | null, locale: Locale
 		SELECT question_index, started_at, answered_at, selected FROM pdf_question_attempts WHERE set_id = ?
 	`).all(id) as PdfAttempt[];
 	const byIndex = new Map(attempts.map((attempt) => [attempt.question_index, attempt]));
-	const { questions } = set.content;
+	const { concepts = [], questions } = set.content;
 	const progress = questions.map((_, index) => byIndex.get(index)?.selected != null);
 	const answered = progress.filter(Boolean).length;
 	const resume = progress.indexOf(false);
-	const current = index ?? resume;
+	const current = index ?? (concepts.length ? -1 : resume);
 	const question = questions[current];
 	if (index !== null && !question) return null;
 
+	const visibleConcepts = question ? concepts.filter((concept) => concept.id === question.conceptId) : concepts;
 	const attempt = byIndex.get(current);
+	const limitSec = question?.kind ? limitByKind[question.kind] : PDF_QUESTION_LIMIT_SEC;
 	// Only explicitly expose solution data for the question with a submitted answer.
 	const feedback = question && attempt?.selected != null && attempt.answered_at !== null
 		? {
 			selected: attempt.selected,
 			correct: question.correct,
 			explanation: question.explanation[locale],
-			late: attempt.answered_at - attempt.started_at > PDF_QUESTION_LIMIT_SEC * 1000
+			...(question.intent && { intent: question.intent[locale] }),
+			late: attempt.answered_at - attempt.started_at > limitSec * 1000
 		}
 		: null;
 	return {
 		id,
 		title: set.content.title[locale],
 		sourceName: set.sourceName,
+		source: set.content.source,
 		isShared: set.isShared,
+		concepts: visibleConcepts.map((concept) => {
+			const exercises = questions.flatMap((question, index) => question.conceptId === concept.id
+				? [{ index, kind: question.kind, answered: progress[index] }]
+				: []);
+			return {
+				id: concept.id,
+				title: concept.title[locale],
+				objective: concept.objective[locale],
+				page: concept.page,
+				prerequisites: concept.prerequisites,
+				exercises
+			};
+		}),
 		progress,
 		answered,
 		correct: resume < 0 ? questions.filter((question, index) => byIndex.get(index)?.selected === question.correct).length : null,
@@ -122,8 +140,10 @@ export function pdfPracticeView(id: string, index: number | null, locale: Locale
 			prompt: question.prompt[locale],
 			choices: question.choices.map((choice) => choice[locale]),
 			page: question.page,
+			...(question.conceptId && { conceptId: question.conceptId }),
+			...(question.kind && { kind: question.kind }),
 			startedAt: attempt?.started_at ?? openQuestion(id, current, now),
-			limitSec: PDF_QUESTION_LIMIT_SEC,
+			limitSec,
 			feedback
 		} : null
 	};

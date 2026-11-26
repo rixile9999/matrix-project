@@ -153,6 +153,10 @@ CREATE TABLE IF NOT EXISTS spar_events (
 );
 CREATE INDEX IF NOT EXISTS spar_events_run ON spar_events(run_id, seq);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS main.pdf_generation_jobs (
+	request_id TEXT PRIMARY KEY, source_name TEXT NOT NULL, started_at INTEGER NOT NULL, process_id TEXT NOT NULL,
+	stage TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL DEFAULT 1, error TEXT
+);
 CREATE TABLE IF NOT EXISTS main.pdf_sets (
 	id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, source_name TEXT NOT NULL, content TEXT NOT NULL
 );

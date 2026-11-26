@@ -18,7 +18,7 @@ See [`notes/idea.md`](notes/idea.md) for the design rationale and [`CLAUDE.md`](
 | Memo | 208 mobile-friendly review cards and 100 problem checks, with FSRS scheduling. |
 | Sparring, Debrief, Garden | Timed coding and recall rounds, session review, and a visualization of your learning history. |
 | Operator | A post-problem question window for Claude Code, Codex, or Qwen Code CLI. It is locked while the timer runs. |
-| PDF sets (pilot) | Upload a text PDF of up to 8 MiB in **PDF sets**. Your connected AI provider uses text from the first 10 pages to generate 3–5 bilingual multiple-choice questions. New sets appear immediately in the library for all signed-in members. Each member’s answers and progress are private. Authors can share older private sets from their practice page. |
+| PDF sets (pilot) | Upload a selectable-text PDF in **PDF sets**. A background job maps concepts and prerequisites throughout the book, writes bilingual recall, application and integration exercises, checks page evidence and has a fresh reviewer solve the questions before publication. Members share the finished concept map and questions. Each learner’s answers and progress are private. |
 | Probability & Statistics | 10 short quantitative lessons covering probability, inference, machine learning, and bioinformatics, with timed answers, hints, references, and review. |
 
 ## Run and manage accounts
@@ -41,7 +41,9 @@ python3 scripts/admin.py create owner
 
 The default address is `http://localhost:5173`. When using a private HTTPS proxy such as Tailscale Serve, set `MATRIX_ORIGIN` to the actual HTTPS origin when starting Compose. Compose binds the web port to loopback. Reuse the same Docker context and environment on subsequent starts.
 
-The web image includes Poppler for PDF extraction. To run the full test suite or use PDF sets outside Docker, install Poppler (including `pdftotext` and `pdfinfo`) and start the Node adapter with `BODY_SIZE_LIMIT=9M` for multipart uploads.
+The web image includes Poppler for PDF extraction. To run the full test suite or use PDF sets outside Docker, install Poppler (including `pdftotext` and `pdfinfo`) and start the Node adapter with `BODY_SIZE_LIMIT=21M` for multipart uploads.
+
+The pilot accepts up to 20 MiB, 600 physical pages and 1.8 million extracted characters per upload. It uses selectable text and skips image-only pages. The owner can select a connected CLI provider without an API key. Open **PDF sets** to revisit a running upload. The original file stays in memory during generation. If the web server restarts, re-upload the file.
 
 ### Access without Tailscale
 

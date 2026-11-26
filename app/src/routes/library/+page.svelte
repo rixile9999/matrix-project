@@ -2,14 +2,15 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 	import { t } from '#lib/i18n.svelte.ts';
-	import { PDF_PAGE_TEXT_LIMIT, PDF_SOURCE_MAX_PAGES, PDF_UPLOAD_MAX_BYTES, type BiText } from '#lib/pdf-sets.ts';
+	import { PDF_SOURCE_MAX_PAGES, PDF_UPLOAD_MAX_BYTES, type BiText } from '#lib/pdf-sets.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	let chosenBackend = $state<BackendId>();
+	const backends = $derived(Object.keys(data.connections.methods) as BackendId[]);
 	const preferredBackend = $derived(chosenBackend ?? form?.backend);
 	const backend = $derived(
-		preferredBackend && data.backends.includes(preferredBackend) ? preferredBackend : data.backends[0]
+		preferredBackend && backends.includes(preferredBackend) ? preferredBackend : backends[0]
 	);
 	let busy = $state(false);
 	let submitError = $state<BiText | null>(null);
@@ -55,6 +56,13 @@
 	<div class="library-grid">
 		<section aria-labelledby="sets-title" class="sets">
 			<h2 id="sets-title">{t('문제집 목록', 'Practice sets')}</h2>
+			{#if data.job}
+				<a class="set" href="/library/jobs/{data.job.id}">
+					<div><strong>{data.job.sourceName}</strong>
+						<span class="source">{data.job.stage === 'failed' ? t('생성 실패 · 자세히 보기', 'Generation failed · View details') : t('생성 진행 상황', 'View generation progress')}</span>
+					</div><span aria-hidden="true">→</span>
+				</a>
+			{/if}
 			{#if data.sets.length === 0}
 				<p class="empty">{t('아직 공유된 문제집이 없습니다.', 'No sets have been shared yet.')}</p>
 			{:else}
@@ -77,46 +85,51 @@
 
 		<section class="upload" aria-labelledby="upload-title">
 			<h2 id="upload-title">{t('PDF로 생성', 'Create from a PDF')}</h2>
-			<p>{t('AI가 영어와 한국어로 객관식 문제 3~5개를 만듭니다.', 'AI generates 3–5 multiple-choice questions in English and Korean.')}</p>
+			<p>{t('책의 핵심 개념과 선수관계를 정리하고, 개념을 기억하고 적용하고 조합하는 한영 문제를 만듭니다.', 'Map the book’s concepts and prerequisites, then practice recalling, applying, and combining them in English or Korean.')}</p>
 
-			{#if data.backends.length}
+			{#if backends.length}
 				<form method="POST" enctype="multipart/form-data" use:enhance={submit} aria-busy={busy}>
 					<input type="hidden" name="requestId" value={form?.requestId ?? data.requestId} />
 					<input type="hidden" name="visibility" value="members" />
+					<input type="hidden" name="scope" value="whole-book" />
 					<fieldset disabled={busy}>
 						<div class="file-field">
 							<label for="pdf-file">{t('PDF 파일', 'PDF file')}</label>
 							<input id="pdf-file" name="pdf" type="file" accept=".pdf,application/pdf" required aria-describedby="file-help" />
-							<p id="file-help" class="help">{t(`텍스트를 선택할 수 있는 PDF · 최대 ${maxMiB} MiB`, `PDF with selectable text · up to ${maxMiB} MiB`)}</p>
+							<p id="file-help" class="help">{t(`텍스트를 선택할 수 있는 PDF · 최대 ${maxMiB} MiB · ${PDF_SOURCE_MAX_PAGES}쪽`, `PDF with selectable text · up to ${maxMiB} MiB · ${PDF_SOURCE_MAX_PAGES} pages`)}</p>
 						</div>
 						<div class="provider-field">
 							<label for="pdf-provider">{t('제공자', 'Provider')}</label>
 							<select id="pdf-provider" name="backend" bind:value={() => backend, (value) => (chosenBackend = value)} required>
-								{#each data.backends as id (id)}
-									<option value={id}>{BACKENDS[id]}</option>
+								{#each backends as id (id)}
+									<option value={id}>{BACKENDS[id]} · {data.connections.methods[id]?.toUpperCase()}</option>
 								{/each}
 							</select>
 						</div>
 						<p id="pdf-privacy" class="help">
 							{t(
-								`선택한 제공자에게 PDF의 처음 ${PDF_SOURCE_MAX_PAGES}쪽에서 쪽당 최대 ${PDF_PAGE_TEXT_LIMIT.toLocaleString('ko-KR')}자를 추출해 보냅니다. 생성된 문제집은 로그인한 모든 회원에게 공개됩니다. 원본 PDF는 저장하지 않으며, 풀이 기록은 비공개입니다.`,
-								`The selected provider receives up to ${PDF_PAGE_TEXT_LIMIT.toLocaleString('en-US')} characters per page from the first ${PDF_SOURCE_MAX_PAGES} pages. All signed-in members can use the generated set. The original PDF is discarded, and your progress is private.`
+								'책 전체에서 추출한 텍스트를 선택한 제공자에게 보냅니다. 완성된 문제집은 모든 로그인 회원에게 공개됩니다. 원본 PDF는 저장하지 않으며 풀이 기록은 개인별로 관리합니다.',
+								'Text extracted throughout the book is sent to the selected provider. The finished set is shared with signed-in members. The PDF is discarded and each member’s progress is private.'
 							)}
 						</p>
 						<button class="btn" type="submit" aria-describedby="pdf-privacy">
-							{busy ? t('문제 생성 중…', 'Generating questions…') : t('문제집 생성 및 공개', 'Generate and share')}
+							{busy ? t('업로드 중…', 'Uploading…') : t('문제집 생성 및 공개', 'Generate and share')}
 						</button>
 					</fieldset>
 				</form>
 			{:else}
 				<div class="connect">
+					{#if data.connections.allowCli}
+						<p>{t('owner는 API 키 없이 CLI로 생성할 수 있습니다. 코치 설정에서 CLI 로그인 방법을 확인하세요.', 'The owner can generate sets with a CLI login. Open Coach settings for the login command.')}</p>
+					{:else}
 					<p>{t('PDF로 문제를 만들려면 코치 제공자를 연결하세요.', 'Connect a coach provider to generate questions from a PDF.')}</p>
+					{/if}
 					<a class="btn ghost" href="/settings/coach">{t('코치 설정 열기', 'Open Coach settings')} <span aria-hidden="true">↗</span></a>
 				</div>
 			{/if}
 
 			{#if busy}
-				<p class="progress" role="status"><span class="pulse" aria-hidden="true"></span>{t('PDF에서 문제를 만드는 중입니다. 잠시 기다려 주세요.', 'Creating questions from your PDF. This can take a moment.')}</p>
+				<p class="progress" role="status"><span class="pulse" aria-hidden="true"></span>{t('PDF를 전송하고 있습니다.', 'Uploading your PDF.')}</p>
 			{:else if error}
 				<p class="err" role="alert">{t(error.ko, error.en)}</p>
 			{/if}
