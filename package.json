@@ -6,6 +6,9 @@
 		"build": "pnpm -C app build",
 		"start": "pnpm -C app start",
 		"test": "pnpm -C app test",
-		"check": "pnpm -C app check"
+		"check": "pnpm -C app check",
+		"verify:fast": "pnpm -C app verify:fast",
+		"verify:changed": "pnpm -C app verify:changed",
+		"verify:full": "pnpm -C app verify:full"
 	}
 }

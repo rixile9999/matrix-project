@@ -6,7 +6,7 @@ import { WorkerUnavailable } from './worker.ts';
 import { tx } from './db.ts';
 import { judge } from './judge.ts';
 import { cheatEntries, findProblem, isCheatEntry, passedBasics } from './lang.ts';
-import { answerCheck, checkKey, recallPool, recallView } from './memo.ts';
+import { answerCheck, checkKey, recallPool, recallSeed, recallView } from './memo.ts';
 import { allRuns, appendEvent, createRun, eventsOf, getRun, isOpen, settleAll, settleOne, type RunRow, type RunWithEvents } from './spar-log.ts';
 import { activeStatsRound, createStatsRound, sparStatsPool, STATS_ROUND_SIZE, statsRecords } from './spar-stats.ts';
 import {
@@ -278,7 +278,7 @@ export function recallScreen(runId: number): SparRecallData | null {
 	const events = eventsOf(runId);
 	const sum = recallSummary(events);
 	const id = s.run.items[sum.answered];
-	const current = id ? recallView(id) : null;
+	const current = id ? recallView(id, runId) : null;
 	if (!current) {
 		appendEvent(runId, 'finish', t - s.run.startedMs); // list exhausted (or a check vanished from disk)
 		return null;
@@ -299,13 +299,14 @@ export async function recallAnswer(runId: number, id: unknown, choice: unknown):
 
 	const current = s.run.items[sum.answered];
 	if (typeof id !== 'string' || id !== current) {
-		return { accepted: false, over: false, correct: null, highlight: null, answered: sum.answered, correctCount: sum.correct, next: current ? recallView(current) : null, runUrl: null };
+		return { accepted: false, over: false, correct: null, highlight: null, answered: sum.answered, correctCount: sum.correct, next: current ? recallView(current, runId) : null, runUrl: null };
 	}
+	const seed = recallSeed(id, runId);
 	const ms = t - s.run.startedMs;
 	const lastMs = events.filter((e) => e.type === 'answer').at(-1)?.ms ?? 0;
 	let r;
 	try {
-		r = await answerCheck(id, choice, Math.max(0, ms - lastMs)); // the existing check path: first answer within the hour is recorded as a memo review
+		r = await answerCheck(id, choice, Math.max(0, ms - lastMs), { seed }); // the existing check path: first answer within the hour is recorded as a memo review
 	} catch (e) {
 		throw new SparFail(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : String(e));
 	}
@@ -315,14 +316,14 @@ export async function recallAnswer(runId: number, id: unknown, choice: unknown):
 	let last = false;
 	tx(() => {
 		if (!isOpen(runId) || recallSummary(eventsOf(runId, true)).answered !== sum.answered) throw new SparFail(409, tr('이미 처리된 답입니다.', 'This answer has already been recorded.'));
-		appendEvent(runId, 'answer', ms, id, { choice, correct: r.correct, recorded: r.recorded });
+		appendEvent(runId, 'answer', ms, id, { choice, correct: r.correct, recorded: r.recorded, seed });
 		last = sum.answered + 1 >= s.run.items.length;
 		if (last) appendEvent(runId, 'finish', ms);
 	});
 	const answered = sum.answered + 1;
 	const right = sum.correct + (r.correct ? 1 : 0);
 	if (last) return over(true, r.correct, highlight, answered, right);
-	const next = recallView(s.run.items[answered]);
+	const next = recallView(s.run.items[answered], runId);
 	if (!next) {
 		appendEvent(runId, 'finish', ms);
 		return over(true, r.correct, highlight, answered, right);
@@ -395,7 +396,8 @@ function recallDetail(me: Judged, base: Base, events: ReturnType<typeof eventsOf
 		.flatMap((e) => {
 			const ms = Math.max(0, e.ms - lastMs);
 			lastMs = e.ms;
-			const k = checkKey(e.itemId!);
+			const seed = typeof e.payload.seed === 'string' ? e.payload.seed : undefined;
+			const k = checkKey(e.itemId!, seed);
 			if (!k) return [];
 			const v = k.view;
 			return [{

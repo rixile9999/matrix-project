@@ -221,6 +221,7 @@ export type MemoCheckKind = 'order' | 'trace' | 'bug' | 'approach';
 /** A check as shown. order: `lines` = the pool (shuffled, distractors mixed in); bug: `lines` = the code lines; trace/approach: `options` (shuffled). */
 export type MemoCheckView = {
 	id: string;
+	attemptId?: number; // standalone /memo/check attempt id anchoring the option/line permutation
 	kind: MemoCheckKind;
 	kindLabel: string;
 	prompt: string;

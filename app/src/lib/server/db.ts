@@ -100,6 +100,11 @@ CREATE TABLE IF NOT EXISTS memo_reviews (
 	at INTEGER NOT NULL, rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4), elapsed_ms INTEGER NOT NULL, detail TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS memo_reviews_item ON memo_reviews(item_type, item_id);
+-- Server-issued attempt ids for standalone memo checks so option order rotates per new attempt while staying stable across reload, locale switch, grading and solution lookup.
+CREATE TABLE IF NOT EXISTS memo_check_attempts (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, check_id TEXT NOT NULL, started_at INTEGER NOT NULL, answered_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS memo_check_attempts_open ON memo_check_attempts(check_id, answered_at, id);
 -- Operator: every question and answer, append-only. session_id refers to a language session or a statistics run.
 ${coachMessages}
 ${coachMessagesIndex}

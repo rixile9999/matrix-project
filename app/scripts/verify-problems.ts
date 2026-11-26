@@ -3,6 +3,7 @@
 import { judge, listProblems, loadBooks, loadSolution } from '../src/lib/server/judge.ts';
 import { cheatIndex } from '../src/lib/server/cheatsheet.ts';
 import { TOPICS } from '../src/lib/core/lang.ts';
+import { CONTENT_BOUNDS, LEVEL_LIMIT_SEC } from '../src/lib/core/rules.ts';
 
 const [lang = 'scala', prefix = ''] = process.argv.slice(2);
 let bad = 0;
@@ -10,11 +11,11 @@ const seen = new Set<string>();
 const TOPIC_IDS = Object.keys(TOPICS);
 const cheatIds = new Set(Object.values(cheatIndex(lang)).flat().map(([id]) => id));
 const books = loadBooks(lang);
-const LIMITS = { 1: [60, 180], 2: [300, 600], 3: [900, 1500] } as const;
+const LIMITS = LEVEL_LIMIT_SEC;
 for (const p of listProblems(lang).filter((p) => p.id.startsWith(prefix))) {
 	const problems: string[] = [];
 	for (const k of ['id', 'title', 'statement', 'starter', 'notes'] as const) if (!p[k]) problems.push(`missing ${k}`);
-	if (p.hints?.length !== 2) problems.push('hints must have 2 entries');
+	if (p.hints?.length !== CONTENT_BOUNDS.hintsPerProblem) problems.push(`hints must have ${CONTENT_BOUNDS.hintsPerProblem} entries`);
 	if (!p.targets?.length) problems.push('no targets');
 	if (seen.has(`${p.level}/${p.order}`)) problems.push(`duplicate order ${p.order} in level ${p.level}`);
 	seen.add(`${p.level}/${p.order}`);
@@ -29,11 +30,12 @@ for (const p of listProblems(lang).filter((p) => p.id.startsWith(prefix))) {
 		if (!b) problems.push(`unknown book ${p.book.id}`);
 		else if (!b.chapters[String(p.book.chapter)]) problems.push(`unknown chapter ${p.book.chapter}`);
 		if (!/^\d+\.\d+$/.test(p.book.exercise ?? '')) problems.push('book.exercise must look like "3.7"');
-		if (!p.intent || p.intent.length < 30) problems.push('book problems need an intent (출제 취지)');
+		if (!p.intent || p.intent.length < CONTENT_BOUNDS.minIntentChars) problems.push('book problems need an intent (출제 취지)');
 	}
 	const sol = await judge(lang, p, loadSolution(lang, p.id), 'maintenance');
 	if (sol.status !== 'passed') problems.push(`solution ${sol.status}: ${sol.output || JSON.stringify(sol.cases.filter((c) => c.status !== 'ok'))}`);
-	if (sol.cases.length < (p.level === 1 ? 3 : 4)) problems.push(`only ${sol.cases.length} test cases`);
+	const minCases = CONTENT_BOUNDS.minCasesByLevel[p.level as 1 | 2 | 3] ?? 4;
+	if (sol.cases.length < minCases) problems.push(`only ${sol.cases.length} test cases`);
 	if (sol.avoided.length) problems.push(`solution uses avoided: ${sol.avoided}`);
 	const st = await judge(lang, p, p.starter, 'maintenance');
 	if (st.status === 'passed') problems.push('starter passes as given');

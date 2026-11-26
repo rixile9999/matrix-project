@@ -1,6 +1,7 @@
 // Memorisation scheduling: pure functions over the append-only review log.
 // Nothing derived is stored; an item's FSRS state is recomputed by replaying its reviews.
 import { createEmptyCard, fsrs, generatorParameters, type Card, type Grade } from 'ts-fsrs';
+import { MEMO_LIMIT_SEC } from './rules.ts';
 
 export type ItemType = 'card' | 'check';
 export type Rating = 1 | 2 | 3 | 4;
@@ -13,10 +14,7 @@ const scheduler = fsrs(generatorParameters({ request_retention: 0.9, enable_fuzz
 export const itemKey = (type: ItemType, id: string) => `${type}:${id}`;
 
 /** Seconds allowed per item, by kind. Overtime is recorded, never enforced. */
-export const LIMIT_SEC = {
-	concept: 40, recognize: 40, steps: 60, line: 30, syntax: 30,
-	trace: 45, approach: 45, bug: 60, order: 120
-} as const;
+export const LIMIT_SEC = MEMO_LIMIT_SEC;
 export type LimitKind = keyof typeof LIMIT_SEC;
 
 export type Memory = { card: Card; reviews: number; lastRating: Rating; tail: Rating[] /* last two ratings, oldest first */ };

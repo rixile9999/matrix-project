@@ -45,7 +45,7 @@
 		const first = !firstDone;
 		if (first) stoppedAt = Date.now();
 		try {
-			const feedback = await post<Record<'en' | 'ko', MemoCheckResponse>>('/memo/check/answer', { id: c.id, choice, elapsedMs: (stoppedAt ?? Date.now()) - startedAt });
+			const feedback = await post<Record<'en' | 'ko', MemoCheckResponse>>('/memo/check/answer', { id: c.id, attemptId: c.attemptId, choice, elapsedMs: (stoppedAt ?? Date.now()) - startedAt });
 			answered = feedback;
 			const r = feedback[page.data.locale];
 			if (first) {
@@ -72,7 +72,7 @@
 
 	async function showSolution() {
 		try {
-			picked = (await post<MemoSolutionResponse>('/memo/check/solution', { id: c.id })).order;
+			picked = (await post<MemoSolutionResponse>('/memo/check/solution', { id: c.id, attemptId: c.attemptId })).order;
 			solved = true;
 			answered = null;
 		} catch (e) {

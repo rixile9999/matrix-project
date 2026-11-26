@@ -15,7 +15,10 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"verify:fast": "node scripts/verify-content.ts --mode fast",
+		"verify:changed": "node scripts/verify-content.ts --mode changed",
+		"verify:full": "pnpm run verify:fast && pnpm run check && pnpm run test && pnpm run build"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^8.0.1",
@@ -37,6 +40,7 @@
 		"@codemirror/view": "^6.43.15",
 		"@lezer/highlight": "^1.2.5",
 		"codemirror": "^6.0.2",
+		"mathjs": "15.3.0",
 		"ts-fsrs": "^6.0.0"
 	}
 }

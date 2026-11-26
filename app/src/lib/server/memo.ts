@@ -266,27 +266,68 @@ export function answerCard(id: unknown, ticked: unknown, elapsedMs: unknown): Me
 // ---------- checks ----------
 const checkKindLabel = (c: Check) => label(CHECK_KINDS[c.kind]);
 const orderPool = (c: Check & { kind: 'order' }) => [...c.lines, ...c.distractors.map((d) => d.line)];
+const ATTEMPT_REUSE_SEC = 24 * 3600;
 
-function checkView(c: Check): MemoCheckView {
-	const base = { id: c.id, kind: c.kind, kindLabel: checkKindLabel(c), prompt: c.prompt, limitSec: limitOf(c.kind), code: null, given: null, lines: [] as string[], options: [] as string[] };
+export const attemptSeed = (checkId: string, attemptId: number) => `${checkId}#a:${attemptId}`;
+export const recallSeed = (checkId: string, runId: number) => `${checkId}#r:${runId}`;
+
+function openCheckAttempt(checkId: string): number {
+	const cutoff = nowSec() - ATTEMPT_REUSE_SEC;
+	const existing = db()
+		.prepare('SELECT id FROM memo_check_attempts WHERE check_id = ? AND answered_at IS NULL AND started_at >= ? ORDER BY id DESC LIMIT 1')
+		.get(checkId, cutoff) as { id: number } | undefined;
+	if (existing) return existing.id;
+	return Number(db().prepare('INSERT INTO memo_check_attempts(check_id, started_at) VALUES(?, ?)').run(checkId, nowSec()).lastInsertRowid);
+}
+
+function validCheckAttempt(checkId: string, attemptId: unknown): number | null {
+	if (typeof attemptId !== 'number' || !Number.isInteger(attemptId) || attemptId <= 0) return null;
+	const row = db().prepare('SELECT id FROM memo_check_attempts WHERE id = ? AND check_id = ?').get(attemptId, checkId) as { id: number } | undefined;
+	return row ? row.id : null;
+}
+
+function resolveCheckSeed(checkId: string, opts?: { attemptId?: unknown; seed?: string }): { seed: string; attemptId: number | null } {
+	if (opts?.seed) return { seed: opts.seed, attemptId: null };
+	const aid = validCheckAttempt(checkId, opts?.attemptId);
+	if (aid !== null) return { seed: attemptSeed(checkId, aid), attemptId: aid };
+	return { seed: checkId, attemptId: null };
+}
+
+function checkView(c: Check, seed = c.id, attemptId?: number): MemoCheckView {
+	const base = {
+		id: c.id,
+		...(attemptId !== undefined ? { attemptId } : {}),
+		kind: c.kind,
+		kindLabel: checkKindLabel(c),
+		prompt: c.prompt,
+		limitSec: limitOf(c.kind),
+		code: null,
+		given: null,
+		lines: [] as string[],
+		options: [] as string[]
+	};
 	switch (c.kind) {
 		case 'order': {
 			const pool = orderPool(c);
-			return { ...base, given: c.given ?? null, lines: permutation(pool.length, c.id).map((i) => pool[i]) };
+			return { ...base, given: c.given ?? null, lines: permutation(pool.length, seed).map((i) => pool[i]) };
 		}
 		case 'bug':
 			return { ...base, given: c.given ?? null, lines: c.lines };
 		case 'trace':
-			return { ...base, code: c.code, options: permutation(4, c.id).map((i) => c.options[i].text) };
+			return { ...base, code: c.code, options: permutation(4, seed).map((i) => c.options[i].text) };
 		case 'approach':
-			return { ...base, options: permutation(4, c.id).map((i) => c.options[i].text) };
+			return { ...base, options: permutation(4, seed).map((i) => c.options[i].text) };
 	}
 }
 
 export function checkSession(): MemoCheckView[] {
 	const w = world();
 	const by = new Map(w.checks.map((c) => [itemKey('check', c.id), c]));
-	return pickSession(checkItems(w), w.memories, w.at, CHECKS, CHECKS).map((k) => checkView(by.get(k)!));
+	return pickSession(checkItems(w), w.memories, w.at, CHECKS, CHECKS).map((k) => {
+		const c = by.get(k)!;
+		const aid = openCheckAttempt(c.id);
+		return checkView(c, attemptSeed(c.id, aid), aid);
+	});
 }
 
 function openCheck(id: unknown): Check | null {
@@ -318,31 +359,43 @@ function recordCheck(c: Check, first: boolean, correct: boolean, ms: number, det
 }
 
 /** Judges a submission. Null for an unknown or locked check; throws for a malformed choice. Only the first submission within an hour is recorded: the server decides, so a retry can never be the one that counts. */
-export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unknown): Promise<MemoCheckResponse | null> {
+export async function answerCheck(
+	id: unknown,
+	choice: unknown,
+	elapsedMs: unknown,
+	opts?: { attemptId?: unknown; seed?: string }
+): Promise<MemoCheckResponse | null> {
 	const c = openCheck(id);
 	if (!c) return null;
 	const isFirst = !answeredRecently(c.id);
 	const ms = clampMs(elapsedMs);
+	const { seed, attemptId } = resolveCheckSeed(c.id, opts);
+	const closeAttempt = () => {
+		if (attemptId !== null) db().prepare('UPDATE memo_check_attempts SET answered_at = ? WHERE id = ? AND answered_at IS NULL').run(nowSec(), attemptId);
+	};
+	const seedMeta = attemptId !== null ? { attemptId, seed } : opts?.seed ? { seed } : {};
 
 	if (c.kind === 'trace' || c.kind === 'approach') {
 		if (!idx(choice, 4)) throw new Error(tr('보기를 고르세요.', 'Select an option.'));
-		const perm = permutation(4, c.id);
+		const perm = permutation(4, seed);
 		const picked = perm[choice as number];
 		const correct = picked === c.answer;
-		const recorded = recordCheck(c, isFirst, correct, ms, { choice: picked, answer: c.answer });
+		closeAttempt();
+		const recorded = recordCheck(c, isFirst, correct, ms, { choice: picked, answer: c.answer, ...seedMeta });
 		return { ...none, correct, recorded, why: c.options[picked].why, correctIndex: perm.indexOf(c.answer), whys: perm.map((i) => c.options[i].why) };
 	}
 	if (c.kind === 'bug') {
 		if (!idx(choice, c.lines.length)) throw new Error(tr('줄을 고르세요.', 'Select a line.'));
 		const correct = choice === c.bugIndex;
-		const recorded = recordCheck(c, isFirst, correct, ms, { choice, bugIndex: c.bugIndex });
+		closeAttempt();
+		const recorded = recordCheck(c, isFirst, correct, ms, { choice, bugIndex: c.bugIndex, ...seedMeta });
 		return { ...none, correct, recorded, why: c.why, bugIndex: c.bugIndex, fixed: c.fixed };
 	}
 
 	const pool = orderPool(c);
 	if (!Array.isArray(choice) || choice.length === 0 || choice.length > pool.length || !choice.every((i) => idx(i, pool.length)) || new Set(choice).size !== choice.length)
 		throw new Error(tr('줄을 골라 순서대로 놓으세요.', 'Select the lines in order.'));
-	const perm = permutation(pool.length, c.id);
+	const perm = permutation(pool.length, seed);
 	const orig = (choice as number[]).map((d) => perm[d]);
 	const usedDistractors = orig.filter((o) => o >= c.lines.length).map((o) => o - c.lines.length);
 	const problem = findProblem(c.problem);
@@ -351,7 +404,8 @@ export async function answerCheck(id: unknown, choice: unknown, elapsedMs: unkno
 	const code = `${c.given ? (c.given.endsWith('\n') ? c.given : `${c.given}\n`) : ''}${body}\n`;
 	const result = await judge(LANG, problem, code);
 	const correct = result.status === 'passed';
-	const recorded = recordCheck(c, isFirst, correct, ms, { order: orig, usedDistractors, status: result.status });
+	closeAttempt();
+	const recorded = recordCheck(c, isFirst, correct, ms, { order: orig, usedDistractors, status: result.status, ...seedMeta });
 	const message = correct ? null : usedDistractors.length ? c.distractors[usedDistractors[0]].why : firstFailure(result);
 	return { ...none, correct, recorded, message };
 }
@@ -371,31 +425,33 @@ export function recallPool(): { id: string; kind: RecallKind; topic: string; urg
 		});
 }
 
-/** The check as shown (options in their fixed display order), for an unlocked trace / approach / bug check; null otherwise. */
-export function recallView(id: unknown): MemoCheckView | null {
+/** The check as shown (options shuffled deterministically for the Recall run), for an unlocked trace / approach / bug check; null otherwise. */
+export function recallView(id: unknown, runId?: number): MemoCheckView | null {
 	const c = openCheck(id);
-	return c && recallKinds.has(c.kind) ? checkView(c) : null;
+	return c && recallKinds.has(c.kind) ? checkView(c, runId !== undefined ? recallSeed(c.id, runId) : c.id) : null;
 }
 
 export type CheckKey = { view: MemoCheckView; correctIndex: number; whys: string[]; why: string | null; fixed: string | null };
 
 /** Everything about a trace / approach / bug check, answer included, in displayed order. Only for runs that are over: never call it for a check still to be answered. Null for unknown ones. */
-export function checkKey(id: string): CheckKey | null {
+export function checkKey(id: string, seed?: string): CheckKey | null {
 	const c = world().checks.find((x) => x.id === id);
 	if (!c || !recallKinds.has(c.kind)) return null;
-	const view = checkView(c);
+	const s = seed ?? c.id;
+	const view = checkView(c, s);
 	if (c.kind === 'bug') return { view, correctIndex: c.bugIndex, whys: [], why: c.why, fixed: c.fixed };
 	if (c.kind === 'order') return null;
-	const perm = permutation(4, c.id);
+	const perm = permutation(4, s);
 	return { view, correctIndex: perm.indexOf(c.answer), whys: perm.map((i) => c.options[i].why), why: null, fixed: null };
 }
 
 /** The correct line order as displayed pool indexes; only once an answer to this check has been recorded in the last hour. */
-export function checkSolution(id: unknown): MemoSolutionResponse | 'forbidden' | null {
+export function checkSolution(id: unknown, attemptId?: unknown): MemoSolutionResponse | 'forbidden' | null {
 	const c = openCheck(id);
 	if (!c || c.kind !== 'order') return null;
 	if (!answeredRecently(c.id)) return 'forbidden';
-	const perm = permutation(orderPool(c).length, c.id);
+	const { seed } = resolveCheckSeed(c.id, { attemptId });
+	const perm = permutation(orderPool(c).length, seed);
 	return { order: c.lines.map((_, i) => perm.indexOf(i)) };
 }
 

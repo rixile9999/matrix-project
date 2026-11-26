@@ -11,8 +11,11 @@
 
 - For a new lesson, extend the track's canonical catalogue. Give it a stable ID and bilingual learning targets, answer fields, feedback, hints, solution, and cheat sheet. Keep published IDs and the meaning/order of stored answers stable. Migrate or version existing attempts when those meanings change.
 - Trace an attempt through the learner-facing course, the Sparring question pool, Debrief, Garden, and Coach. Reuse the same account-scoped attempt and server-side deadline. Count a completed attempt once and keep live answers, private history, and post-session coaching behind the appropriate access checks.
-- New tracks must implement those entry points and provide their own catalogue-wide integration test. For Statistics, the executable example is [stats-connectivity.test.ts](app/src/lib/server/stats-connectivity.test.ts). It discovers lessons from the catalogue. Also add independently checked sample answers to [stats.test.ts](app/src/lib/server/stats.test.ts).
-- Before publishing, run `pnpm -C app check`, `pnpm -C app test`, and `pnpm -C app build`. The build also runs [HTTP route checks](app/scripts/verify-stats-connections.mjs) against a disposable account. Update these checks when adding a learning route. When changing a learner flow, exercise the real route in both languages with a temporary account. Report which connections were tested and whether a provider response was live or simulated.
+- New tracks must implement those entry points and provide their own catalogue-wide integration test. Executable examples are [stats-connectivity.test.ts](app/src/lib/server/stats-connectivity.test.ts) and [scala-connectivity.test.ts](app/src/lib/server/scala-connectivity.test.ts). They verify catalogue discovery, course/sparring dealing, debrief/garden reflection, post-session coach unlock, bilingual parity, and account isolation. Also add independently checked sample answers (e.g. [stats.test.ts](app/src/lib/server/stats.test.ts)).
+- Verification runs in three speeds without heavy git hooks:
+  - `pnpm verify:fast`: static schema, ID/reference integrity, required bilingual fields, and cross-layer pedagogy warnings (no compiler, DB, or network).
+  - `pnpm verify:changed`: `verify:fast` plus diff-scoped execution checks for changed content and referencing items (escalates to full check/test when shared rules, verifiers, or judges change).
+  - Before publishing (`pnpm verify:full` or `pnpm -C app check`, `pnpm -C app test`, `pnpm -C app build`): the build also runs [HTTP route checks](app/scripts/verify-stats-connections.mjs) against a disposable account. Update these checks when adding a learning route. When changing a learner flow, exercise the real route in both languages with a temporary account. Report which connections were tested and whether a provider response was live or simulated.
 
 문제·기능·콘텐츠를 만드는 에이전트는 아래 원칙을 따른다.
 원칙과 어긋나는 작업은 진행하기 전에 사용자에게 알린다.
@@ -63,11 +66,9 @@
 31. 예외는 짧게 둔다. 외부 전송 고지, 오류 메시지, 문제 지문·힌트·노트(21번)는 필요한 만큼만 쓴다.
 32. 숫자와 근거는 기록에 그대로 남긴다(23번). 화면에 다 보여 줄 필요는 없다.
 
-## 채택했지만 아직 구현되지 않은 것
-- 간격 반복(FSRS)
-- 교차 출제(주제 섞기)
-- 정확도 모드(확신도 입력)
-- 모바일 스낵 창구
+## 구현 현황 메모 (채택 원칙 중 미구현 항목)
+- 정확도 모드(확신도 입력 기반 보정)
 - 체스 팩
+- 교차 출제의 일반 커리큘럼 확대 *(암기 FSRS·점검·Sparring Recall/Sprint·모바일 암기 창구·Debrief는 구현됨)*
 
 근거: `notes/idea.md`, `app/src/lib/core/`, `app/scripts/verify-*.ts`

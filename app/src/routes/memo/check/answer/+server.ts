@@ -9,7 +9,7 @@ export const POST = async ({ request, locals }) => {
 	const b = await m.readJson(request);
 	let r: MemoCheckResponse | null;
 	try {
-		r = await withLocale('ko', () => m.answerCheck(b.id, b.choice, b.elapsedMs));
+		r = await withLocale('ko', () => m.answerCheck(b.id, b.choice, b.elapsedMs, { attemptId: b.attemptId }));
 	} catch (e) {
 		error(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : 'Bad request');
 	}

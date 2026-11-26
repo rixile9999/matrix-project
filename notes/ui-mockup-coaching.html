@@ -1,0 +1,1277 @@
+<!doctype html>
+<html lang="ko" data-look="arena">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Matrix · 미니멀 노트 & 코칭 시안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Minimalist Matrix aesthetic:
+   - Single calm reading column (~680px), generous whitespace, no card-in-card boxes.
+   - Monochrome ink + hairline rules + one warm accent used sparingly.
+   - One focus per screen; details stay hidden behind quiet 1-line disclosures. */
+:root {
+	--bg: #f6f7f9;
+	--surface: #ffffff;
+	--ink: #151922;
+	--dim: rgba(21, 25, 34, .56);
+	--faint: rgba(21, 25, 34, .11);
+	--accent: #2f4fd8;
+	--on-accent: #ffffff;
+	--ok: #1e7a46;
+	--bad: #b83a32;
+	--f-display: 'Space Grotesk', 'IBM Plex Sans KR', system-ui, sans-serif;
+	--f-body: 'IBM Plex Sans KR', system-ui, -apple-system, sans-serif;
+	--f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+	color-scheme: light;
+}
+:root[data-look="arena"] {
+	--bg: #06070b;
+	--surface: rgba(236, 235, 230, .035);
+	--ink: #ecebe6;
+	--dim: rgba(236, 235, 230, .54);
+	--faint: rgba(236, 235, 230, .11);
+	--accent: #f0cfa6;
+	--on-accent: #06070b;
+	--ok: #b9d3b0;
+	--bad: #e3a58f;
+	color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font: 15px/1.68 var(--f-body);
+	-webkit-font-smoothing: antialiased;
+}
+code, pre, .mono {
+	font-family: var(--f-mono);
+	font-variant-ligatures: none;
+	font-feature-settings: 'liga' 0, 'calt' 0;
+}
+code {
+	font-size: .88em;
+	color: var(--ink);
+	background: color-mix(in srgb, var(--ink) 7%, transparent);
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+button:focus-visible, summary:focus-visible, input:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+	border-radius: 3px;
+}
+
+/* ultra-quiet single-row bar */
+.bar {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background: color-mix(in srgb, var(--bg) 90%, transparent);
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid var(--faint);
+}
+.bar-in {
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 12px 20px;
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+.brand {
+	font: 600 14px var(--f-display);
+	letter-spacing: -.01em;
+	color: var(--dim);
+	white-space: nowrap;
+}
+.tablist {
+	display: flex;
+	gap: 18px;
+	overflow-x: auto;
+	flex: 1;
+	scrollbar-width: none;
+}
+.tablist::-webkit-scrollbar { display: none; }
+.tab {
+	position: relative;
+	flex: none;
+	padding: 4px 0 6px;
+	font-size: 13.5px;
+	color: var(--dim);
+	white-space: nowrap;
+	transition: color .2s;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); }
+.tab[aria-selected="true"]::after {
+	content: "";
+	position: absolute;
+	inset: auto 0 0;
+	border-block-end: 1.5px solid var(--accent);
+}
+.look {
+	font: 400 12px var(--f-mono);
+	color: var(--dim);
+	white-space: nowrap;
+}
+.look:hover { color: var(--ink); }
+
+/* single calm column */
+main {
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 48px 20px 96px;
+}
+.view {
+	display: flex;
+	flex-direction: column;
+	gap: 44px;
+	animation: softIn .35s ease both;
+}
+@keyframes softIn {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: none; }
+}
+
+.kicker {
+	font: 400 12px var(--f-mono);
+	letter-spacing: .04em;
+	color: var(--dim);
+}
+h1 {
+	font: 500 clamp(22px, 3.6vw, 28px)/1.3 var(--f-display);
+	letter-spacing: -.02em;
+	margin: 6px 0 0;
+	text-wrap: balance;
+}
+.lead {
+	margin: 10px 0 0;
+	font-size: 15px;
+	color: var(--dim);
+	max-width: 54ch;
+}
+.hr { border: 0; border-top: 1px solid var(--faint); margin: 0; }
+
+/* restrained buttons */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 9px 18px;
+	border-radius: 999px;
+	font: 500 13.5px var(--f-body);
+	background: var(--ink);
+	color: var(--bg);
+	transition: opacity .2s;
+}
+.btn:hover:not(:disabled) { opacity: .84; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.warm { background: var(--accent); color: var(--on-accent); }
+.btn.outline {
+	background: transparent;
+	color: var(--ink);
+	border: 1px solid color-mix(in srgb, var(--ink) 24%, transparent);
+}
+.btn.outline:hover:not(:disabled) { border-color: var(--ink); opacity: 1; }
+.link-btn {
+	font: 400 13px var(--f-body);
+	color: var(--dim);
+	text-decoration: underline;
+	text-decoration-color: var(--faint);
+	text-underline-offset: 4px;
+}
+.link-btn:hover { color: var(--ink); text-decoration-color: var(--dim); }
+.link-btn.accent { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.between { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+
+/* quiet inline disclosure */
+details.fold > summary {
+	cursor: pointer;
+	list-style: none;
+	font: 400 12.5px var(--f-mono);
+	color: var(--dim);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	user-select: none;
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary:hover { color: var(--ink); }
+details.fold > summary::before { content: "+"; font-family: var(--f-mono); }
+details.fold[open] > summary::before { content: "−"; }
+.fold-body {
+	margin-top: 14px;
+	padding-left: 14px;
+	border-left: 1px solid var(--faint);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	font-size: 13.5px;
+	color: var(--dim);
+}
+
+/* minimal code lines (no heavy boxes) */
+.code-pair {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	background: var(--surface);
+	border: 1px solid var(--faint);
+	border-radius: 10px;
+}
+.code-line {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	gap: 8px;
+	font: 12.5px/1.6 var(--f-mono);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.code-line.bad { color: var(--dim); }
+.code-line.bad i { font-style: normal; color: var(--bad); }
+.code-line.good { color: var(--ink); }
+.code-line.good i { font-style: normal; color: var(--ok); }
+
+/* ---------- View 1: Session Finish (one quiet flow) ---------- */
+.checkin {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 20px;
+	padding: 14px 0;
+	border-top: 1px solid var(--faint);
+	border-bottom: 1px solid var(--faint);
+}
+.seg-text { display: inline-flex; gap: 14px; }
+.seg-text button {
+	font-size: 14px;
+	color: var(--dim);
+	padding: 2px 0;
+	border-bottom: 1.5px solid transparent;
+	transition: color .15s, border-color .15s;
+}
+.seg-text button:hover { color: var(--ink); }
+.seg-text button[aria-pressed="true"] {
+	color: var(--ink);
+	border-bottom-color: var(--accent);
+}
+.note-stage {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+.statement {
+	font-size: 17px;
+	line-height: 1.7;
+	max-width: 48ch;
+	text-wrap: pretty;
+}
+.statement strong { font-weight: 500; color: var(--accent); }
+
+/* ---------- View 2: Notes (index list → single focused note) ---------- */
+.filter-line {
+	display: flex;
+	gap: 18px;
+	align-items: center;
+	font-size: 13.5px;
+}
+.filter-line button { color: var(--dim); padding-bottom: 3px; border-bottom: 1.5px solid transparent; }
+.filter-line button:hover { color: var(--ink); }
+.filter-line button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+.note-list { display: flex; flex-direction: column; }
+.note-row {
+	display: grid;
+	grid-template-columns: 14px minmax(0, 1fr) auto;
+	gap: 14px;
+	align-items: baseline;
+	padding: 16px 4px;
+	border-top: 1px solid var(--faint);
+	text-align: left;
+	width: 100%;
+	transition: background .15s;
+}
+.note-row:last-child { border-bottom: 1px solid var(--faint); }
+.note-row:hover { background: var(--surface); }
+.dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	align-self: center;
+	background: transparent;
+	border: 1.5px solid var(--accent);
+}
+.dot.on { background: var(--ok); border-color: var(--ok); }
+.note-row b { font-weight: 500; font-size: 15px; display: block; color: var(--ink); }
+.note-row small { display: block; font-size: 13px; color: var(--dim); margin-top: 2px; }
+.note-row .meta { font: 400 12px var(--f-mono); color: var(--dim); white-space: nowrap; }
+
+.detail-view {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	animation: softIn .25s ease both;
+}
+.kv-min { display: flex; flex-direction: column; gap: 14px; }
+.kv-min div { display: flex; flex-direction: column; gap: 3px; }
+.kv-min label { font: 400 11.5px var(--f-mono); color: var(--dim); }
+.kv-min p { margin: 0; font-size: 15px; line-height: 1.68; }
+
+/* ---------- View 3: Coaching (Garden contemplative room) ---------- */
+.coach-quote {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+.coach-quote p {
+	margin: 0;
+	font-size: clamp(18px, 2.6vw, 22px);
+	line-height: 1.65;
+	letter-spacing: -.01em;
+	max-width: 38ch;
+	text-wrap: pretty;
+}
+.pager {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	font: 400 12px var(--f-mono);
+	color: var(--dim);
+}
+.pager button { font: inherit; color: var(--dim); }
+.pager button:hover:not(:disabled) { color: var(--ink); }
+.pager button:disabled { opacity: .3; cursor: default; }
+
+.hours {
+	display: grid;
+	grid-template-columns: repeat(24, minmax(0, 1fr));
+	gap: 4px;
+	align-items: end;
+	height: 82px;
+}
+.hours i {
+	display: block;
+	background: var(--ink);
+	opacity: .72;
+	border-radius: 2px 2px 0 0;
+	min-height: 2px;
+	transition: height .35s ease, opacity .25s;
+}
+.hours i.low { opacity: .14; }
+.hours i.best { background: var(--ok); opacity: 1; }
+.hours i.shaky { background: var(--bad); opacity: 1; }
+.axis {
+	display: flex;
+	justify-content: space-between;
+	font: 400 11px var(--f-mono);
+	color: var(--dim);
+	margin-top: 8px;
+}
+
+.fatigue {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 18px;
+	align-items: end;
+	height: 112px;
+}
+.f-col {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	height: 100%;
+	justify-content: flex-end;
+}
+.f-wrap { width: 100%; flex: 1; display: flex; align-items: flex-end; justify-content: center; }
+.f-bar { width: 42%; border-radius: 3px 3px 0 0; background: var(--ink); opacity: .75; transition: height .35s ease; }
+.f-bar.drop { background: var(--bad); opacity: 1; }
+.f-bar.muted { background: var(--faint); opacity: 1; }
+.f-v { font: 500 12.5px var(--f-mono); }
+.f-l { font: 400 11.5px var(--f-mono); color: var(--dim); }
+
+.facts-min { display: flex; flex-direction: column; }
+.facts-min div {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 11px 0;
+	border-top: 1px solid var(--faint);
+	font-size: 14px;
+	color: var(--dim);
+}
+.facts-min div:last-child { border-bottom: 1px solid var(--faint); }
+.facts-min b { font: 400 13.5px var(--f-mono); color: var(--ink); text-align: right; }
+
+.next-list { display: flex; flex-direction: column; }
+.next-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 14px;
+	padding: 14px 4px;
+	border-top: 1px solid var(--faint);
+	text-align: left;
+	width: 100%;
+}
+.next-item:last-child { border-bottom: 1px solid var(--faint); }
+.next-item:hover { background: var(--surface); }
+.next-item b { font-weight: 500; font-size: 15px; }
+.next-item.rec b { color: var(--accent); }
+.next-item small { font: 400 12px var(--f-mono); color: var(--dim); white-space: nowrap; }
+
+.sc-footer {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	padding-top: 12px;
+	border-top: 1px solid var(--faint);
+	font: 400 12px var(--f-mono);
+	color: var(--dim);
+}
+
+/* ---------- View 4: Pure Centered Mobile Review ---------- */
+.phone-stage {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 28px;
+}
+.phone {
+	width: min(360px, 100%);
+	min-height: 500px;
+	padding: 26px 22px 24px;
+	border: 1px solid var(--faint);
+	border-radius: 26px;
+	background: var(--surface);
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+.p-line { height: 2px; background: var(--faint); overflow: hidden; }
+.p-line b { display: block; height: 100%; background: var(--accent); transition: width .25s; }
+.p-q { font: 500 17px/1.55 var(--f-body); text-wrap: pretty; }
+.p-code {
+	margin: 0;
+	padding: 11px 13px;
+	border-left: 2px solid var(--faint);
+	font: 12.5px/1.6 var(--f-mono);
+	color: var(--dim);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.pts { display: flex; flex-direction: column; gap: 11px; padding-top: 12px; border-top: 1px solid var(--faint); }
+.pt {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	gap: 10px;
+	align-items: start;
+	font-size: 14px;
+	line-height: 1.55;
+	cursor: pointer;
+}
+.pt input { width: 16px; height: 16px; margin-top: 3px; accent-color: var(--accent); }
+.spacer { flex: 1; }
+
+.toast {
+	position: fixed;
+	bottom: 24px;
+	left: 50%;
+	transform: translate(-50%, 8px);
+	background: var(--ink);
+	color: var(--bg);
+	padding: 8px 16px;
+	border-radius: 999px;
+	font-size: 13px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity .2s, transform .2s;
+	white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+	<div class="bar-in">
+		<span class="brand">Matrix</span>
+		<div class="tablist" role="tablist" aria-label="화면 전환">
+			<button type="button" class="tab" role="tab" id="t-done" aria-selected="true" data-p="v-done">풀이 직후</button>
+			<button type="button" class="tab" role="tab" id="t-notes" aria-selected="false" data-p="v-notes">패턴 노트</button>
+			<button type="button" class="tab" role="tab" id="t-coach" aria-selected="false" data-p="v-coach">집중 코칭</button>
+			<button type="button" class="tab" role="tab" id="t-memo" aria-selected="false" data-p="v-memo">복습</button>
+		</div>
+		<button type="button" class="look" id="look-btn">Arena</button>
+	</div>
+</header>
+
+<main>
+
+<!-- ==================== 1. 풀이 직후 (한 화면, 순차 흐름) ==================== -->
+<section class="view" id="v-done" role="tabpanel" aria-labelledby="t-done">
+	<header>
+		<div class="kicker">fp-0312 · 책 3장 · 통과 · 4:48</div>
+		<h1>foldLeft로 reverse 구현</h1>
+	</header>
+
+	<!-- 초저마찰 1줄 체크인 (박스 없음) -->
+	<div class="checkin">
+		<span class="kicker">지금 상태</span>
+		<div class="seg-text" role="group" aria-label="지금 컨디션">
+			<button type="button" data-c="맑음" aria-pressed="true">맑음</button>
+			<button type="button" data-c="보통" aria-pressed="false">보통</button>
+			<button type="button" data-c="흐림" aria-pressed="false">흐림</button>
+		</div>
+		<span class="kicker" style="margin-left:auto" id="c-echo">기록됨</span>
+	</div>
+
+	<!-- 핵심 1개: 반복 패턴 제안 → 누르면 초안으로 전환 -->
+	<div class="note-stage" id="stage-ask">
+		<p class="statement">
+			<strong><code>foldLeft</code> 초기값 타입 추론</strong>에서 최근 10일간 3번째 막혔습니다.<br>
+			이번 실행 오류와 Operator 질문을 짧은 노트로 정리할까요?
+		</p>
+		<div class="row">
+			<button type="button" class="btn warm" id="btn-make">노트 만들기</button>
+			<button type="button" class="link-btn" id="btn-skip">다음 문제로 ›</button>
+		</div>
+		<details class="fold">
+			<summary>이번 세션 기록 보기</summary>
+			<div class="fold-body">
+				<div>실행 4회 (컴파일 오류 2 · 통과 1) · 치트시트 1회 · 탭 이탈 1회(14초)</div>
+				<div>질문: “<code>Nil</code>도 <code>List[A]</code>의 하위 타입인데 왜 <code>foldLeft(Nil)</code>에서 타입 에러가 나지?”</div>
+			</div>
+		</details>
+	</div>
+
+	<div class="note-stage" id="stage-draft" hidden>
+		<div class="between">
+			<span class="kicker">자동 노트 초안 · scala-cli 검증됨</span>
+			<button type="button" class="link-btn" id="btn-back-ask">접기</button>
+		</div>
+		<p class="statement">
+			<code>foldLeft(Nil)</code>처럼 빈 리터럴을 넘기면 누적기 타입이 <code>List[Nothing]</code>으로 먼저 고정됩니다. 초기값에서 <code>List.empty[A]</code>로 타입을 명시하세요.
+		</p>
+		<div class="code-pair">
+			<div class="code-line bad"><i>×</i><span>xs.foldLeft(Nil)((acc, a) => a :: acc)</span></div>
+			<div class="code-line good"><i>✓</i><span>xs.foldLeft(List.empty[A])((acc, a) => a :: acc)</span></div>
+		</div>
+		<div class="row">
+			<button type="button" class="btn warm" id="btn-to-fsrs">복습 카드로 넣기</button>
+			<button type="button" class="link-btn" id="btn-open-notes">전체 패턴 노트 ›</button>
+		</div>
+		<details class="fold">
+			<summary>근거 3건</summary>
+			<div class="fold-body">
+				<div>fp-0312 컴파일 오류 · Found List[A], Required Nil.type</div>
+				<div>Operator 질문 #89 · foldLeft(Nil) 타입 추론</div>
+				<div>fp-0318 (5일 전) · 같은 컴파일 오류 1회</div>
+			</div>
+		</details>
+	</div>
+</section>
+
+<!-- ==================== 2. 패턴 노트 (목록 ↔ 단일 상세 전환) ==================== -->
+<section class="view" id="v-notes" role="tabpanel" aria-labelledby="t-notes" hidden>
+	<!-- List mode -->
+	<div id="notes-index" style="display:flex;flex-direction:column;gap:28px">
+		<header>
+			<div class="kicker">내 기록에서 정리된 패턴</div>
+			<h1>패턴 노트</h1>
+			<p class="lead">항목을 누르면 상세와 검증된 코드를 봅니다. 읽기만 하면 잊혀지므로 복습 카드로 넘겨 간격 반복에 묶습니다.</p>
+		</header>
+
+		<div class="between">
+			<div class="filter-line" role="group" aria-label="상태 필터" id="n-filters">
+				<button type="button" data-f="all" aria-pressed="true">전체</button>
+				<button type="button" data-f="draft" aria-pressed="false">초안</button>
+				<button type="button" data-f="card" aria-pressed="false">복습 중</button>
+			</div>
+			<button type="button" class="link-btn accent" id="btn-new-found">+ 새 패턴 1건 정리</button>
+		</div>
+
+		<div class="note-list" id="n-list"></div>
+	</div>
+
+	<!-- Detail mode (replaces list for zero distraction) -->
+	<div class="detail-view" id="notes-detail" hidden>
+		<div class="between">
+			<button type="button" class="link-btn" id="d-back">‹ 패턴 노트</button>
+			<span class="kicker" id="d-meta"></span>
+		</div>
+		<h1 id="d-title" style="margin:0"></h1>
+
+		<div class="kv-min">
+			<div><label>빠지는 함정</label><p id="d-trap"></p></div>
+			<div><label>판단 기준</label><p id="d-fix"></p></div>
+		</div>
+
+		<div class="code-pair">
+			<div class="code-line bad"><i>×</i><span id="d-bad"></span></div>
+			<div class="code-line good"><i>✓</i><span id="d-good"></span></div>
+		</div>
+
+		<div class="row">
+			<button type="button" class="btn warm" id="d-promote"></button>
+			<button type="button" class="link-btn" id="d-to-memo">복습 화면에서 보기 ›</button>
+		</div>
+
+		<details class="fold">
+			<summary id="d-ev-sum">근거 보기</summary>
+			<div class="fold-body" id="d-ev-body"></div>
+		</details>
+	</div>
+</section>
+
+<!-- ==================== 3. 집중 코칭 (Garden 톤: 한 번에 문장 1개 + 그래프 1개) ==================== -->
+<section class="view" id="v-coach" role="tabpanel" aria-labelledby="t-coach" hidden>
+	<header>
+		<div class="kicker" id="g-kicker"></div>
+		<h1>리듬과 집중</h1>
+	</header>
+
+	<!-- One coaching insight at a time -->
+	<div class="coach-quote">
+		<span class="kicker" id="c-topic"></span>
+		<p id="c-text"></p>
+		<details class="fold" id="c-ev">
+			<summary>근거 보기</summary>
+			<div class="fold-body" id="c-facts"></div>
+		</details>
+		<div class="pager">
+			<button type="button" id="c-prev">‹ 이전</button>
+			<span id="c-pos">1 / 3</span>
+			<button type="button" id="c-next">다음 ›</button>
+		</div>
+	</div>
+
+	<hr class="hr">
+
+	<!-- One chart at a time (quiet text switcher) -->
+	<div style="display:flex;flex-direction:column;gap:22px">
+		<div class="between">
+			<div class="filter-line" role="group" aria-label="지표 전환" id="g-tabs">
+				<button type="button" data-g="fatigue" aria-pressed="true">피로 곡선</button>
+				<button type="button" data-g="hours" aria-pressed="false">시간대</button>
+				<button type="button" data-g="signals" aria-pressed="false">집중 신호</button>
+			</div>
+			<span class="kicker" id="g-sub"></span>
+		</div>
+
+		<div id="g-viz"></div>
+		<div class="facts-min" id="g-facts"></div>
+	</div>
+
+	<hr class="hr">
+
+	<!-- Next session choice (principle 25: quiet choice, never forced) -->
+	<div style="display:flex;flex-direction:column;gap:14px">
+		<div class="kicker" id="g-next-kicker"></div>
+		<div class="next-list" id="g-next"></div>
+	</div>
+
+	<!-- Quiet prototype scenario switch at the very bottom -->
+	<div class="sc-footer">
+		<span>시안 데이터 전환</span>
+		<div class="seg-text" role="group" aria-label="시나리오" id="sc-switch">
+			<button type="button" data-sc="rich" aria-pressed="true" style="font-size:12px">42일 기록</button>
+			<button type="button" data-sc="night" aria-pressed="false" style="font-size:12px">야간 피로</button>
+			<button type="button" data-sc="cold" aria-pressed="false" style="font-size:12px">4일 초기</button>
+		</div>
+	</div>
+</section>
+
+<!-- ==================== 4. 복습 (휴대폰 1화면 집중, 주변 장식 없음) ==================== -->
+<section class="view" id="v-memo" role="tabpanel" aria-labelledby="t-memo" hidden>
+	<div class="phone-stage">
+		<div class="phone">
+			<div class="between">
+				<span class="kicker">내 패턴 카드</span>
+				<span class="kicker" id="m-pos">1 / 3</span>
+			</div>
+			<div class="p-line"><b id="m-bar" style="width:33%"></b></div>
+
+			<div class="p-q" id="m-q"></div>
+			<pre class="p-code" id="m-pcode" hidden></pre>
+			<div class="kicker" id="m-src"></div>
+
+			<div class="pts" id="m-ans" hidden>
+				<span class="kicker">떠올린 내용에 들어 있던 것을 체크</span>
+				<div id="m-pts" style="display:flex;flex-direction:column;gap:10px"></div>
+				<pre class="p-code" id="m-acode" hidden></pre>
+			</div>
+
+			<div class="spacer"></div>
+			<div class="kicker" id="m-verdict" hidden></div>
+			<button type="button" class="btn warm" style="width:100%" id="m-btn">답 보기</button>
+		</div>
+
+		<details class="fold" style="max-width:360px;width:100%">
+			<summary>이 카드는 어떻게 들어왔나</summary>
+			<div class="fold-body">
+				<div>패턴 노트에서 “복습 카드로 넣기”를 누른 항목만 기존 FSRS 큐에 합류합니다.</div>
+				<div>2회 연속 놓치면 데스크톱 다시 풀기 목록으로 자동 연결됩니다.</div>
+			</div>
+		</details>
+	</div>
+</section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const notes = [
+	{
+		id: 'n1',
+		topic: 'fold·누적',
+		title: 'foldLeft 초기값 Nil → 타입이 Nothing으로 고정됨',
+		short: 'List.empty[A]로 초기값 타입을 먼저 넓혀야 한다',
+		trap: 'foldLeft(Nil)처럼 빈 리터럴을 넘기면 첫 인자 목록에서 누적기 타입 B가 List[Nothing]으로 먼저 고정되어 a :: acc가 컴파일되지 않는다.',
+		fix: '초기값에서 원소 타입을 명시한다: List.empty[A] 또는 (Nil: List[A]).',
+		bad: 'xs.foldLeft(Nil)((acc, a) => a :: acc)',
+		good: 'xs.foldLeft(List.empty[A])((acc, a) => a :: acc)',
+		count: 3,
+		promoted: true,
+		refs: [
+			'fp-0312 컴파일 오류 · Found List[A], Required Nil.type',
+			'Operator 질문 #89 · "Nil도 List[A] 하위 타입인데 왜 에러?"',
+			'fp-0318 (5일 전) · 동일 컴파일 오류 1회'
+		],
+		card: {
+			q: 'xs.foldLeft(Nil)((acc, a) => a :: acc)가 컴파일되지 않는 이유와 수정법은?',
+			pcode: 'xs.foldLeft(Nil)((acc, a) => a :: acc)',
+			pts: [
+				'첫 인자 목록(초기값)에서 누적기 타입 B가 먼저 고정된다',
+				'Nil이 List[Nothing]으로 잡혀 List[A]와 충돌한다',
+				'List.empty[A] 또는 (Nil: List[A])로 타입을 명시한다'
+			],
+			acode: 'xs.foldLeft(List.empty[A])((acc, a) => a :: acc)',
+			src: 'fp-0312 외 2건에서'
+		}
+	},
+	{
+		id: 'n2',
+		topic: 'Option·Either',
+		title: 'Option.isDefined + get 대신 flatMap 체이닝',
+		short: '값 꺼내 검사하지 말고 flatMap·getOrElse로 닫는다',
+		trap: 'if o.isDefined then f(o.get) else None 형태로 쓰면 통과해도 비관용(avoid) 경고가 남고 분기가 중첩된다.',
+		fix: '값 변환은 map, Option을 돌려주는 연쇄는 flatMap, 기본값 탈출은 getOrElse를 쓴다.',
+		bad: 'if o.isDefined then f(o.get) else None',
+		good: 'o.flatMap(f)',
+		count: 4,
+		promoted: true,
+		refs: [
+			'fp-0401 avoid 경고 · get, isDefined',
+			'fp-0402 avoid 경고 · get',
+			'check-opt-chain · 2회 연속 오답'
+		],
+		card: {
+			q: 'Option 값을 받아 또 다른 Option을 반환하는 함수 f를 연결할 때 isDefined/get 대신 쓸 연산과 이유는?',
+			pcode: null,
+			pts: [
+				'flatMap이 None 전파를 처리하고 예외 위험을 없앤다',
+				'map을 쓰면 Option[Option[B]]로 중첩된다'
+			],
+			acode: 'o.flatMap(f) // 탈출은 .getOrElse(default)',
+			src: 'fp-0401 외 3건에서'
+		}
+	},
+	{
+		id: 'n3',
+		topic: '재귀·꼬리재귀',
+		title: '@tailrec 실패: 재귀 호출 뒤에 연산이 남아 있음',
+		short: '반환 후 연산(1 + len(t))을 누적기 인자로 내린다',
+		trap: '1 + len(t)처럼 재귀 결과에 연산을 덧대면 마지막 동작이 재귀 호출이 아니어서 @tailrec이 깨진다.',
+		fix: '누적기(acc)를 받는 내부 @tailrec def loop로 바꿔 재귀 호출만 마지막에 둔다.',
+		bad: 'case _ :: t => 1 + len(t)',
+		good: 'case _ :: t => loop(t, acc + 1)',
+		count: 2,
+		promoted: true,
+		refs: [
+			'fp-0201 컴파일 오류 · could not optimize @tailrec',
+			'Operator 질문 #64 · "if 분기 안 재귀가 왜 꼬리재귀가 안 되나?"'
+		],
+		card: {
+			q: '@tailrec 컴파일 오류가 나는 대표 원인과 전환 패턴은?',
+			pcode: 'case _ :: t => 1 + len(t)',
+			pts: [
+				'재귀 호출 반환값에 추가 연산이 남아 스택 프레임을 재사용할 수 없다',
+				'누적기(acc)를 넘기는 내부 loop 함수로 변환한다'
+			],
+			acode: 'case _ :: t => loop(t, acc + 1)',
+			src: 'fp-0201 외 1건에서'
+		}
+	},
+	{
+		id: 'n4',
+		topic: '컬렉션',
+		title: '불변 Map 키 조회 시 m(k) 예외',
+		short: '단건 조회는 getOrElse, 빈도 집계는 groupMapReduce',
+		trap: '키가 없을 수 있는 Map에서 m(k)를 호출하면 NoSuchElementException으로 실패한다.',
+		fix: '단건 기본값은 m.getOrElse(k, 0), 빈도 집계는 groupMapReduce를 쓴다.',
+		bad: 'val n = counts(word) + 1',
+		good: 'val n = counts.getOrElse(word, 0) + 1',
+		count: 2,
+		promoted: false,
+		refs: [
+			'c-02 word-freq 런타임 오류 · key not found',
+			'치트시트 map-get · 2회 조회'
+		],
+		card: {
+			q: 'Scala 불변 Map에서 키 부재 예외 없이 기본값을 읽는 법과 빈도 집계 관용식은?',
+			pcode: null,
+			pts: [
+				'단건 조회는 m.getOrElse(k, default)를 쓴다',
+				'빈도 집계는 groupMapReduce(identity)(_ => 1)(_ + _)로 쓴다'
+			],
+			acode: 'words.groupMapReduce(identity)(_ => 1)(_ + _)',
+			src: 'c-02 외 1건에서'
+		}
+	}
+];
+
+const extraNote = {
+	id: 'n5',
+	topic: 'Option·Either',
+	title: 'Option.map2와 for-comprehension의 관계',
+	short: 'for a <- oa; b <- ob yield f(a, b)는 flatMap + map',
+	trap: '두 Option을 묶을 때 중첩 match 4개 분기를 쓰다 실수하고, for-yield의 단축 평가 원리를 헷갈렸다.',
+	fix: 'for-yield는 oa.flatMap(a => ob.map(b => f(a, b)))로 변환되므로 앞이 None이면 즉시 멈춘다.',
+	bad: '(oa, ob) match { case (Some(a), Some(b)) => Some(f(a,b)); case _ => None }',
+	good: 'for a <- oa; b <- ob yield f(a, b)',
+	count: 3,
+	promoted: false,
+	refs: [
+		'치트시트 for-desugar · 2회 조회',
+		'Operator 질문 #94 · "Option.map2와 for-yield가 같은가?"'
+	],
+	card: {
+		q: 'for a <- oa; b <- ob yield f(a, b)가 변환되는 식과 None 단축 평가 이유는?',
+		pcode: null,
+		pts: [
+			'oa.flatMap(a => ob.map(b => f(a, b)))로 변환된다',
+			'oa가 None이면 flatMap이 본문을 실행하지 않고 None을 돌려준다'
+		],
+		acode: 'oa.flatMap(a => ob.map(b => f(a, b)))',
+		src: 'fp-0405 외 2건에서'
+	}
+};
+
+const SCENARIOS = {
+	rich: {
+		kicker: '42일 기록 · 첫 시도 164건',
+		coaches: [
+			{
+				topic: '세션 호흡 · 피로 곡선',
+				text: '연속 40분을 넘긴 구간부터 첫 시도 정답률이 83%에서 61%로 떨어집니다. 한 번에 오래 붙잡기보다 35분 단위로 끊고 암기 3분으로 넘기는 편이 낫습니다.',
+				facts: ['20–40분 구간 첫 시도 정답률 83% (31건)', '40–60분 구간 61% (18건)', '60분+ 구간 46% (11건)']
+			},
+			{
+				topic: '집중 신호 · 탭 이탈',
+				text: '세션 중 탭을 2번 이상 벗어난 문제에서는 소요 시간이 평소 중앙값의 1.38배로 늘고, 20초 이내 재제출이 같이 늘었습니다.',
+				facts: ['이탈 0회 세션(34건) 정답률 86% · 소요비 0.71', '이탈 2회+ 세션(12건) 정답률 58% · 소요비 0.98']
+			},
+			{
+				topic: '반복 약점 · fold · Option',
+				text: '최근 14일 실패와 질문의 42%가 fold 누적기 타입 추론과 Option 체이닝에 몰렸습니다. 승격한 개인 카드 3장이 내일 복습에 들어 있습니다.',
+				facts: ['foldLeft 초기값 오류 3회 (질문 1건)', 'Option avoid 경고 4회', '내일 예정 개인 카드 3장']
+			}
+		],
+		fatigueSub: '집중 블록 28개',
+		fatigue: [
+			{ l: '0–20분', v: 88, drop: false },
+			{ l: '20–40분', v: 83, drop: false },
+			{ l: '40–60분', v: 61, drop: true },
+			{ l: '60분+', v: 46, drop: true }
+		],
+		fatigueFacts: [
+			['가장 안정적인 호흡', '35분 이내'],
+			['40분 이후 초과율', '56% (평소 21%)']
+		],
+		hoursSub: '유효 시간대 9개',
+		hours: [0,0,0,0,0,0,0,.68,.84,.92,.89,.81,.72,.74,.78,.80,.76,.71,.69,.75,.79,.72,.61,.52],
+		hoursN: [0,0,0,0,0,0,0,4,10,16,14,9,5,6,11,12,8,5,4,8,14,12,11,9],
+		hoursFacts: [
+			['가장 잘 푸는 시간', '09시 · 92% (16건)'],
+			['가장 흔들리는 시간', '23시 · 52% (9건)']
+		],
+		signalsSub: '체크인 24회',
+		signalsFacts: [
+			['탭 이탈 0회 vs 2회+', '정답률 86% vs 58%'],
+			['성급한 재제출(<20초, 3회+)', '최근 2주 29%'],
+			['상태 "맑음" vs "흐림"', '레벨 2 첫 시도 85% vs 44%'],
+			['3일 공백 후 복귀', '평소보다 16% 느림 · 이틀 뒤 복귀']
+		],
+		nextKicker: '지금(14시 · 맑음) 기준 다음 선택',
+		offers: [
+			{ title: 'fp-0314 fold로 append 구현', meta: '추천 · 약점 보강 · 5분', rec: true },
+			{ title: '개인 카드 포함 FSRS 복습 8장', meta: '3분', rec: false },
+			{ title: 'fp-0510 unfold 일반화', meta: '깊이 도전 · 12분', rec: false }
+		]
+	},
+	night: {
+		kicker: '야간 편중 주간 · 첫 시도 88건',
+		coaches: [
+			{
+				topic: '시간대 · 컨디션 분리',
+				text: '22시 이후 "흐림" 상태에서는 새 레벨 2 정답률이 38%로 떨어지지만, 암기 복습 기억률은 79%로 유지됩니다. 밤에는 복습과 기본 워밍업만 두는 편이 손실이 적습니다.',
+				facts: ['22–02시 레벨 2 첫 시도 38% (13건)', '같은 시간대 암기 기억률 79% (34건)']
+			},
+			{
+				topic: '성급한 재제출',
+				text: '야간 세션의 48%에서 컴파일 오류 직후 20초 안에 3번 이상 연속 제출했습니다. 오류 첫 줄만 읽고 멈춰도 재시도가 줄어듭니다.',
+				facts: ['야간 thrashing 48% (12/25)', '주간 thrashing 14% (2/14)']
+			}
+		],
+		fatigueSub: '22시 이후 기록 68%',
+		fatigue: [
+			{ l: '0–20분', v: 74, drop: false },
+			{ l: '20–40분', v: 58, drop: true },
+			{ l: '40–60분', v: 41, drop: true },
+			{ l: '60분+', v: 33, drop: true }
+		],
+		fatigueFacts: [
+			['야간 하락 시점', '20분 이후'],
+			['야간 포기·초과율', '54% (주간의 2.4배)']
+		],
+		hoursSub: '야간 표본 집중',
+		hours: [.48,.42,0,0,0,0,0,0,.85,.88,0,0,0,0,.76,.74,0,0,0,0,.72,.68,.54,.46],
+		hoursN: [8,6,0,0,0,0,0,0,6,7,0,0,0,0,5,4,0,0,0,0,7,9,16,14],
+		hoursFacts: [
+			['가장 잘 푸는 시간', '09시 · 88% (7건)'],
+			['가장 흔들리는 시간', '01시 · 42% (6건)']
+		],
+		signalsSub: '"흐림" 체크인 62%',
+		signalsFacts: [
+			['야간 "흐림" 레벨 2 정답률', '38%'],
+			['야간 "흐림" 암기 기억률', '79%'],
+			['성급한 재제출(<20초, 3회+)', '48%']
+		],
+		nextKicker: '지금(23시 · 흐림) 기준 다음 선택',
+		offers: [
+			{ title: 'FSRS 복습 10장 (개인 카드 3장)', meta: '추천 · 야간 유지율 79% · 3분', rec: true },
+			{ title: '기본 워밍업 1문제 (b-12)', meta: '2분', rec: false },
+			{ title: 'fp-0406 Option.traverse', meta: '직접 도전 · 10분', rec: false }
+		]
+	},
+	cold: {
+		kicker: '4일 기록 · 표본 수집 중 (11건)',
+		coaches: [
+			{
+				topic: '데이터 수집 중',
+				text: '집중·피로 패턴을 말하기에는 아직 기록이 적습니다. 억지로 추측하지 않고 각 지표가 최소 표본을 넘길 때마다 자동으로 열립니다.',
+				facts: ['전체 첫 시도 11건 (리듬 분석 최소 18건)', '집중 블록 3개 (구간당 최소 5건)', '패턴 노트는 1건만 있어도 바로 생성 가능']
+			}
+		],
+		fatigueSub: '집중 블록 3개 · 수집 중',
+		fatigue: [
+			{ l: '0–20분', v: 80, drop: false },
+			{ l: '20–40분', v: 0, muted: true },
+			{ l: '40–60분', v: 0, muted: true },
+			{ l: '60분+', v: 0, muted: true }
+		],
+		fatigueFacts: [
+			['0–20분 구간', '80% (8건)'],
+			['20–40분 구간', '2 / 5건 수집 중']
+		],
+		hoursSub: '유효 시간대 0 / 3',
+		hours: [0,0,0,0,0,0,0,0,0,.8,.75,0,0,0,0,0,0,0,0,0,.67,0,0,0],
+		hoursN: [0,0,0,0,0,0,0,0,0,5,3,0,0,0,0,0,0,0,0,0,3,0,0,0],
+		hoursFacts: [
+			['시간대 분석', '시간대당 6건 × 3개 시간대부터 열립니다']
+		],
+		signalsSub: '체크인 2회 · 수집 중',
+		signalsFacts: [
+			['탭 이탈 비교', '이탈 2회+ 세션 1 / 5건 수집 중'],
+			['컨디션 비교', '체크인 2 / 8회 수집 중']
+		],
+		nextKicker: '기본 커리큘럼 다음 선택',
+		offers: [
+			{ title: 'b-08 foldLeft 누적 합', meta: '이어서 · 2분', rec: true },
+			{ title: '열린 암기 카드 5장', meta: '2분', rec: false },
+			{ title: 'fp-0201 피보나치', meta: '책 2장 · 5분', rec: false }
+		]
+	}
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let toastT;
+function toast(msg) {
+	const t = $('#toast');
+	t.textContent = msg;
+	t.classList.add('show');
+	clearTimeout(toastT);
+	toastT = setTimeout(() => t.classList.remove('show'), 2100);
+}
+
+// ---------- tabs ----------
+const tabs = $$('[role="tab"]');
+function goTab(tab) {
+	for (const t of tabs) {
+		const on = t === tab;
+		t.setAttribute('aria-selected', String(on));
+		$('#' + t.dataset.p).hidden = !on;
+	}
+	if (tab.id === 't-notes') showNotesIndex();
+}
+tabs.forEach((t, i) => {
+	t.addEventListener('click', () => goTab(t));
+	t.addEventListener('keydown', (e) => {
+		if (e.key === 'ArrowRight') { e.preventDefault(); const n = tabs[(i + 1) % tabs.length]; n.focus(); goTab(n); }
+		if (e.key === 'ArrowLeft') { e.preventDefault(); const n = tabs[(i - 1 + tabs.length) % tabs.length]; n.focus(); goTab(n); }
+	});
+});
+
+// look switch
+$('#look-btn').addEventListener('click', () => {
+	const r = document.documentElement;
+	const next = r.dataset.look === 'arena' ? 'light' : 'arena';
+	r.dataset.look = next;
+	$('#look-btn').textContent = next === 'arena' ? 'Arena' : 'Light';
+});
+
+// ---------- View 1 ----------
+$$('#v-done [data-c]').forEach((b) => b.addEventListener('click', () => {
+	$$('#v-done [data-c]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+	$('#c-echo').textContent = `${b.dataset.c} · 기록됨`;
+}));
+$('#btn-make').addEventListener('click', () => {
+	$('#stage-ask').hidden = true;
+	$('#stage-draft').hidden = false;
+});
+$('#btn-back-ask').addEventListener('click', () => {
+	$('#stage-draft').hidden = true;
+	$('#stage-ask').hidden = false;
+});
+$('#btn-skip').addEventListener('click', () => toast('다음 문제 후보로 이동합니다'));
+$('#btn-to-fsrs').addEventListener('click', (e) => {
+	e.currentTarget.textContent = '복습 큐에 들어감 ✓';
+	e.currentTarget.disabled = true;
+	toast('FSRS 복습 큐에 추가되었습니다');
+});
+$('#btn-open-notes').addEventListener('click', () => goTab($('#t-notes')));
+
+// ---------- View 2: Notes index & detail ----------
+let nFilter = 'all';
+let openNoteId = null;
+
+function showNotesIndex() {
+	openNoteId = null;
+	$('#notes-detail').hidden = true;
+	$('#notes-index').hidden = false;
+	renderNotesList();
+}
+function openNote(id) {
+	const n = notes.find((x) => x.id === id);
+	if (!n) return;
+	openNoteId = id;
+	$('#notes-index').hidden = true;
+	$('#notes-detail').hidden = false;
+	$('#d-meta').textContent = `${n.topic} · ${n.count}회 · scala-cli 검증됨`;
+	$('#d-title').textContent = n.title;
+	$('#d-trap').textContent = n.trap;
+	$('#d-fix').textContent = n.fix;
+	$('#d-bad').textContent = n.bad;
+	$('#d-good').textContent = n.good;
+	$('#d-ev-sum').textContent = `근거 ${n.refs.length}건`;
+	$('#d-ev-body').innerHTML = n.refs.map((r) => `<div>${esc(r)}</div>`).join('');
+	const btn = $('#d-promote');
+	btn.textContent = n.promoted ? '복습 중 ✓ (해제)' : '복습 카드로 넣기';
+	btn.className = n.promoted ? 'btn outline' : 'btn warm';
+}
+function renderNotesList() {
+	const list = notes.filter((n) => nFilter === 'all' ? true : nFilter === 'card' ? n.promoted : !n.promoted);
+	$('#n-list').innerHTML = list.length ? list.map((n) => `
+		<button type="button" class="note-row" data-open="${n.id}">
+			<i class="dot ${n.promoted ? 'on' : ''}" aria-hidden="true"></i>
+			<div><b>${esc(n.title)}</b><small>${esc(n.short)}</small></div>
+			<span class="meta">${n.count}회 · ${n.promoted ? '복습 중' : '초안'}</span>
+		</button>
+	`).join('') : `<p class="lead">해당 항목이 없습니다.</p>`;
+	$$('[data-open]').forEach((b) => b.addEventListener('click', () => openNote(b.dataset.open)));
+}
+$$('#n-filters button').forEach((b) => b.addEventListener('click', () => {
+	$$('#n-filters button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+	nFilter = b.dataset.f;
+	renderNotesList();
+}));
+$('#d-back').addEventListener('click', showNotesIndex);
+$('#d-promote').addEventListener('click', () => {
+	const n = notes.find((x) => x.id === openNoteId);
+	if (!n) return;
+	n.promoted = !n.promoted;
+	openNote(n.id);
+	renderMemo();
+	toast(n.promoted ? 'FSRS 복습 큐에 넣었습니다' : '초안 상태로 되돌렸습니다');
+});
+$('#d-to-memo').addEventListener('click', () => goTab($('#t-memo')));
+$('#btn-new-found').addEventListener('click', (e) => {
+	if (!notes.some((x) => x.id === extraNote.id)) {
+		notes.unshift(extraNote);
+		e.currentTarget.hidden = true;
+		renderNotesList();
+		toast('검증된 새 패턴 노트 1건이 추가되었습니다');
+	}
+});
+
+// ---------- View 3: Coaching ----------
+let scKey = 'rich';
+let coachIdx = 0;
+let vizKey = 'fatigue';
+
+function renderCoach() {
+	const sc = SCENARIOS[scKey];
+	$('#g-kicker').textContent = sc.kicker;
+	if (coachIdx >= sc.coaches.length) coachIdx = 0;
+	const c = sc.coaches[coachIdx];
+	$('#c-topic').textContent = c.topic;
+	$('#c-text').textContent = c.text;
+	$('#c-ev').open = false;
+	$('#c-facts').innerHTML = c.facts.map((f) => `<div>${esc(f)}</div>`).join('');
+	$('#c-pos').textContent = `${coachIdx + 1} / ${sc.coaches.length}`;
+	$('#c-prev').disabled = coachIdx === 0;
+	$('#c-next').disabled = coachIdx >= sc.coaches.length - 1;
+
+	renderViz(sc);
+
+	$('#g-next-kicker').textContent = sc.nextKicker;
+	$('#g-next').innerHTML = sc.offers.map((o) => `
+		<button type="button" class="next-item ${o.rec ? 'rec' : ''}" data-go="${esc(o.title)}">
+			<b>${esc(o.title)}</b>
+			<small>${esc(o.meta)}</small>
+		</button>
+	`).join('');
+	$$('[data-go]').forEach((b) => b.addEventListener('click', () => toast(`시작: ${b.dataset.go}`)));
+}
+
+function renderViz(sc) {
+	const viz = $('#g-viz');
+	const facts = $('#g-facts');
+	if (vizKey === 'fatigue') {
+		$('#g-sub').textContent = sc.fatigueSub;
+		viz.innerHTML = `<div class="fatigue">${sc.fatigue.map((f) => `
+			<div class="f-col">
+				<span class="f-v" style="color:${f.muted ? 'var(--dim)' : f.drop ? 'var(--bad)' : 'var(--ink)'}">${f.muted ? '—' : f.v + '%'}</span>
+				<div class="f-wrap"><div class="f-bar ${f.muted ? 'muted' : f.drop ? 'drop' : ''}" style="height:${f.muted ? 12 : Math.max(12, f.v)}%"></div></div>
+				<span class="f-l">${esc(f.l)}</span>
+			</div>
+		`).join('')}</div>`;
+		facts.innerHTML = sc.fatigueFacts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+	} else if (vizKey === 'hours') {
+		$('#g-sub').textContent = sc.hoursSub;
+		const valid = sc.hours.map((v, i) => (sc.hoursN[i] >= 6 ? v : null)).filter((v) => v !== null);
+		const hi = valid.length >= 3 ? Math.max(...valid) : -1;
+		const lo = valid.length >= 3 ? Math.min(...valid) : -1;
+		viz.innerHTML = `<div class="hours">${sc.hours.map((v, i) => {
+			const n = sc.hoursN[i];
+			const h = n === 0 ? 2 : Math.max(8, Math.round(v * 76));
+			const cls = n < 6 ? 'low' : v === hi ? 'best' : v === lo ? 'shaky' : '';
+			return `<i class="${cls}" style="height:${h}px" title="${i}시 · ${n ? Math.round(v * 100) + '% (' + n + '건)' : '기록 없음'}"></i>`;
+		}).join('')}</div><div class="axis"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div>`;
+		facts.innerHTML = sc.hoursFacts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+	} else {
+		$('#g-sub').textContent = sc.signalsSub;
+		viz.innerHTML = '';
+		facts.innerHTML = sc.signalsFacts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+	}
+}
+
+$('#c-prev').addEventListener('click', () => { if (coachIdx > 0) { coachIdx--; renderCoach(); } });
+$('#c-next').addEventListener('click', () => { coachIdx++; renderCoach(); });
+$$('#g-tabs button').forEach((b) => b.addEventListener('click', () => {
+	$$('#g-tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+	vizKey = b.dataset.g;
+	renderViz(SCENARIOS[scKey]);
+}));
+$$('#sc-switch button').forEach((b) => b.addEventListener('click', () => {
+	$$('#sc-switch button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+	scKey = b.dataset.sc;
+	coachIdx = 0;
+	renderCoach();
+}));
+
+// ---------- View 4: Mobile FSRS ----------
+let mIdx = 0;
+let mOpen = false;
+function renderMemo() {
+	const cards = notes.filter((n) => n.promoted).map((n) => n.card);
+	const btn = $('#m-btn');
+	if (!cards.length) {
+		$('#m-pos').textContent = '0 / 0';
+		$('#m-bar').style.width = '0%';
+		$('#m-q').textContent = '복습 큐에 들어 있는 패턴 카드가 없습니다.';
+		$('#m-pcode').hidden = true;
+		$('#m-src').textContent = '';
+		$('#m-ans').hidden = true;
+		$('#m-verdict').hidden = true;
+		btn.disabled = true;
+		btn.textContent = '카드 없음';
+		return;
+	}
+	btn.disabled = false;
+	if (mIdx >= cards.length) mIdx = 0;
+	const c = cards[mIdx];
+	mOpen = false;
+	$('#m-pos').textContent = `${mIdx + 1} / ${cards.length}`;
+	$('#m-bar').style.width = `${Math.round(((mIdx + 1) / cards.length) * 100)}%`;
+	$('#m-q').textContent = c.q;
+	if (c.pcode) { $('#m-pcode').textContent = c.pcode; $('#m-pcode').hidden = false; }
+	else $('#m-pcode').hidden = true;
+	$('#m-src').textContent = c.src;
+	$('#m-ans').hidden = true;
+	$('#m-verdict').hidden = true;
+	$('#m-pts').innerHTML = c.pts.map((p, i) => `<label class="pt"><input type="checkbox" data-i="${i}"><span>${esc(p)}</span></label>`).join('');
+	if (c.acode) { $('#m-acode').textContent = c.acode; $('#m-acode').hidden = false; }
+	else $('#m-acode').hidden = true;
+	btn.textContent = '답 보기';
+	$$('#m-pts input').forEach((cb) => cb.addEventListener('change', syncVerdict));
+}
+function syncVerdict() {
+	const cbs = $$('#m-pts input');
+	const n = cbs.filter((x) => x.checked).length;
+	const [w, next] = n === cbs.length ? ['기억함', '4일 뒤'] : n > 0 ? ['어려움', '1일 뒤'] : ['다시', '10분 뒤'];
+	$('#m-verdict').textContent = `${w} · 다음 복습 ${next}`;
+	$('#m-verdict').hidden = false;
+}
+$('#m-btn').addEventListener('click', () => {
+	const cards = notes.filter((n) => n.promoted);
+	if (!cards.length) return;
+	if (!mOpen) {
+		mOpen = true;
+		$('#m-ans').hidden = false;
+		syncVerdict();
+		$('#m-btn').textContent = '다음 카드 ›';
+	} else {
+		mIdx = (mIdx + 1) % cards.length;
+		renderMemo();
+		toast('복습 기록됨');
+	}
+});
+
+renderNotesList();
+renderCoach();
+renderMemo();
+</script>
+</body>
+</html>
