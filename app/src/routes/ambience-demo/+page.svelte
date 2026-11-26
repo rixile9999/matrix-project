@@ -25,6 +25,7 @@
 
 <main class="arena demo">
 	<div class="bar">
+		<a href="/ambience-demo/desk">{t('관측 데스크 시안', 'Observation desk preview')}</a>
 		<div class="seg" role="group" aria-label={t('장면', 'Scene')}>
 			{#each scenes as [s, label] (s)}
 				<button type="button" aria-pressed={scene === s} onclick={() => go(s)}>{label}</button>

@@ -76,5 +76,5 @@
 		</section>
 	{/each}
 
-	<div class="a-corner"><span></span><AmbienceControls /></div>
+	<div class="a-corner"><a class="a-small" href="/ambience-demo/desk">{t('관측 데스크 시안', 'Observation desk preview')}</a><AmbienceControls /></div>
 </main>

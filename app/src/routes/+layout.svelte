@@ -78,7 +78,9 @@
 	{#if stage.view}<ViewMode />{/if}
 {/if}
 
-{#if spar}
+{#if path === '/ambience-demo/desk'}
+	{@render children()}
+{:else if spar}
 	<div class="arena a-app" class:viewing={stage.view} inert={stage.view}>
 		{@render bar()}
 		{@render children()}
