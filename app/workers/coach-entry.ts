@@ -1,6 +1,7 @@
 import {spawn} from 'node:child_process';
 import net from 'node:net';
-import {mkdirSync} from 'node:fs';
+import {openIdentity,saveIdentity} from './identity.mjs';
+import {existsSync,mkdirSync} from 'node:fs';
 type BackendId = 'claude'|'codex'|'qwen';
 const TIMEOUT_MS=120000;
 // ---------- backends ----------
@@ -164,13 +165,14 @@ const codex: Backend = {
 // (cached), and the init event of the real call is checked again: anything listed there stops the run.
 // The CLI reports an API failure (expired key ...) as ordinary answer text "[API Error: ...]", which is turned into an error here.
 let qwenTools: Promise<string[]> | null = null;
-const QWEN_BASE = ['--auth-type','openai','-o', 'stream-json', '--include-partial-messages', '--safe-mode'];
+const qwenAuth = process.env.MATRIX_AUTH_MODE === 'cli' ? (existsSync('/identity/subscription_credentials.json') ? 'qwen-subscription' : 'qwen-oauth') : 'openai';
+const QWEN_BASE = ['--auth-type',qwenAuth,'-o', 'stream-json', '--include-partial-messages', '--safe-mode'];
 const QWEN_ALLOWED_TOOLS: string[] = [];
 
 function probeQwenTools(): Promise<string[]> {
 	return (qwenTools ??= (async () => {
 		const found: { tools: string[] | null } = { tools: null };
-		await run('qwen', ['-p', '.', '-o', 'stream-json', '--safe-mode'], {
+		await run('qwen', ['-p', '.', ...QWEN_BASE], {
 			timeoutMs: 30_000,
 			onLine(line) {
 				const ev = parse(line);
@@ -248,10 +250,15 @@ for await (const chunk of process.stdin) {
 }
 const {backend,prompt,system} = JSON.parse(request);
 if (!Object.hasOwn(backends,backend)) throw Error('invalid backend');
+const cliIdentity = process.env.MATRIX_AUTH_MODE === 'cli';
+if (cliIdentity) openIdentity(backend);
 try {
 	const text = await backends[backend as BackendId].ask(prompt,system,delta => console.log(JSON.stringify({delta})));
 	console.log(JSON.stringify({text}));
 } catch {
 	console.log(JSON.stringify({error:'코칭 워커가 답변을 생성하지 못했습니다. 제공자 인증 또는 연결을 확인하세요.'}));
 	process.exitCode = 1;
-} finally { proxy.close(); }
+} finally {
+	if (cliIdentity) saveIdentity(backend);
+	proxy.close();
+}

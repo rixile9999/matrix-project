@@ -4,7 +4,7 @@ import { db, accountId } from './db.ts';
 import { findProblem } from './lang.ts';
 import { gardenMemo } from './memo.ts';
 import { allRuns } from './spar-log.ts';
-import { askCoach } from './worker.ts';
+import { askCoach, connectedCoaches } from './worker.ts';
 import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import {
 	READING_SYSTEM, createGarden, parseReading, readingPrompt, rhythmOf, weekKeyOf, weekLabelOf, weekStartOf, weeklyFacts,
@@ -79,19 +79,20 @@ const latestReading = (weekKey: string): GardenReading | null => {
 	return r ? toReading(r) : null;
 };
 
-export function gardenData(): GardenData {
+export async function gardenData(): Promise<GardenData> {
 	const rec = loadRecords();
 	const g = createGarden(rec);
 	const now = nowSec();
 	const start = weekStartOf(now);
 	const key = weekKeyOf(start);
+	const available = await connectedCoaches();
 	return {
 		days: g.days(now),
 		rhythm: rhythmOf(rec),
 		week: { key, label: weekLabelOf(start), factCount: weeklyFacts(rec, start, now, g).length },
 		reading: latestReading(key),
-		backends: (Object.keys(BACKENDS) as BackendId[]).map((id) => ({ id, name: BACKENDS[id] })),
-		defaultBackend: DEFAULT_BACKEND
+		backends: available.map((id) => ({ id, name: BACKENDS[id] })),
+		defaultBackend: available[0] ?? DEFAULT_BACKEND
 	};
 }
 

@@ -4,13 +4,22 @@ import http from 'node:http';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import { chownSync, chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { chownSync, chmodSync, writeFileSync, renameSync, rmSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 const docker = promisify(execFile);
 const socket = process.env.MATRIX_WORKER_SOCKET ?? '/ipc/worker.sock';
 const active = new Set();
 const fields = new Set(['Judge.scala','User.scala','Tests.scala','Given.scala','T.scala','Main.scala','Cheat.scala']);
 const credential = {claude:'ANTHROPIC_API_KEY',codex:'CODEX_API_KEY',qwen:'OPENAI_API_KEY'};
+const ownerId = process.env.MATRIX_CLI_OWNER_ID;
+const loginFiles = {codex:['auth.json'],claude:['.credentials.json'],qwen:['oauth_creds.json','subscription_credentials.json']};
+const apiFile = (owner,provider) => '/run/matrix-credentials/'+owner+'/'+provider;
+function methods(owner,provider) {
+	return {
+		cli: owner === ownerId && loginFiles[provider].some(file=>existsSync('/cli/'+provider+'/'+file)),
+		api: existsSync(apiFile(owner,provider))
+	};
+}
 const max = 1024*1024;
 const server = http.createServer(async (req, res) => {
 	let reserved, container, child, timer, ended = false, timedOut = false, outputLimit = false;
@@ -22,7 +31,7 @@ const server = http.createServer(async (req, res) => {
 	res.on('close', () => { if (!res.writableEnded) stop(); });
 	const emit = event => { if (!res.destroyed) res.write(JSON.stringify(event)+'\n'); };
 	try {
-		if (req.method !== 'POST' || !['/scala','/coach'].includes(req.url)) throw Error('요청 형식 오류');
+		if (req.method !== 'POST' || !['/scala','/coach','/coach-status','/coach-key'].includes(req.url)) throw Error('요청 형식 오류');
 		let size=0; const chunks=[];
 		for await (const chunk of req) {
 			size += chunk.length;
@@ -31,6 +40,25 @@ const server = http.createServer(async (req, res) => {
 		}
 		const job=JSON.parse(Buffer.concat(chunks).toString());
 		if (!/^(?:[a-f0-9-]{36}|maintenance)$/.test(job.owner)) throw Error('작업 소유자가 필요합니다.');
+		if (req.url !== '/scala' && !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(job.owner)) throw Error('잘못된 계정입니다.');
+		if (req.url === '/coach-status') {
+			emit({status:{allowCli:job.owner===ownerId, providers:Object.fromEntries(Object.keys(credential).map(id=>[id,methods(job.owner,id)]))}});
+			return;
+		}
+		if (req.url === '/coach-key') {
+			if (!Object.hasOwn(credential,job.backend)) throw Error('잘못된 제공자입니다.');
+			const file=apiFile(job.owner,job.backend);
+			if (job.key===null) rmSync(file,{force:true});
+			else {
+				if (typeof job.key!=='string' || !/^[!-~]{8,4096}$/.test(job.key)) throw Error('API 키 형식을 확인하세요.');
+				mkdirSync(dirname(file),{recursive:true,mode:0o700});
+				const tmp=file+'.'+randomUUID();
+				writeFileSync(tmp,job.key,{mode:0o600,flag:'wx'});
+				renameSync(tmp,file);
+			}
+			emit({saved:true});
+			return;
+		}
 		const slot = req.url+job.owner;
 		if (active.has(slot) || active.size>=4) throw Error('워커 사용 중입니다. 잠시 후 다시 시도하세요.');
 		active.add(slot); reserved=slot;
@@ -48,14 +76,17 @@ const server = http.createServer(async (req, res) => {
 		} else {
 			const {backend,prompt,system}=job;
 			if (!Object.hasOwn(credential,backend) || typeof prompt!=='string' || typeof system!=='string') throw Error('코칭 요청 형식 오류');
-			const secret='/run/matrix-credentials/'+backend;
-			if (!existsSync(secret)) throw Error('이 코치의 전용 자격 증명이 등록되지 않았습니다.');
-			const key=credential[backend];
-			env[key]=readFileSync(secret,'utf8').trim();
-			if (!env[key]) throw Error('코치 자격 증명이 비어 있습니다.');
-			args.push('--network=none','--mount','type=volume,source=matrix-relay-'+backend+',target=/relay,readonly','-e',key,'-e','HTTPS_PROXY=http://127.0.0.1:8080','-e','HTTP_PROXY=http://127.0.0.1:8080',
+			const method=methods(job.owner,backend);
+			if (method.cli) {
+				args.push('--mount','type=volume,source=matrix-cli-'+backend+',target=/identity','-e','MATRIX_AUTH_MODE=cli');
+			} else if (method.api) {
+				const key=credential[backend];
+				env[key]=readFileSync(apiFile(job.owner,backend),'utf8');
+				args.push('-e',key);
+			} else throw Error('코치 연결 설정에서 이 계정의 인증을 먼저 연결하세요.');
+			args.push('--network=none','--mount','type=volume,source=matrix-relay-'+backend+',target=/relay,readonly','-e','HTTPS_PROXY=http://127.0.0.1:8080','-e','HTTP_PROXY=http://127.0.0.1:8080',
 				'-e','https_proxy=http://127.0.0.1:8080','-e','http_proxy=http://127.0.0.1:8080','-e','NODE_USE_ENV_PROXY=1');
-			if (backend==='qwen') args.push('-e','OPENAI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1','-e','OPENAI_MODEL=qwen3-coder-plus');
+			if (backend==='qwen' && !method.cli) args.push('-e','OPENAI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1','-e','OPENAI_MODEL=qwen3-coder-plus');
 			args.push('matrix-coach:1');
 			input=JSON.stringify({backend,prompt,system});
 		}

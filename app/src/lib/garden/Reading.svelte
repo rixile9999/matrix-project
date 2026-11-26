@@ -54,6 +54,8 @@
 	{/if}
 
 	<div class="ask">
+		<a href="/settings/coach">코치 연결 설정</a>
+		{#if !backends.length}<p>연결된 코치가 없습니다.</p>{:else}
 		<div class="row">
 			<button type="button" class="a-btn small" class:ghost={!!reading} disabled={busy || week.factCount === 0} onclick={ask}>
 				{busy ? '읽는 중…' : reading ? '다시 풀이받기' : '이번 주 풀이받기'}
@@ -65,6 +67,7 @@
 				</select>
 			</label>
 		</div>
+		{/if}
 		{#if busy}<p class="a-small">기록을 읽고 쓰는 데 1분 가까이 걸릴 수 있습니다.</p>{/if}
 		{#if error}<p class="a-err" role="alert">{error}</p>{/if}
 	</div>

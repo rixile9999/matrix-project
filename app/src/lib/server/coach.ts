@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
-import {runScala, askCoach} from './worker.ts';
+import {runScala, askCoach, connectedCoaches} from './worker.ts';
 import { db, accountId } from './db.ts';
 import { coachBasis } from './lang.ts';
 import { coachCard } from './memo.ts';
@@ -86,27 +86,27 @@ export function resolveContext(kind: unknown, id: unknown): Resolved | null {
 	};
 }
 
-export function threadView(kind: unknown, id: unknown): CoachThreadResponse | null {
+export async function threadView(kind: unknown, id: unknown): Promise<CoachThreadResponse | null> {
 	const c = resolveContext(kind, id);
 	if (!c) return null;
 	return {
 		access: c.access,
 		opensAt: c.opensAt,
 		gets: c.material()?.gets ?? [],
-		backends: (Object.keys(BACKENDS) as BackendId[]).map((b) => ({ id: b, label: BACKENDS[b] })),
+		backends: (await connectedCoaches()).map((b) => ({ id: b, label: BACKENDS[b] })),
 		messages: thread(c)
 	};
 }
 
 // ---------- ask ----------
 const running = new Set<string>();
-export type AskFailure = { status: 400 | 403 | 404 | 409; error: string };
+export type AskFailure = { status: 400 | 403 | 404 | 409 | 503; error: string };
 
 /**
  * Validates and starts a question. Returns a failure (nothing stored) or the NDJSON body to stream.
  * The stream is a sequence of CoachEvent lines. When `signal` aborts (client gone) the CLI process is killed.
  */
-export function startAsk(body: Record<string, unknown>, signal?: AbortSignal): AskFailure | { stream: ReadableStream<Uint8Array> } {
+export async function startAsk(body: Record<string, unknown>, signal?: AbortSignal): Promise<AskFailure | { stream: ReadableStream<Uint8Array> }> {
 	const ctx = body.context as Record<string, unknown> | undefined;
 	const backendId = body.backend;
 	const question = typeof body.question === 'string' ? body.question.trim() : '';
@@ -122,6 +122,7 @@ export function startAsk(body: Record<string, unknown>, signal?: AbortSignal): A
 	if (!c) return { status: 404, error: '질문할 대상을 찾을 수 없습니다.' };
 	if (c.access === 'locked') return { status: 403, error: '지금은 질문할 수 없습니다. 제한시간이 지나거나 세션이 끝나면 열립니다.' };
 	const access = c.access;
+	if (!(await connectedCoaches()).includes(backendId as BackendId)) return {status:503,error:'코치 연결 설정에서 이 제공자를 먼저 연결하세요.'};
 	const key = accountId();
 	if (running.has(key)) return { status: 409, error: '이미 답을 기다리는 질문이 있습니다.' };
 

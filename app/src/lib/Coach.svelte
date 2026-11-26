@@ -230,6 +230,7 @@
 	{:else}
 		<div class="co-top">
 			<p class="note">질문과 현재 풀이 자료를 선택한 모델 제공자에게 보냅니다.</p>
+			<a href="/settings/coach">코치 연결 설정</a>
 			<div class="co-chips" role="group" aria-label="{COACH_NAME} 선택">
 				{#each thread.backends as b (b.id)}
 					<button class="co-chip" type="button" aria-pressed={backend === b.id} onclick={() => chooseBackend(b.id)}>{b.label}</button>
@@ -267,15 +268,16 @@
 		</div>
 		<div class="co-bottom">
 			{#if notice}<p class="err" role="alert">{notice}</p>{/if}
-			{#if thread.access === 'full'}
+			{#if thread.access === 'full' && backend}
 				<div class="co-quick">
 					{#each QUICK as q (q)}<button type="button" disabled={busy} onclick={() => ask(q)}>{q}</button>{/each}
 				</div>
 			{/if}
+			{#if !backend}<p class="note">연결된 코치가 없습니다. 코치 연결 설정을 확인하세요.</p>{:else}
 			<div class="co-ask">
 				<textarea bind:this={input} bind:value={draft} rows="1" {placeholder} aria-label="질문" onkeydown={keydown}></textarea>
 				<button type="button" disabled={busy || !draft.trim()} onclick={send}>묻기</button>
-			</div>
+			</div>{/if}
 		</div>
 	{/if}
 </div>

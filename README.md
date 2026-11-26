@@ -45,7 +45,8 @@ python3 scripts/admin.py create owner
 - **계정**은 로그인 화면의 회원가입에서 직접 만들 수 있습니다. 관리자는 `python3 scripts/admin.py create 아이디`로 만듭니다. `reset 아이디`는 비밀번호를 바꾸고 해당 계정의 로그인 세션을 폐기합니다. 비밀번호는 숨김 입력으로 받습니다.
 - **기존 기록 이전**은 빈 계정 저장소에 최초 소유자를 만들 때 수행합니다. 이전 서비스 쓰기를 중지하고 SQLite 백업 API로 기존 DB의 일관된 사본을 만드세요. 이 파일을 웹 컨테이너의 쓰기 가능한 계정 볼륨에 복사하고 웹 서비스 사용자에게 읽기 권한을 준 뒤, 비밀번호를 표준 입력으로 보내 `docker compose exec -T web node scripts/account.ts create owner /app/data/accounts/import.db`를 실행합니다. 명령은 무결성을 확인한 별도 백업과 사용자 사본을 만들고 원래 DB를 보존합니다.
 - **학습 데이터**는 VM의 `matrix_accounts` 볼륨에 있습니다. `auth.db`는 인증, `users/<UUID>/trainer.db`는 개인 기록, `catalog.db`는 공용 Codeforces 문제 목록입니다. 백업할 때는 서비스를 멈추고 전체 볼륨을 보관하거나 각 SQLite DB를 백업 API로 복사하세요.
-- **코치 인증**은 제공자별 전용 API 키를 `python3 scripts/admin.py provider claude`, `provider codex`, `provider qwen`으로 등록합니다. Qwen은 DashScope 국제 엔드포인트를 사용합니다. 전용 키는 VM의 `matrix_credentials` 볼륨에 저장되며 변경 사항은 다음 작업부터 적용됩니다. 개인 CLI 로그인 디렉터리를 복사할 필요가 없습니다.
+- **코치 연결**은 로그인 후 ‘코치 설정’에서 관리합니다. 각 계정이 제공자별 API 키를 등록·교체·삭제할 수 있습니다. 키는 계정 UUID별로 워커 전용 볼륨에 저장되며 웹 응답에 반환하지 않습니다. Qwen 키는 DashScope 국제 엔드포인트용입니다. 공용 제공자 키는 사용하지 않습니다.
+- **소유자의 CLI 로그인**은 브로커의 `MATRIX_CLI_OWNER_ID`를 기존 관리 계정 `owner`의 UUID로 지정한 뒤 사용합니다. VM Docker 컨텍스트를 선택하고 저장소 루트에서 `python3 app/scripts/admin.py cli-login codex`를 실행합니다. Claude와 Qwen은 마지막 인자를 각각 `claude`, `qwen`으로 바꿉니다. 제공자 인증을 완료하고 Qwen의 대화형 UI는 정상 종료합니다. 작업마다 소유자의 해당 제공자 로그인 파일만 복원하고 갱신된 인증을 보관합니다. 소유자에게 CLI와 API 키가 모두 있으면 CLI를 우선 사용합니다.
 - **격리 실행**에서 웹 앱은 전용 Unix 소켓으로 작업을 요청합니다. 브로커만 VM의 Docker 소켓을 사용합니다. 각 작업은 비특권 사용자·읽기 전용 루트·제한된 임시 공간·CPU/메모리/PID/실행 시간/출력 제한을 적용한 새 컨테이너에서 끝납니다. Scala는 컴파일 단계부터 오프라인입니다. 코치는 네트워크가 꺼진 상태에서 제공자 전용 Unix 소켓을 통해 허용된 HTTPS 호스트에만 연결합니다. Operator, 정원 주간 해석과 Scala trace 검증이 같은 경계를 사용합니다.
 - **개발**은 `app/`에서 `MATRIX_DATA`로 개발 전용 계정 디렉터리를 정하고 `node scripts/account.ts create 이름`에 비밀번호를 표준 입력으로 보내 계정을 만듭니다. `pnpm dev`에서 채점과 코칭까지 사용하려면 `MATRIX_WORKER_SOCKET`에 브로커 소켓을 연결합니다. 운영과 같은 경계를 확인하려면 Compose에서 실행하세요.
 

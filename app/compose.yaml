@@ -38,24 +38,29 @@ services:
     restart: unless-stopped
     read_only: true
     network_mode: none
+    environment:
+      MATRIX_CLI_OWNER_ID: ${MATRIX_CLI_OWNER_ID:-}
     volumes:
       - "${MATRIX_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock"
       - ipc:/ipc
-      - credentials:/run/matrix-credentials:ro
+      - credentials:/run/matrix-credentials
+      - cli-codex:/cli/codex:ro
+      - cli-claude:/cli/claude:ro
+      - cli-qwen:/cli/qwen:ro
     logging: {driver: none}
   claude-egress:
     <<: *proxy
-    environment: {DESTINATIONS: api.anthropic.com}
+    environment: {DESTINATIONS: "api.anthropic.com,platform.claude.com,console.anthropic.com,claude.ai"}
     networks: [uplink]
     volumes: [relay-claude:/relay]
   codex-egress:
     <<: *proxy
-    environment: {DESTINATIONS: api.openai.com}
+    environment: {DESTINATIONS: "api.openai.com,chatgpt.com,auth.openai.com"}
     networks: [uplink]
     volumes: [relay-codex:/relay]
   qwen-egress:
     <<: *proxy
-    environment: {DESTINATIONS: dashscope-intl.aliyuncs.com}
+    environment: {DESTINATIONS: "dashscope-intl.aliyuncs.com,chat.qwen.ai,api.qwen.ai,auth.qwen.ai,portal.qwen.ai,coding.dashscope.aliyuncs.com"}
     networks: [uplink]
     volumes: [relay-qwen:/relay]
   scala-image:
@@ -69,6 +74,9 @@ services:
 volumes:
   accounts:
   credentials:
+  cli-claude: {name: matrix-cli-claude}
+  cli-codex: {name: matrix-cli-codex}
+  cli-qwen: {name: matrix-cli-qwen}
   ipc:
   relay-claude: {name: matrix-relay-claude}
   relay-codex: {name: matrix-relay-codex}

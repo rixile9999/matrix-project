@@ -50,6 +50,7 @@
 			<a href="/garden" class:on={path.startsWith('/garden')} aria-current={path.startsWith('/garden') ? 'page' : undefined}>Garden</a>
 		</nav>
 		<div class="bar-tools">
+			<a href="/settings/coach">코치 설정</a>
 			<form method="POST" action="/logout" data-sveltekit-reload><button class="btn ghost small" title={data.accountName ?? undefined}>{data.accountName} · 로그아웃</button></form>
 			<LookSwitch />
 			{#if look.value === 'arena' && !spar}<AmbienceControls />{/if}

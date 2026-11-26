@@ -1,12 +1,13 @@
 import {request} from 'node:http';
 import {resolve} from 'node:path';
 import { accountId } from './db.ts';
-import type { BackendId } from '../core/coach.ts';
+import { BACKENDS, type BackendId } from '../core/coach.ts';
 
 export class WorkerUnavailable extends Error {}
 
 type ScalaResult = { stdout:string; stderr:string; code:number; timedOut:boolean };
-type Reply = { delta?:string; text?:string; error?:string; result?:ScalaResult };
+type ConnectionStatus = {allowCli:boolean;providers:Record<BackendId,{cli:boolean;api:boolean}>};
+type Reply = { status?:ConnectionStatus; saved?:boolean; delta?:string; text?:string; error?:string; result?:ScalaResult };
 async function job(path:string, body:object, receive:(event:Reply)=>void, signal?:AbortSignal) {
 	const socketPath = process.env.MATRIX_WORKER_SOCKET ?? resolve('data/worker.sock');
 	const deadline = AbortSignal.timeout(155000);
@@ -43,4 +44,22 @@ export async function askCoach(backend:BackendId,prompt:string,system:string,onD
 	},signal);
 	if (!text) throw Error('코칭 결과를 받지 못했습니다.');
 	return text;
+}
+
+export async function coachStatus() {
+	let status: ConnectionStatus | undefined;
+	await job('/coach-status',{owner:accountId()},event=>{status=event.status;},AbortSignal.timeout(3000));
+	if (!status) throw new WorkerUnavailable('코치 연결 상태를 확인할 수 없습니다.');
+	return status;
+}
+export async function connectedCoaches():Promise<BackendId[]> {
+	try {
+		const {providers}=await coachStatus();
+		return (Object.keys(BACKENDS) as BackendId[]).filter(id=>providers[id].cli || providers[id].api);
+	} catch { return []; }
+}
+export async function setCoachKey(backend: BackendId, key:string|null) {
+	let saved=false;
+	await job('/coach-key',{owner:accountId(),backend,key},event=>{saved=event.saved===true;},AbortSignal.timeout(5000));
+	if (!saved) throw new WorkerUnavailable('연결 설정을 저장하지 못했습니다.');
 }
