@@ -10,7 +10,7 @@
 	import { look, syncLook } from '#lib/look.svelte.ts';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 	const path = $derived(page.url.pathname);
 	const focus = $derived(path.startsWith('/attempt'));
 	const spar = $derived(['/spar', '/garden'].some((r) => path === r || path.startsWith(r + '/'))); // Sparring and Garden are always dark: their own wrapper, no card, no light bar
@@ -49,6 +49,7 @@
 			<a href="/garden" class:on={path.startsWith('/garden')} aria-current={path.startsWith('/garden') ? 'page' : undefined}>Garden</a>
 		</nav>
 		<div class="bar-tools">
+			<form method="POST" action="/logout" data-sveltekit-reload><button class="btn ghost small" title={data.accountName ?? undefined}>{data.accountName} · 로그아웃</button></form>
 			<LookSwitch />
 			{#if look.value === 'arena' && !spar}<AmbienceControls />{/if}
 		</div>
@@ -66,7 +67,7 @@
 	</div>
 {:else}
 	<div class="screen" class:wide={path.startsWith('/lang/')}>
-		{#if !focus}{@render bar()}{/if}
+		{#if !focus && path !== '/login' && path !== '/signup'}{@render bar()}{/if}
 		{@render children()}
 	</div>
 {/if}

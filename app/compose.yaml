@@ -1,0 +1,77 @@
+name: matrix
+x-proxy: &proxy
+  build:
+    context: workers
+    dockerfile: egress.Dockerfile
+  image: matrix-egress:1
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 128m
+  logging: {driver: none}
+services:
+  web:
+    image: matrix-web:1
+    build: {context: ., dockerfile: workers/web.Dockerfile}
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      PORT: "3000"
+      ORIGIN: ${MATRIX_ORIGIN-http://localhost:5173}
+      MATRIX_ALLOWED_ORIGINS: ${MATRIX_ALLOWED_ORIGINS:-}
+      PROTOCOL_HEADER: x-matrix-proto
+      HOST_HEADER: x-matrix-host
+      MATRIX_DATA: /app/data/accounts
+      MATRIX_WORKER_SOCKET: /ipc/worker.sock
+    command: ["sh", "-c", 'if [ -z "$$ORIGIN" ]; then unset ORIGIN; fi; exec node build']
+    ports: ["127.0.0.1:${MATRIX_PORT:-5173}:3000"]
+    volumes: [accounts:/app/data/accounts, ipc:/ipc:ro]
+    networks: [web]
+    depends_on: [broker]
+  broker:
+    image: matrix-broker:1
+    build: {context: workers, dockerfile: broker.Dockerfile}
+    restart: unless-stopped
+    read_only: true
+    network_mode: none
+    volumes:
+      - "${MATRIX_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock"
+      - ipc:/ipc
+      - credentials:/run/matrix-credentials:ro
+    logging: {driver: none}
+  claude-egress:
+    <<: *proxy
+    environment: {DESTINATIONS: api.anthropic.com}
+    networks: [uplink]
+    volumes: [relay-claude:/relay]
+  codex-egress:
+    <<: *proxy
+    environment: {DESTINATIONS: api.openai.com}
+    networks: [uplink]
+    volumes: [relay-codex:/relay]
+  qwen-egress:
+    <<: *proxy
+    environment: {DESTINATIONS: dashscope-intl.aliyuncs.com}
+    networks: [uplink]
+    volumes: [relay-qwen:/relay]
+  scala-image:
+    profiles: [images]
+    image: matrix-scala:1
+    build: {context: workers, dockerfile: scala.Dockerfile}
+  coach-image:
+    profiles: [images]
+    image: matrix-coach:1
+    build: {context: workers, dockerfile: coach.Dockerfile}
+volumes:
+  accounts:
+  credentials:
+  ipc:
+  relay-claude: {name: matrix-relay-claude}
+  relay-codex: {name: matrix-relay-codex}
+  relay-qwen: {name: matrix-relay-qwen}
+networks:
+  web:
+  uplink:

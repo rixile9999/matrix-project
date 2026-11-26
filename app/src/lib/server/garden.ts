@@ -1,10 +1,10 @@
 // Garden, server side: reads the records into the plain shapes of core/garden.ts, builds the page data, and writes weekly readings on request.
 // The form and the rhythm are recomputed on every load; the only thing stored is a reading (append-only garden_readings).
-import { db } from './db.ts';
+import { db, accountId } from './db.ts';
 import { findProblem } from './lang.ts';
 import { gardenMemo } from './memo.ts';
 import { allRuns } from './spar-log.ts';
-import { backends } from './coach.ts';
+import { askCoach } from './worker.ts';
 import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import {
 	READING_SYSTEM, createGarden, parseReading, readingPrompt, rhythmOf, weekKeyOf, weekLabelOf, weekStartOf, weeklyFacts,
@@ -25,7 +25,7 @@ export function loadRecords(): GardenRecords {
 	const meta = new Map<string, ReturnType<typeof findProblem>>();
 	const problem = (id: string) => (meta.has(id) ? meta.get(id)! : (meta.set(id, findProblem(id)), meta.get(id)!));
 
-	const rows = db.prepare('SELECT id, problem_id, started_at, hints_used, ended_at, outcome, elapsed_sec FROM lang_sessions WHERE lang = ? ORDER BY id').all(LANG) as SessionRow[];
+	const rows = db().prepare('SELECT id, problem_id, started_at, hints_used, ended_at, outcome, elapsed_sec FROM lang_sessions WHERE lang = ? ORDER BY id').all(LANG) as SessionRow[];
 	const lang: LangRec[] = rows.flatMap((r) => {
 		const p = problem(r.problem_id);
 		return p
@@ -75,7 +75,7 @@ function toReading(r: ReadingRow): GardenReading | null {
 }
 
 const latestReading = (weekKey: string): GardenReading | null => {
-	const r = db.prepare('SELECT * FROM garden_readings WHERE week_key = ? ORDER BY id DESC LIMIT 1').get(weekKey) as ReadingRow | undefined;
+	const r = db().prepare('SELECT * FROM garden_readings WHERE week_key = ? ORDER BY id DESC LIMIT 1').get(weekKey) as ReadingRow | undefined;
 	return r ? toReading(r) : null;
 };
 
@@ -95,13 +95,13 @@ export function gardenData(): GardenData {
 	};
 }
 
-let busy = false;
+const busy = new Set<string>();
 const ASK_TIMEOUT_MS = 150_000;
 
 /** Asks one backend for this week's reading, validates it, stores the accepted sentences as a new row. On any failure nothing is stored. */
 export async function createReading(backendId: unknown): Promise<{ status: number; body: GardenReadingResponse }> {
 	const id = (typeof backendId === 'string' && backendId in BACKENDS ? backendId : DEFAULT_BACKEND) as BackendId;
-	if (busy) return { status: 409, body: { error: '이미 풀이를 쓰는 중입니다. 잠시 기다려 주세요.' } };
+	if (busy.has(accountId())) return { status: 409, body: { error: '이미 풀이를 쓰는 중입니다. 잠시 기다려 주세요.' } };
 	const rec = loadRecords();
 	const now = nowSec();
 	const start = weekStartOf(now);
@@ -109,13 +109,13 @@ export async function createReading(backendId: unknown): Promise<{ status: numbe
 	const facts = weeklyFacts(rec, start, now);
 	if (facts.length === 0) return { status: 409, body: { error: '이번 주 기록이 아직 없어 읽을 것이 없습니다.' } };
 
-	busy = true;
+	busy.add(accountId());
 	try {
 		const ctl = new AbortController();
 		const timer = setTimeout(() => ctl.abort(), ASK_TIMEOUT_MS);
 		let text: string;
 		try {
-			text = await backends[id].ask(readingPrompt(weekLabelOf(start), facts), READING_SYSTEM, () => {}, { signal: ctl.signal });
+			text = await askCoach(id, readingPrompt(weekLabelOf(start), facts), READING_SYSTEM, () => {}, ctl.signal);
 		} finally {
 			clearTimeout(timer);
 		}
@@ -124,12 +124,12 @@ export async function createReading(backendId: unknown): Promise<{ status: numbe
 		const byId = new Map(facts.map((f) => [f.id, f]));
 		const sentences = parsed.sentences.map((s) => ({ text: s.text, facts: s.factIds.map((i) => byId.get(i)!) as WeekFact[] }));
 		const at = nowSec();
-		const row = db.prepare('INSERT INTO garden_readings(week_key, created_at, backend, body) VALUES(?,?,?,?)').run(key, at, id, JSON.stringify({ sentences }));
+		const row = db().prepare('INSERT INTO garden_readings(week_key, created_at, backend, body) VALUES(?,?,?,?)').run(key, at, id, JSON.stringify({ sentences }));
 		return { status: 200, body: { reading: { id: Number(row.lastInsertRowid), weekKey: key, createdAt: at, backend: id, backendName: backendName(id), sentences } } };
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		return { status: 502, body: { error: `풀이를 받지 못했습니다. ${msg}`.slice(0, 600) } };
 	} finally {
-		busy = false;
+		busy.delete(accountId());
 	}
 }

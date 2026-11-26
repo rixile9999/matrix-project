@@ -8,12 +8,12 @@ const now = () => Math.floor(Date.now() / 1000);
 
 // ---------- settings ----------
 export function getSetting(key: string): string | null {
-	const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+	const row = db().prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
 	return row?.value ?? null;
 }
 export function setSetting(key: string, value: string | number | null) {
-	if (value === null) db.prepare('DELETE FROM settings WHERE key = ?').run(key);
-	else db.prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
+	if (value === null) db().prepare('DELETE FROM settings WHERE key = ?').run(key);
+	else db().prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
 }
 const numSetting = (key: string) => {
 	const v = getSetting(key);
@@ -33,15 +33,15 @@ const toProblem = (r: ProblemRow): Problem => ({
 	url: `https://codeforces.com/problemset/problem/${r.contest_id}/${r.idx}`
 });
 export const getProblem = (id: string) => {
-	const r = db.prepare('SELECT * FROM problems WHERE id = ?').get(id) as ProblemRow | undefined;
+	const r = db().prepare('SELECT * FROM catalog.problems WHERE id = ?').get(id) as ProblemRow | undefined;
 	return r ? toProblem(r) : null;
 };
-export const problemCount = () => (db.prepare('SELECT COUNT(*) AS n FROM problems').get() as { n: number }).n;
+export const problemCount = () => (db().prepare('SELECT COUNT(*) AS n FROM catalog.problems').get() as { n: number }).n;
 
 export async function syncProblems() {
 	const list = await cf.fetchProblems();
-	const stmt = db.prepare(
-		`INSERT INTO problems(id, contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?,?)
+	const stmt = db().prepare(
+		`INSERT INTO catalog.problems(id, contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?,?)
 		 ON CONFLICT(id) DO UPDATE SET name=excluded.name, rating=excluded.rating, tags=excluded.tags, solved_count=excluded.solved_count`
 	);
 	tx(() => {
@@ -51,7 +51,7 @@ export async function syncProblems() {
 }
 
 function storeSubmissions(subs: cf.CfSubmission[]) {
-	const stmt = db.prepare('INSERT OR REPLACE INTO cf_submissions(id, problem_id, verdict, created_at) VALUES(?,?,?,?)');
+	const stmt = db().prepare('INSERT OR REPLACE INTO cf_submissions(id, problem_id, verdict, created_at) VALUES(?,?,?,?)');
 	tx(() => {
 		for (const s of subs) {
 			const cid = s.problem.contestId ?? s.contestId;
@@ -80,7 +80,7 @@ export async function setHandle(handle: string, initialRating?: number | null) {
 	setSetting('handle', info.handle);
 	if (info.rating != null) setSetting('cf_rating', info.rating);
 	else setSetting('cf_rating', null);
-	const hasAttempts = (db.prepare('SELECT COUNT(*) AS n FROM attempts').get() as { n: number }).n > 0;
+	const hasAttempts = (db().prepare('SELECT COUNT(*) AS n FROM attempts').get() as { n: number }).n > 0;
 	let init: Rating | null = null;
 	if (initialRating != null && Number.isFinite(initialRating)) init = { r: initialRating, rd: 200 };
 	else if (!hasAttempts) init = info.rating != null ? { r: info.rating, rd: 150 } : { r: 1000, rd: 350 };
@@ -99,7 +99,7 @@ type AttemptRow = {
 const initialRating = (): Rating => ({ r: numSetting('init_rating') ?? 1000, rd: numSetting('init_rd') ?? 350 });
 
 function finishedRows() {
-	return db.prepare('SELECT * FROM attempts WHERE ended_at IS NOT NULL ORDER BY ended_at, id').all() as AttemptRow[];
+	return db().prepare('SELECT * FROM attempts WHERE ended_at IS NOT NULL ORDER BY ended_at, id').all() as AttemptRow[];
 }
 
 function derive() {
@@ -140,12 +140,12 @@ function buildAttempts(): Attempt[] {
 }
 
 export function getActiveAttemptId(): number | null {
-	const r = db.prepare('SELECT id FROM attempts WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1').get() as { id: number } | undefined;
+	const r = db().prepare('SELECT id FROM attempts WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1').get() as { id: number } | undefined;
 	return r?.id ?? null;
 }
 
 export function getAttempt(id: number): Attempt | null {
-	const row = db.prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
+	const row = db().prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
 	if (!row) return null;
 	const problem = getProblem(row.problem_id);
 	if (!problem) return null;
@@ -176,11 +176,11 @@ export function buildOffers(): Offer[] {
 	if (!getSetting('handle') || problemCount() === 0) return [];
 	const { rating, tags } = ratingState();
 	const exclude = new Set<string>();
-	for (const r of db.prepare("SELECT DISTINCT problem_id FROM cf_submissions WHERE verdict = 'OK'").all() as { problem_id: string }[]) exclude.add(r.problem_id);
-	for (const r of db.prepare('SELECT DISTINCT problem_id FROM attempts').all() as { problem_id: string }[]) exclude.add(r.problem_id);
+	for (const r of db().prepare("SELECT DISTINCT problem_id FROM cf_submissions WHERE verdict = 'OK'").all() as { problem_id: string }[]) exclude.add(r.problem_id);
+	for (const r of db().prepare('SELECT DISTINCT problem_id FROM attempts').all() as { problem_id: string }[]) exclude.add(r.problem_id);
 	const [minR, maxR] = [Math.min(...Object.keys(MODES).map((m) => ratingWindow(rating.r, m as Mode)[0])), Math.max(...Object.keys(MODES).map((m) => ratingWindow(rating.r, m as Mode)[1]))];
 	const candidates: Candidate[] = (
-		db.prepare('SELECT id, rating, tags, solved_count FROM problems WHERE rating BETWEEN ? AND ?').all(minR, maxR) as Pick<ProblemRow, 'id' | 'rating' | 'tags' | 'solved_count'>[]
+		db().prepare('SELECT id, rating, tags, solved_count FROM catalog.problems WHERE rating BETWEEN ? AND ?').all(minR, maxR) as Pick<ProblemRow, 'id' | 'rating' | 'tags' | 'solved_count'>[]
 	).map((r) => ({ id: r.id, rating: r.rating, tags: JSON.parse(r.tags), solvedCount: r.solved_count }));
 
 	return (Object.keys(MODES) as Mode[]).map((mode) => {
@@ -200,7 +200,7 @@ export function startAttempt(mode: string, problemId: string): number {
 	if (!(mode in MODES)) throw new Error('알 수 없는 모드입니다.');
 	if (getActiveAttemptId() !== null) throw new Error('이미 진행 중인 시도가 있습니다.');
 	if (!getProblem(problemId)) throw new Error('문제를 찾을 수 없습니다.');
-	const r = db
+	const r = db()
 		.prepare('INSERT INTO attempts(problem_id, mode, started_at, limit_sec) VALUES(?,?,?,?)')
 		.run(problemId, mode, now(), MODES[mode as Mode].limitSec);
 	return Number(r.lastInsertRowid);
@@ -208,7 +208,7 @@ export function startAttempt(mode: string, problemId: string): number {
 
 function finish(id: number, outcome: Outcome, endedAt: number, elapsedSec: number | null) {
 	// guarded so a concurrent resolve cannot finish twice
-	return db
+	return db()
 		.prepare('UPDATE attempts SET ended_at = ?, outcome = ?, elapsed_sec = ? WHERE id = ? AND ended_at IS NULL')
 		.run(endedAt, outcome, elapsedSec, id).changes > 0;
 }
@@ -219,7 +219,7 @@ export function giveUp(id: number) {
 
 /** Resolves an active attempt against Codeforces. Throws if the CF call fails. */
 export async function resolveAttempt(id: number): Promise<{ resolved: boolean; outcome: Outcome | null }> {
-	const row = db.prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
+	const row = db().prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
 	if (!row) throw new Error('시도를 찾을 수 없습니다.');
 	if (row.ended_at !== null) return { resolved: true, outcome: row.outcome };
 	const handle = getSetting('handle');

@@ -1,3 +1,4 @@
+import { WorkerUnavailable } from './worker.ts';
 // Sparring (Sprint and Recall): runs, events and the views built from them. Rules and arithmetic: core/spar.ts. Contract: the Sparring
 // section of src/lib/types.ts. Everything stored is an append-only event; nothing derived is stored.
 import { tx } from './db.ts';
@@ -22,14 +23,14 @@ const TREND = 5;
 
 /** A rejected request; `status` is the HTTP status, `over` says the run is no longer running (the page should go to its result). */
 export class SparFail extends Error {
-	constructor(public status: 400 | 409, message: string, public over = false, public runId?: number) {
+	constructor(public status: 400 | 409 | 503, message: string, public over = false, public runId?: number) {
 		super(message);
 	}
 	get body() {
 		return { error: this.message, ...(this.over ? { over: true, runUrl: this.runId ? `/spar/run/${this.runId}` : undefined } : {}) };
 	}
 }
-export const failure = (e: unknown): SparFail => (e instanceof SparFail ? e : new SparFail(400, e instanceof Error ? e.message : String(e)));
+export const failure = (e: unknown): SparFail => (e instanceof SparFail ? e : new SparFail(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : String(e)));
 
 const runUrl = (id: number) => `/spar/run/${id}`;
 const screenUrl = (r: { kind: SparKind; id: number }) => `/spar/${r.kind}/${r.id}`;
@@ -295,7 +296,7 @@ export async function recallAnswer(runId: number, id: unknown, choice: unknown):
 	try {
 		r = await answerCheck(id, choice, Math.max(0, ms - lastMs)); // the existing check path: first answer within the hour is recorded as a memo review
 	} catch (e) {
-		throw new SparFail(400, e instanceof Error ? e.message : String(e));
+		throw new SparFail(e instanceof WorkerUnavailable ? 503 : 400, e instanceof Error ? e.message : String(e));
 	}
 	if (!r) throw new SparFail(409, '점검을 찾을 수 없습니다.');
 	const highlight = r.correctIndex ?? r.bugIndex;

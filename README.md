@@ -14,39 +14,44 @@
 | 암기 | 휴대폰용 복습 카드 208장과 문제 점검 93개. 간격 반복(FSRS)으로 다음 복습 시점을 정합니다. |
 | Operator | 문제를 마친 뒤 질문하는 창. Claude Code, Codex, Qwen Code CLI를 도구 없이 호출합니다. 타이머가 도는 동안은 잠깁니다. |
 
-## 주의: 공개 서버에 올리지 마세요
+## 실행과 계정 관리
 
-이 앱에는 **로그인이 없고, 제출한 Scala 코드를 서버 컴퓨터에서 그대로 실행합니다.**
-내 컴퓨터나 사설망(예: Tailscale) 안에서만 쓰도록 만들었습니다. 사설 주소가 아닌 곳에서 온 요청은 상태를 바꾸지 못하게 막아 두었지만
-(`app/src/hooks.server.ts`), 이것은 안전장치일 뿐 인증이 아닙니다. 인터넷에 그대로 노출하면 누구나 그 컴퓨터에서 코드를 실행할 수 있습니다.
-
-## 실행
-
-필요한 것: Node.js 26 이상(`node:sqlite` 사용), pnpm, 그리고 Scala 문제를 채점할 [scala-cli](https://scala-cli.virtuslab.org/).
+Node.js 26, pnpm, Docker Compose가 필요합니다. 운영은 사설망 HTTPS 또는 로컬호스트를 기준으로 합니다. macOS에서는 호스트 디렉터리를 공유하지 않는 전용 Linux VM을 사용할 수 있습니다. 아래 명령은 Lima의 rootless Docker 템플릿 기준입니다. 이미 구성한 VM에서는 시작과 컨텍스트 선택만 필요합니다.
 
 ```sh
-pnpm -C app install
-# scala-cli 실행 파일을 tools/scala-cli 에 두거나, SCALA_CLI 환경변수로 경로를 알려 줍니다.
+limactl create --name=matrix-workers --mount-none --memory=5 --cpus=3 --disk=20 template:docker
+limactl start matrix-workers
+docker context create lima-matrix-workers --docker "host=unix://$HOME/.lima/matrix-workers/sock/docker.sock"
+export DOCKER_CONTEXT=lima-matrix-workers
+export MATRIX_DOCKER_SOCKET="/run/user/$(limactl shell --workdir / matrix-workers id -u)/docker.sock"
+pnpm -C app install --frozen-lockfile
 pnpm build
-PORT=5173 pnpm start      # 개발 중에는 pnpm dev
+cd app
+docker compose --profile images build
+docker compose up -d --no-build
+python3 scripts/admin.py create owner
 ```
 
-데이터는 `app/data/trainer.db`(SQLite)에 쌓입니다. 기록이 원본이고, 레이팅과 복습 일정은 기록에서 다시 계산합니다.
+기본 접속 주소는 `http://localhost:5173`입니다. Tailscale Serve 같은 사설 HTTPS 프록시를 쓰면 Compose 실행 시 `MATRIX_ORIGIN`을 실제 HTTPS 주소로 지정합니다. Compose는 웹 포트를 루프백에 바인딩합니다. 재실행할 때도 같은 Docker 컨텍스트와 환경 설정을 사용하세요.
 
-환경변수(모두 선택):
+### Tailscale 없이 접속하기
 
-| 이름 | 뜻 |
-|---|---|
-| `DB_PATH` | 데이터베이스 파일 경로 |
-| `SCALA_CLI`, `JUDGE_DIR` | scala-cli 경로, 채점 작업 폴더 |
-| `COACH_DIR` | Operator가 CLI를 실행하는 빈 폴더 |
-| `COACH_CLAUDE_MODEL`, `COACH_CODEX_MODEL`, `COACH_QWEN_MODEL` | Operator 백엔드별 모델 |
+이 Mac에서만 쓸 때는 기본 구성의 `http://localhost:5173/signup`에서 가입합니다. 같은 Wi-Fi나 사내망에 제공할 때는 Mac에서 Caddy를 실행해 LAN IP의 HTTPS 요청을 VM의 루프백 포트로 전달합니다. HTTPS 접속 주소와 브라우저 주소가 같아야 폼 제출과 로그인 쿠키가 동작합니다.
 
-Operator를 쓰려면 `claude`, `codex`, `qwen` 중 쓰려는 CLI가 설치되어 있고 로그인되어 있어야 합니다. API 키는 이 저장소에 없고, 각 CLI가 자기 설정에서 읽습니다.
+1. Compose 환경에서 `MATRIX_PORT=5183`, `MATRIX_ORIGIN=`(빈 값), `MATRIX_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://<Mac의 LAN IP>:8443`을 설정하고 웹 서비스를 다시 띄웁니다. 여러 주소를 쓰는 구성에서는 로컬 프록시가 요청마다 원래 프로토콜과 호스트를 설정합니다.
+2. Mac 호스트에서 `MATRIX_LAN_IP=<Mac의 LAN IP> caddy run --config app/Caddyfile.lan --adapter caddyfile`로 프록시를 실행합니다. Mac에서는 `http://localhost:5173`, 같은 네트워크의 기기에서는 `https://<Mac의 LAN IP>:8443/signup`으로 접속합니다.
+3. LAN HTTPS는 Caddy의 내부 인증서를 사용합니다. 다른 기기의 신뢰 저장소에는 Caddy 데이터 디렉터리의 `pki/authorities/local/root.crt` 공개 인증서를 설치합니다. 외부 인터넷에서 운영하려면 소유한 도메인의 DNS·인바운드 라우팅·공인 HTTPS 인증서를 구성하고 그 HTTPS 주소를 허용 목록에 추가합니다.
+
+- **계정**은 로그인 화면의 회원가입에서 직접 만들 수 있습니다. 관리자는 `python3 scripts/admin.py create 아이디`로 만듭니다. `reset 아이디`는 비밀번호를 바꾸고 해당 계정의 로그인 세션을 폐기합니다. 비밀번호는 숨김 입력으로 받습니다.
+- **기존 기록 이전**은 빈 계정 저장소에 최초 소유자를 만들 때 수행합니다. 이전 서비스 쓰기를 중지하고 SQLite 백업 API로 기존 DB의 일관된 사본을 만드세요. 이 파일을 웹 컨테이너의 쓰기 가능한 계정 볼륨에 복사하고 웹 서비스 사용자에게 읽기 권한을 준 뒤, 비밀번호를 표준 입력으로 보내 `docker compose exec -T web node scripts/account.ts create owner /app/data/accounts/import.db`를 실행합니다. 명령은 무결성을 확인한 별도 백업과 사용자 사본을 만들고 원래 DB를 보존합니다.
+- **학습 데이터**는 VM의 `matrix_accounts` 볼륨에 있습니다. `auth.db`는 인증, `users/<UUID>/trainer.db`는 개인 기록, `catalog.db`는 공용 Codeforces 문제 목록입니다. 백업할 때는 서비스를 멈추고 전체 볼륨을 보관하거나 각 SQLite DB를 백업 API로 복사하세요.
+- **코치 인증**은 제공자별 전용 API 키를 `python3 scripts/admin.py provider claude`, `provider codex`, `provider qwen`으로 등록합니다. Qwen은 DashScope 국제 엔드포인트를 사용합니다. 전용 키는 VM의 `matrix_credentials` 볼륨에 저장되며 변경 사항은 다음 작업부터 적용됩니다. 개인 CLI 로그인 디렉터리를 복사할 필요가 없습니다.
+- **격리 실행**에서 웹 앱은 전용 Unix 소켓으로 작업을 요청합니다. 브로커만 VM의 Docker 소켓을 사용합니다. 각 작업은 비특권 사용자·읽기 전용 루트·제한된 임시 공간·CPU/메모리/PID/실행 시간/출력 제한을 적용한 새 컨테이너에서 끝납니다. Scala는 컴파일 단계부터 오프라인입니다. 코치는 네트워크가 꺼진 상태에서 제공자 전용 Unix 소켓을 통해 허용된 HTTPS 호스트에만 연결합니다. Operator, 정원 주간 해석과 Scala trace 검증이 같은 경계를 사용합니다.
+- **개발**은 `app/`에서 `MATRIX_DATA`로 개발 전용 계정 디렉터리를 정하고 `node scripts/account.ts create 이름`에 비밀번호를 표준 입력으로 보내 계정을 만듭니다. `pnpm dev`에서 채점과 코칭까지 사용하려면 `MATRIX_WORKER_SOCKET`에 브로커 소켓을 연결합니다. 운영과 같은 경계를 확인하려면 Compose에서 실행하세요.
 
 ## 콘텐츠 검증
 
-콘텐츠는 기계로 확인한 것만 넣습니다.
+콘텐츠 검증 스크립트에서 문제 채점은 연결된 브로커를 사용합니다. 저장소에 포함된 치트시트·암기 예제의 오프라인 유지보수 검증에는 로컬 scala-cli도 필요합니다.
 
 ```sh
 cd app

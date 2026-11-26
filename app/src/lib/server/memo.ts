@@ -119,12 +119,12 @@ function cheatEntries(): CheatEntry[] {
 
 // ---------- facts from the log and the language pack ----------
 const finishedProblems = () =>
-	new Set((db.prepare('SELECT DISTINCT problem_id FROM lang_sessions WHERE lang = ? AND ended_at IS NOT NULL').all(LANG) as { problem_id: string }[]).map((r) => r.problem_id));
-const lookedUpEntries = () => (db.prepare('SELECT entry_id FROM lang_lookups GROUP BY entry_id ORDER BY MIN(id)').all() as { entry_id: string }[]).map((r) => r.entry_id);
+	new Set((db().prepare('SELECT DISTINCT problem_id FROM lang_sessions WHERE lang = ? AND ended_at IS NOT NULL').all(LANG) as { problem_id: string }[]).map((r) => r.problem_id));
+const lookedUpEntries = () => (db().prepare('SELECT entry_id FROM lang_lookups GROUP BY entry_id ORDER BY MIN(id)').all() as { entry_id: string }[]).map((r) => r.entry_id);
 
 type LogRow = { item_type: ItemType; item_id: string; at: number; rating: Rating };
 const reviewLog = (): Review[] =>
-	(db.prepare('SELECT item_type, item_id, at, rating FROM memo_reviews ORDER BY id').all() as LogRow[]).map((r) => ({ itemType: r.item_type, itemId: r.item_id, at: r.at, rating: r.rating }));
+	(db().prepare('SELECT item_type, item_id, at, rating FROM memo_reviews ORDER BY id').all() as LogRow[]).map((r) => ({ itemType: r.item_type, itemId: r.item_id, at: r.at, rating: r.rating }));
 
 /** Cards (file cards plus synthetic syntax cards) in one normalised shape. */
 type AnyCard = {
@@ -236,11 +236,11 @@ export function revealCard(id: unknown, elapsedMs?: unknown): MemoRevealResponse
 const clampMs = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(3_600_000, Math.max(0, Math.round(v))) : 0);
 
 function record(type: ItemType, id: string, rating: Rating, elapsedMs: number, detail: object) {
-	db.prepare('INSERT INTO memo_reviews(item_type, item_id, at, rating, elapsed_ms, detail) VALUES(?,?,?,?,?,?)').run(type, id, nowSec(), rating, elapsedMs, JSON.stringify(detail));
+	db().prepare('INSERT INTO memo_reviews(item_type, item_id, at, rating, elapsed_ms, detail) VALUES(?,?,?,?,?,?)').run(type, id, nowSec(), rating, elapsedMs, JSON.stringify(detail));
 }
 
 const memoryOf = (type: ItemType, id: string) =>
-	replay((db.prepare('SELECT at, rating FROM memo_reviews WHERE item_type = ? AND item_id = ? ORDER BY id').all(type, id) as { at: number; rating: Rating }[]));
+	replay((db().prepare('SELECT at, rating FROM memo_reviews WHERE item_type = ? AND item_id = ? ORDER BY id').all(type, id) as { at: number; rating: Rating }[]));
 
 /** Records a card review. Null for an unknown or locked card; throws for a malformed tick list. */
 export function answerCard(id: unknown, ticked: unknown, elapsedMs: unknown): MemoAnswerResponse | null {
@@ -301,7 +301,7 @@ function firstFailure(r: JudgeResult): string {
 	return bad ? `${bad.name}${bad.detail ? `: ${bad.detail}` : ''}` : '테스트를 통과하지 못했습니다.';
 }
 
-const answeredRecently = (id: string) => !!db.prepare("SELECT 1 FROM memo_reviews WHERE item_type = 'check' AND item_id = ? AND at >= ?").get(id, nowSec() - 3600);
+const answeredRecently = (id: string) => !!db().prepare("SELECT 1 FROM memo_reviews WHERE item_type = 'check' AND item_id = ? AND at >= ?").get(id, nowSec() - 3600);
 
 function recordCheck(c: Check, first: boolean, correct: boolean, ms: number, detail: object): boolean {
 	if (!first) return false;
@@ -421,7 +421,7 @@ export function homeView(): MemoHomeData {
 		const kind = kinds.get(k)!;
 		split[kind === 'concept' ? 'concept' : kind === 'syntax' ? 'syntax' : processKinds.has(kind) ? 'process' : 'concept']++;
 	}
-	const at = (db.prepare('SELECT at FROM memo_reviews').all() as { at: number }[]).map((r) => r.at);
+	const at = (db().prepare('SELECT at FROM memo_reviews').all() as { at: number }[]).map((r) => r.at);
 	return {
 		total: keys.length,
 		split,

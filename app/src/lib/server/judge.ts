@@ -1,14 +1,9 @@
-import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
+import { runScala } from './worker.ts';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { findAvoided, parseCases, type BookMeta, type JudgeResult, type LangProblem } from '#lib/core/lang.ts';
 
 const PROBLEMS_DIR = resolve(process.env.PROBLEMS_DIR ?? 'problems');
-export const WORK_DIR = resolve(process.env.JUDGE_DIR ?? 'data/judge');
-const LOCAL_CLI = resolve('../tools/scala-cli');
-export const SCALA_CLI = process.env.SCALA_CLI ?? (existsSync(LOCAL_CLI) ? LOCAL_CLI : 'scala-cli');
-const TIMEOUT_MS = 90_000; // the first run also downloads the compiler
-
 const problemDir = (lang: string, id: string) => join(PROBLEMS_DIR, lang, id);
 
 export function listProblems(lang: string): LangProblem[] {
@@ -39,51 +34,31 @@ export function loadBooks(lang: string): Record<string, BookMeta> {
 	return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
 }
 
-let queue: Promise<unknown> = Promise.resolve();
-
-/** Runs `fn` after every earlier scala-cli job has finished; judge runs and the Operator's trace checks share this queue. */
-export function serialized<T>(fn: () => Promise<T>): Promise<T> {
-	const run = queue.then(fn);
-	queue = run.catch(() => {});
-	return run;
-}
-
-/** Compiles `code` together with the problem's tests and runs them. Runs are serialized. */
-export function judge(lang: string, problem: LangProblem, code: string): Promise<JudgeResult> {
-	return serialized(() => runOnce(lang, problem, code));
-}
-
-function runOnce(lang: string, problem: LangProblem, code: string): Promise<JudgeResult> {
-	// A stable directory per problem lets the compile server reuse its incremental state.
-	const dir = join(WORK_DIR, lang, problem.id);
-	mkdirSync(dir, { recursive: true });
-	copyFileSync(join(PROBLEMS_DIR, '_harness', 'Judge.scala'), join(dir, 'Judge.scala'));
-	copyFileSync(join(problemDir(lang, problem.id), 'Tests.scala'), join(dir, 'Tests.scala'));
-	const given = join(problemDir(lang, problem.id), 'Given.scala');
-	if (existsSync(given)) copyFileSync(given, join(dir, 'Given.scala'));
-	else rmSync(join(dir, 'Given.scala'), { force: true });
-	writeFileSync(join(dir, 'User.scala'), code);
+export async function judge(lang: string, problem: LangProblem, code: string, owner?: string): Promise<JudgeResult> {
+	const files: Record<string,string> = {
+		'Judge.scala': readFileSync(join(PROBLEMS_DIR, '_harness', 'Judge.scala'),'utf8'),
+		'Tests.scala': readFileSync(join(problemDir(lang,problem.id),'Tests.scala'),'utf8'),
+		'User.scala': code
+	};
+	const given = loadGiven(lang, problem.id);
+	if (given !== null) files['Given.scala'] = given;
 	const avoided = findAvoided(code, problem.avoid);
-
-	return new Promise((done) => {
-		execFile(SCALA_CLI, ['run', dir, '-q'], { timeout: TIMEOUT_MS, maxBuffer: 1 << 20, killSignal: 'SIGKILL' }, (err, stdout, stderr) => {
-			const { cases, rest } = parseCases(stdout);
-			// Keep only compiler errors, without colour codes, harness warnings or work-dir paths.
-			const clean = stderr
-				.replace(/\x1b\[[0-9;]*m/g, '')
-				.split('\n')
-				.filter((l) => l.startsWith('[error]'))
-				.map((l) => l.slice(8).replace(/^\S*User\.scala/, 'User.scala'))
-				.join('\n')
-				.trim();
-			if (err && (err as { killed?: boolean }).killed) return done({ status: 'timeout', cases, output: rest, avoided });
-			if (cases.length === 0) return done({ status: 'compile_error', cases, output: clean || rest || stderr.trim(), avoided });
-			const allOk = !err && cases.every((c) => c.status === 'ok');
-			if (allOk && problem.kind === 'refactor' && avoided.length > 0) {
-				const used = avoided.map((w) => '`' + w + '`').join(', ');
-				return done({ status: 'failed', cases, output: `테스트는 통과했지만 ${used} 사용이 남아 있습니다. 이 문제는 그것 없이 다시 쓰는 것이 목표입니다.`, avoided });
-			}
-			done({ status: allOk ? 'passed' : 'failed', cases, output: rest, avoided });
-		});
-	});
+	const {stdout, stderr, code: exit, timedOut} = await runScala(files,owner);
+	const { cases, rest } = parseCases(stdout);
+	// Keep only compiler errors, without colour codes, harness warnings or work-dir paths.
+	const clean = stderr
+		.replace(/\x1b\[[0-9;]*m/g, '')
+		.split('\n')
+		.filter((l) => l.startsWith('[error]'))
+		.map((l) => l.slice(8).replace(/^\S*User\.scala/, 'User.scala'))
+		.join('\n')
+		.trim();
+	if (timedOut) return ({ status: 'timeout', cases, output: rest, avoided });
+	if (cases.length === 0) return ({ status: 'compile_error', cases, output: clean || rest || stderr.trim(), avoided });
+	const allOk = exit === 0 && cases.every((c) => c.status === 'ok');
+	if (allOk && problem.kind === 'refactor' && avoided.length > 0) {
+		const used = avoided.map((w) => '`' + w + '`').join(', ');
+		return ({ status: 'failed', cases, output: `테스트는 통과했지만 ${used} 사용이 남아 있습니다. 이 문제는 그것 없이 다시 쓰는 것이 목표입니다.`, avoided });
+	}
+	return ({ status: allOk ? 'passed' : 'failed', cases, output: rest, avoided });
 }

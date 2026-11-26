@@ -1,14 +1,42 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { join } from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { accountRoot } from './auth.ts';
 
-const path = process.env.DB_PATH ?? 'data/trainer.db';
-if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
+const context = new AsyncLocalStorage<{ id: string; database: DatabaseSync }>();
+const connections = new Map<string, DatabaseSync>();
 
-export const db = new DatabaseSync(path);
-db.exec(`
+export function withAccount<T>(id: string, fn: () => T): T {
+	if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error('Invalid account');
+	let database = connections.get(id);
+	if (!database) {
+		const directory = join(accountRoot(), 'users', id);
+		mkdirSync(directory, { recursive: true, mode: 0o700 });
+		database = new DatabaseSync(join(directory, 'trainer.db'));
+		initialize(database);
+		connections.set(id, database);
+	}
+	return context.run({ id, database }, fn);
+}
+
+export function accountId() {
+	const account = context.getStore();
+	if (!account) throw new Error('로그인이 필요합니다.');
+	return account.id;
+}
+
+export function db() {
+	const account = context.getStore();
+	if (!account) throw new Error('로그인이 필요합니다.');
+	return account.database;
+}
+
+function initialize(database: DatabaseSync) {
+	database.prepare('ATTACH DATABASE ? AS catalog').run(join(accountRoot(), 'catalog.db'));
+	database.exec(`
 PRAGMA journal_mode = WAL;
-CREATE TABLE IF NOT EXISTS problems (
+CREATE TABLE IF NOT EXISTS catalog.problems (
 	id TEXT PRIMARY KEY, contest_id INTEGER NOT NULL, idx TEXT NOT NULL, name TEXT NOT NULL,
 	rating INTEGER NOT NULL, tags TEXT NOT NULL, solved_count INTEGER NOT NULL
 );
@@ -65,16 +93,21 @@ CREATE TABLE IF NOT EXISTS garden_readings (
 );
 CREATE INDEX IF NOT EXISTS garden_readings_week ON garden_readings(week_key, id);
 `);
+	// Seed the shared public catalogue from the old single-user file when present.
+	if (database.prepare("SELECT 1 FROM main.sqlite_schema WHERE type='table' AND name='problems'").get()) {
+		database.exec('INSERT OR IGNORE INTO catalog.problems SELECT * FROM main.problems');
+	}
+}
 
 /** Runs fn inside a transaction. */
 export function tx<T>(fn: () => T): T {
-	db.exec('BEGIN');
+	db().exec('BEGIN');
 	try {
 		const out = fn();
-		db.exec('COMMIT');
+		db().exec('COMMIT');
 		return out;
 	} catch (e) {
-		db.exec('ROLLBACK');
+		db().exec('ROLLBACK');
 		throw e;
 	}
 }

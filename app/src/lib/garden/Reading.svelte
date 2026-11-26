@@ -68,7 +68,7 @@
 		{#if busy}<p class="a-small">기록을 읽고 쓰는 데 1분 가까이 걸릴 수 있습니다.</p>{/if}
 		{#if error}<p class="a-err" role="alert">{error}</p>{/if}
 	</div>
-	<p class="note">Operator가 이번 주({week.label}) 기록의 사실만 받아 쓴 글입니다. 사람을 평가하지 않고, 문장마다 근거가 된 기록을 볼 수 있습니다. 누를 때만 만들어지며 다시 받으면 새 글이 쌓입니다.</p>
+	<p class="note">선택한 모델 제공자에게 이번 주 학습 기록 요약을 전송합니다. Operator가 이번 주({week.label}) 기록의 사실만 받아 쓴 글입니다. 사람을 평가하지 않고, 문장마다 근거가 된 기록을 볼 수 있습니다. 누를 때만 만들어지며 다시 받으면 새 글이 쌓입니다.</p>
 </div>
 
 <style>

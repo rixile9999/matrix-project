@@ -229,6 +229,7 @@
 		</div>
 	{:else}
 		<div class="co-top">
+			<p class="note">질문과 현재 풀이 자료를 선택한 모델 제공자에게 보냅니다.</p>
 			<div class="co-chips" role="group" aria-label="{COACH_NAME} 선택">
 				{#each thread.backends as b (b.id)}
 					<button class="co-chip" type="button" aria-pressed={backend === b.id} onclick={() => chooseBackend(b.id)}>{b.label}</button>

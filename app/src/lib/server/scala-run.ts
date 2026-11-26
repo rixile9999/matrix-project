@@ -1,10 +1,12 @@
 // Shared by the verify scripts and the Operator's trace check: run Scala snippets and read back their values.
 // A snippet line ending in `// => value` is evaluated with Cheat.show (cheatsheet/_harness/Cheat.scala), which prints
 // `##SHOW|<key>|<line>|<toString>`; the caller compares that with the annotation.
-import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-export { SCALA_CLI, WORK_DIR } from './judge.ts';
+export const WORK_DIR = resolve(process.env.JUDGE_DIR ?? 'data/judge');
+const LOCAL_CLI = resolve('../tools/scala-cli');
+export const SCALA_CLI = process.env.SCALA_CLI ?? (existsSync(LOCAL_CLI) ? LOCAL_CLI : 'scala-cli');
 
 const ANSI = /\x1b\[[0-9;]*m/g;
 

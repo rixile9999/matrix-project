@@ -13,23 +13,23 @@ const row = (r: RawRun): RunRow => ({ id: r.id, kind: r.kind, startedAt: r.start
 const event = (e: RawEvent): SparEvent => ({ seq: e.seq, at: e.at, ms: e.ms, type: e.type, itemId: e.item_id, payload: JSON.parse(e.payload) as Record<string, unknown> });
 
 export const getRun = (id: number): RunRow | null => {
-	const r = db.prepare('SELECT * FROM spar_runs WHERE id = ?').get(id) as RawRun | undefined;
+	const r = db().prepare('SELECT * FROM spar_runs WHERE id = ?').get(id) as RawRun | undefined;
 	return r ? row(r) : null;
 };
 
 /** Events of one run in order. `light` replaces the (large) payload of judged runs by {}: enough to count them. */
 export function eventsOf(runId: number, light = false): SparEvent[] {
 	const sql = light ? "SELECT run_id, seq, at, ms, type, item_id, CASE WHEN type = 'run' THEN '{}' ELSE payload END AS payload" : 'SELECT run_id, seq, at, ms, type, item_id, payload';
-	return (db.prepare(`${sql} FROM spar_events WHERE run_id = ? ORDER BY seq`).all(runId) as RawEvent[]).map(event);
+	return (db().prepare(`${sql} FROM spar_events WHERE run_id = ? ORDER BY seq`).all(runId) as RawEvent[]).map(event);
 }
 
 export type RunWithEvents = RunRow & { events: SparEvent[] };
 
 /** Every run (optionally of one kind), oldest first, with light events. */
 export function allRuns(kind?: SparKind): RunWithEvents[] {
-	const runs = (db.prepare(kind ? 'SELECT * FROM spar_runs WHERE kind = ? ORDER BY id' : 'SELECT * FROM spar_runs ORDER BY id').all(...(kind ? [kind] : [])) as RawRun[]).map(row);
+	const runs = (db().prepare(kind ? 'SELECT * FROM spar_runs WHERE kind = ? ORDER BY id' : 'SELECT * FROM spar_runs ORDER BY id').all(...(kind ? [kind] : [])) as RawRun[]).map(row);
 	const by = new Map<number, SparEvent[]>();
-	const evs = db
+	const evs = db()
 		.prepare("SELECT run_id, seq, at, ms, type, item_id, CASE WHEN type = 'run' THEN '{}' ELSE payload END AS payload FROM spar_events ORDER BY run_id, seq")
 		.all() as RawEvent[];
 	for (const e of evs) by.set(e.run_id, [...(by.get(e.run_id) ?? []), event(e)]);
@@ -37,16 +37,16 @@ export function allRuns(kind?: SparKind): RunWithEvents[] {
 }
 
 export function createRun(kind: SparKind, items: string[], startedMs = Date.now()): number {
-	return Number(db.prepare('INSERT INTO spar_runs(kind, started_at, started_ms, items) VALUES(?,?,?,?)').run(kind, Math.floor(startedMs / 1000), startedMs, JSON.stringify(items)).lastInsertRowid);
+	return Number(db().prepare('INSERT INTO spar_runs(kind, started_at, started_ms, items) VALUES(?,?,?,?)').run(kind, Math.floor(startedMs / 1000), startedMs, JSON.stringify(items)).lastInsertRowid);
 }
 
 /** Appends the next event of a run (seq = last + 1). Not atomic by itself: call inside tx() when the decision depends on earlier events. */
 export function appendEvent(runId: number, type: SparEvent['type'], ms: number, itemId: string | null = null, payload: object = {}): void {
-	const next = (db.prepare('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM spar_events WHERE run_id = ?').get(runId) as { n: number }).n;
-	db.prepare('INSERT INTO spar_events(run_id, seq, at, ms, type, item_id, payload) VALUES(?,?,?,?,?,?,?)').run(runId, next, Math.floor(Date.now() / 1000), ms, type, itemId, JSON.stringify(payload));
+	const next = (db().prepare('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM spar_events WHERE run_id = ?').get(runId) as { n: number }).n;
+	db().prepare('INSERT INTO spar_events(run_id, seq, at, ms, type, item_id, payload) VALUES(?,?,?,?,?,?,?)').run(runId, next, Math.floor(Date.now() / 1000), ms, type, itemId, JSON.stringify(payload));
 }
 
-export const isOpen = (runId: number) => !db.prepare("SELECT 1 FROM spar_events WHERE run_id = ? AND type IN ('finish', 'abandon') LIMIT 1").get(runId);
+export const isOpen = (runId: number) => !db().prepare("SELECT 1 FROM spar_events WHERE run_id = ? AND type IN ('finish', 'abandon') LIMIT 1").get(runId);
 
 /** Appends the lazy terminal event for every open run that cannot go on (see runStatus). Returns the runs' statuses. */
 export function settleAll(now = Date.now()): Map<number, SparStatus> {

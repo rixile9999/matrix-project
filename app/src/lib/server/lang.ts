@@ -26,8 +26,8 @@ type SessionRow = {
 };
 
 const latestSession = (problemId: string) =>
-	db.prepare('SELECT * FROM lang_sessions WHERE lang = ? AND problem_id = ? ORDER BY id DESC LIMIT 1').get(LANG, problemId) as SessionRow | undefined;
-const getSession = (id: number) => db.prepare('SELECT * FROM lang_sessions WHERE id = ?').get(id) as SessionRow | undefined;
+	db().prepare('SELECT * FROM lang_sessions WHERE lang = ? AND problem_id = ? ORDER BY id DESC LIMIT 1').get(LANG, problemId) as SessionRow | undefined;
+const getSession = (id: number) => db().prepare('SELECT * FROM lang_sessions WHERE id = ?').get(id) as SessionRow | undefined;
 
 // ---------- problems on disk ----------
 // Authors add problems while the app runs, so a directory may be half written. Only complete ones
@@ -122,12 +122,12 @@ export function recordLookup(problemId: string, entryId: unknown): boolean {
 	if (typeof entryId !== 'string' || !cheatIds().has(entryId)) return false;
 	const s = latestSession(problemId);
 	if (!s || s.ended_at !== null) return false;
-	db.prepare('INSERT INTO lang_lookups(session_id, entry_id, at) VALUES(?,?,?)').run(s.id, entryId, now());
+	db().prepare('INSERT INTO lang_lookups(session_id, entry_id, at) VALUES(?,?,?)').run(s.id, entryId, now());
 	return true;
 }
 
 const lookedUp = (sessionId: number) =>
-	(db.prepare('SELECT entry_id FROM lang_lookups WHERE session_id = ? GROUP BY entry_id ORDER BY MIN(id)').all(sessionId) as { entry_id: string }[]).map((r) => r.entry_id);
+	(db().prepare('SELECT entry_id FROM lang_lookups WHERE session_id = ? GROUP BY entry_id ORDER BY MIN(id)').all(sessionId) as { entry_id: string }[]).map((r) => r.entry_id);
 
 /** Entry ids of problems the user has passed, per entry: where the syntax was used. */
 export function cheatView(): LangCheatData {
@@ -140,12 +140,12 @@ export function cheatView(): LangCheatData {
 
 // ---------- list ----------
 type Row = Pick<SessionRow, 'problem_id' | 'hints_used' | 'ended_at' | 'outcome' | 'elapsed_sec' | 'avoided'>;
-const allRows = () => db.prepare('SELECT problem_id, hints_used, ended_at, outcome, elapsed_sec, avoided FROM lang_sessions WHERE lang = ?').all(LANG) as Row[];
+const allRows = () => db().prepare('SELECT problem_id, hints_used, ended_at, outcome, elapsed_sec, avoided FROM lang_sessions WHERE lang = ?').all(LANG) as Row[];
 
 /** problem id -> time of its latest passing session */
 const passedTimes = () =>
 	new Map(
-		(db.prepare("SELECT problem_id, MAX(ended_at) AS at FROM lang_sessions WHERE lang = ? AND outcome = 'passed' GROUP BY problem_id").all(LANG) as { problem_id: string; at: number }[]).map((r) => [r.problem_id, r.at])
+		(db().prepare("SELECT problem_id, MAX(ended_at) AS at FROM lang_sessions WHERE lang = ? AND outcome = 'passed' GROUP BY problem_id").all(LANG) as { problem_id: string; at: number }[]).map((r) => [r.problem_id, r.at])
 	);
 
 /** Complete, non-book level-1 problems passed at least once, in curriculum order: what a Sparring Sprint may draw from. */
@@ -265,12 +265,12 @@ function givenCode(id: string): string | null {
 
 // ---------- sessions ----------
 const insertSession = (problemId: string) =>
-	Number(db.prepare('INSERT INTO lang_sessions(lang, problem_id, started_at) VALUES(?,?,?)').run(LANG, problemId, now()).lastInsertRowid);
+	Number(db().prepare('INSERT INTO lang_sessions(lang, problem_id, started_at) VALUES(?,?,?)').run(LANG, problemId, now()).lastInsertRowid);
 
 const IDLE_SEC = 600;
 /** An open session is abandoned once its limit has passed and nothing (run, lookup) happened for IDLE_SEC. */
 function abandoned(s: SessionRow, limitSec: number): boolean {
-	const last = (table: string) => (db.prepare(`SELECT MAX(at) AS at FROM ${table} WHERE session_id = ?`).get(s.id) as { at: number | null }).at ?? 0;
+	const last = (table: string) => (db().prepare(`SELECT MAX(at) AS at FROM ${table} WHERE session_id = ?`).get(s.id) as { at: number | null }).at ?? 0;
 	const active = Math.max(s.started_at, last('lang_runs'), last('lang_lookups'));
 	return now() > s.started_at + limitSec && now() - active > IDLE_SEC;
 }
@@ -300,7 +300,7 @@ export function sessionView(problemId: string): LangSessionData | null {
 	if (!p) return null;
 	const s = latestSession(problemId);
 	if (!s) return null;
-	const last = db.prepare('SELECT code, result FROM lang_runs WHERE session_id = ? ORDER BY id DESC LIMIT 1').get(s.id) as { code: string; result: string } | undefined;
+	const last = db().prepare('SELECT code, result FROM lang_runs WHERE session_id = ? ORDER BY id DESC LIMIT 1').get(s.id) as { code: string; result: string } | undefined;
 
 	let finished: LangFinished | null = null;
 	if (s.ended_at !== null && s.outcome) {
@@ -338,7 +338,7 @@ export function sessionView(problemId: string): LangSessionData | null {
 }
 
 const endSession = (id: number, outcome: 'passed' | 'revealed', avoided: string[]) =>
-	db
+	db()
 		.prepare(
 			`UPDATE lang_sessions SET ended_at = ?, outcome = ?, avoided = ?, elapsed_sec = ? - started_at
 			 WHERE id = ? AND ended_at IS NULL`
@@ -354,7 +354,7 @@ export async function runCode(problemId: string, code: unknown): Promise<{ resul
 	const result = await judge(LANG, p, code);
 	// The session may have been ended (reveal, double submit) while the judge was running.
 	const open = getSession(s.id)?.ended_at === null;
-	db.prepare('INSERT INTO lang_runs(session_id, at, status, code, result) VALUES(?,?,?,?,?)').run(s.id, now(), result.status, code, JSON.stringify(result));
+	db().prepare('INSERT INTO lang_runs(session_id, at, status, code, result) VALUES(?,?,?,?,?)').run(s.id, now(), result.status, code, JSON.stringify(result));
 	let finished = false;
 	if (open && result.status === 'passed') finished = endSession(s.id, 'passed', result.avoided).changes > 0;
 	return { result, finished };
@@ -363,7 +363,7 @@ export async function runCode(problemId: string, code: unknown): Promise<{ resul
 export function useHint(problemId: string): { hints: string[]; refs: string[]; intent: string | null } {
 	const p = requireProblem(problemId);
 	const s = openSession(problemId, '이미 끝난 세션에서는 힌트를 볼 수 없습니다.');
-	db.prepare('UPDATE lang_sessions SET hints_used = MIN(hints_used + 1, ?) WHERE id = ?').run(MAX_HINTS, s.id);
+	db().prepare('UPDATE lang_sessions SET hints_used = MIN(hints_used + 1, ?) WHERE id = ?').run(MAX_HINTS, s.id);
 	const used = getSession(s.id)!.hints_used;
 	return { hints: p.hints.slice(0, used), ...revealExtras(p, used, false) };
 }
@@ -381,7 +381,7 @@ export function coachBasis(problemId: string) {
 	const problem = findProblem(problemId);
 	if (!problem) return null;
 	const s = latestSession(problemId);
-	const last = s ? (db.prepare('SELECT code, result FROM lang_runs WHERE session_id = ? ORDER BY id DESC LIMIT 1').get(s.id) as { code: string; result: string } | undefined) : undefined;
+	const last = s ? (db().prepare('SELECT code, result FROM lang_runs WHERE session_id = ? ORDER BY id DESC LIMIT 1').get(s.id) as { code: string; result: string } | undefined) : undefined;
 	return {
 		problem,
 		session: s ? { id: s.id, startedAt: s.started_at, endedAt: s.ended_at, outcome: s.outcome, elapsedSec: s.elapsed_sec } : null,

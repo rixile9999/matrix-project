@@ -99,12 +99,12 @@ for (const c of checks) {
 		if (!c.distractors?.length || c.distractors.length > 2) err(c.id, '1–2 distractors');
 		if (p && Array.isArray(c.lines)) {
 			const pre = c.given ? c.given + '\n' : '';
-			const r = await judge(lang, p, pre + c.lines.join('\n'));
+			const r = await judge(lang, p, pre + c.lines.join('\n'), 'maintenance');
 			if (r.status !== 'passed') err(c.id, `correct order does not pass (${r.status}) ${r.output}`);
 			for (const d of c.distractors ?? []) {
 				if (!d.why || !(d.replaces >= 0 && d.replaces < c.lines.length)) { err(c.id, 'distractor needs why and a valid replaces index'); continue; }
 				const swapped = c.lines.map((l, i) => (i === d.replaces ? d.line : l));
-				const rd = await judge(lang, p, pre + swapped.join('\n'));
+				const rd = await judge(lang, p, pre + swapped.join('\n'), 'maintenance');
 				if (rd.status === 'passed') err(c.id, `distractor still passes: ${d.line.trim()}`);
 			}
 		}
@@ -114,9 +114,9 @@ for (const c of checks) {
 		if (!Array.isArray(c.lines) || !(c.bugIndex >= 0 && c.bugIndex < c.lines.length)) err(c.id, 'bugIndex must be a line index');
 		else if (p) {
 			const pre = c.given ? c.given + '\n' : '';
-			const r = await judge(lang, p, pre + c.lines.join('\n'));
+			const r = await judge(lang, p, pre + c.lines.join('\n'), 'maintenance');
 			if (r.status !== 'failed') err(c.id, `buggy version must compile and fail, got ${r.status}`);
-			const rf = await judge(lang, p, pre + c.lines.map((l, i) => (i === c.bugIndex ? c.fixed : l)).join('\n'));
+			const rf = await judge(lang, p, pre + c.lines.map((l, i) => (i === c.bugIndex ? c.fixed : l)).join('\n'), 'maintenance');
 			if (rf.status !== 'passed') err(c.id, `fixed version does not pass (${rf.status})`);
 		}
 	} else err((c as Check).id, `bad kind ${(c as Check).kind}`);

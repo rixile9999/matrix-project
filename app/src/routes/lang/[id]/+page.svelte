@@ -102,7 +102,7 @@
 			const j = (await res.json()) as LangRunResponse;
 			if (id !== s.id) return;
 			error = j.error ?? (res.ok ? '' : `실행 실패 (${res.status})`);
-			if (j.result) runResult = j.result;
+			if (j.result && !j.error) runResult = j.result;
 			if (j.finished) await invalidateAll();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
