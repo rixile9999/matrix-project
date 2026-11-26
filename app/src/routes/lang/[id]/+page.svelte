@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
@@ -262,6 +263,8 @@
 <svelte:head><title>{p.title} · Matrix</title></svelte:head>
 
 <svelte:window onkeydowncapture={keys} />
+
+{#if !fin}<DeskHorizon />{/if}
 
 <div class="lang-split" class:with-cheat={panelOpen}>
 	<div class="lang-col">

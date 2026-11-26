@@ -4,6 +4,7 @@
 	import { MediaQuery } from 'svelte/reactivity';
 	import './arena.css';
 	import { enable, isReady, setMode as setSoundMode, setScene as setSoundScene, setTrack, setVolume } from './audio';
+	import { stage } from './stage.svelte';
 	import { createCanvasScene, type CanvasScene } from './canvasScene';
 	import { VIDEO_RATE, VIDEO_SHOW } from './core';
 	import { resolveBackdrop, saveSettings, settings } from './settings.svelte';
@@ -26,7 +27,7 @@
 	let fading = $state(false); // the earthrise does not loop cleanly: it fades out before its end and starts over
 
 	const reduce = new MediaQuery('prefers-reduced-motion: reduce');
-	const frozen = $derived(reduce.current || (!view && (scene === 'still' || !settings.motion))); // view mode is an explicit request to watch
+	const frozen = $derived(reduce.current || (!view && (stage.desk || scene === 'still' || !settings.motion))); // view mode is an explicit request to watch
 	const backdrop = $derived(mounted ? (view && viewBackdrop ? viewBackdrop : resolveBackdrop()) : 'none');
 	const src = $derived(backdrop === 'none' ? '' : view ? `/video/full/${backdrop}.mp4` : `/video/${backdrop}.mp4`);
 	const videoOpacity = $derived(fading ? 0 : view ? 1 : VIDEO_SHOW[scene]);

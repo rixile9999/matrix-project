@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
@@ -184,6 +185,8 @@
 
 <svelte:head><title>Sprint · Matrix</title></svelte:head>
 <svelte:window onkeydowncapture={keys} />
+
+<DeskHorizon />
 
 <main class="a-page">
 	<div class="a-top">

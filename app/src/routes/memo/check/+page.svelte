@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { page } from '$app/state';
 	import MemoClock from '#lib/MemoClock.svelte';
 	import { renderInline } from '#lib/inline.ts';
@@ -107,6 +108,8 @@
 </script>
 
 <svelte:head><title>{t('문제 점검 · Matrix', 'Problem checks · Matrix')}</title></svelte:head>
+
+{#if data.checks.length > 0 && !done}<DeskHorizon />{/if}
 
 <div class="memo">
 	{#if data.checks.length === 0}

@@ -3,8 +3,8 @@
 // (before the page mounts), so a page that sets the stage itself wins.
 import type { Backdrop, Scene, SoundMode } from './types';
 
-export const stage = $state<{ scene: Scene; progress: number | undefined; bloom: number; dim: number; sound: SoundMode; view: boolean; viewBackdrop: Backdrop | null; viewFit: 'contain' | 'cover' }>({
-	scene: 'home', progress: undefined, bloom: 0,
+export const stage = $state<{ scene: Scene; progress: number | undefined; bloom: number; desk: boolean; dim: number; sound: SoundMode; view: boolean; viewBackdrop: Backdrop | null; viewFit: 'contain' | 'cover' }>({
+	scene: 'home', progress: undefined, bloom: 0, desk: false,
 	dim: 0, // 0 = the picture as is, up to 1 = hidden behind the ground colour (calm screens)
 	sound: 'full',
 	view: false, // view mode: the page steps aside and the backdrop is shown whole (full colour, no veil)

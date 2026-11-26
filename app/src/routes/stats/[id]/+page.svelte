@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
@@ -62,6 +63,8 @@
 </script>
 
 <svelte:head><title>{t(...data.lesson.title)} · Matrix</title></svelte:head>
+
+{#if !data.outcome}<DeskHorizon />{/if}
 
 <div class="body practice">
 	<a class="back" href="/stats">← {t('확률과 통계', 'Probability & Statistics')}</a>

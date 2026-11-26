@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onDestroy, untrack } from 'svelte';
@@ -73,6 +74,8 @@
 </script>
 
 <svelte:head><title>{active ? `${mmss(remaining)} · ` : ''}{a.problem.id} · Matrix</title></svelte:head>
+
+{#if active}<DeskHorizon />{/if}
 
 <div class="body focus">
 	{#if active}

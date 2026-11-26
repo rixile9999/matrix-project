@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { MediaQuery } from 'svelte/reactivity';
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import LanguageSwitch from '#lib/LanguageSwitch.svelte';
 	import CodeEditor from '#lib/CodeEditor.svelte';
-	import { settings } from '#lib/ambience/settings.svelte.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 
 	const exercises = $derived([
@@ -19,9 +18,6 @@
 	let index = $state(0);
 	let drafts = $state<(string | undefined)[]>([]);
 	const exercise = $derived(exercises[index]);
-	const reduce = new MediaQuery('prefers-reduced-motion: reduce');
-	let movie = $state<HTMLVideoElement>();
-	let visible = $state(true);
 	let elapsed = $state(0);
 	const remaining = $derived(Math.max(0, 400 - elapsed));
 
@@ -31,11 +27,6 @@
 		const interval = setInterval(() => { elapsed = Math.floor((performance.now() - start) / 1000); }, 250);
 		return () => clearInterval(interval);
 	});
-	$effect(() => {
-		if (!movie) return;
-		if (active || reduce.current || !settings.motion || !visible) movie.pause();
-		else void movie.play().catch(() => {});
-	});
 	function openDesk() {
 		index = 0;
 		elapsed = 0;
@@ -44,27 +35,16 @@
 </script>
 
 <svelte:head><title>{t('관측 데스크 시안', 'Observation desk preview')} · Matrix</title></svelte:head>
-<svelte:document onvisibilitychange={() => (visible = !document.hidden)} />
 
-<main class="station arena" class:active class:still={!settings.motion}>
+<main class="station arena">
 	<header>
 		<div class="identity"><a href="/spar">Matrix</a><span>/</span>{t('관측 데스크 시안', 'Observation desk preview')}</div>
 		<LanguageSwitch />
 	</header>
 
-	<div class="window">
-		<!-- The still is from this exact shot. Defer the movie until the sky is opened. -->
-		{#if !active || movie}
-			<video bind:this={movie} muted playsinline loop preload="metadata" poster="/video/earthrise-desk.jpg"
-				onloadedmetadata={(e) => { e.currentTarget.currentTime = 18; }}>
-				<source src="/video/full/earthrise.mp4" type="video/mp4" />
-			</video>
-		{/if}
-		<div class="caption"><span>{t('달 지평선에서 본 지구', 'Earth from the lunar horizon')}</span><small>NASA / GSFC / SVS</small></div>
-	</div>
+	<DeskHorizon {active} preview />
 
 	<section class="desk" aria-label={t('훈련 작업판', 'Training desk')}>
-		<div class="lip" aria-hidden="true"><i></i></div>
 		<div class="sheet">
 			{#if active}
 				<div class="rail">
@@ -107,18 +87,7 @@
 	.identity { display: flex; align-items: baseline; gap: 14px; font-size: 14px; color: #c8cdca; }
 	.identity span { color: #798384; }
 	.identity a { color: var(--ink); font: 600 20px Georgia, serif; text-decoration: none; }
-	.window { position: relative; overflow: hidden; height: max(56svh, calc(100svh - 156px)); flex: none; background: #06080a url('/video/earthrise-desk.jpg') center 42% / cover no-repeat; transition: height 420ms cubic-bezier(.22,.7,.2,1); }
-	.active .window { height: clamp(132px, 23svh, 220px); }
-	video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
-	.window::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -20px 25px -21px #000; background: linear-gradient(0deg, #070d12a8, transparent 48%); }
-	.caption { position: absolute; z-index: 1; bottom: 14px; left: clamp(20px, 5vw, 90px); right: clamp(20px, 5vw, 90px); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: #faf8ed; text-shadow: 0 1px 4px #000; font-size: 13px; }
-	.caption small { font: 12px var(--f-mono); }
 	.desk { position: relative; flex: 1; background: var(--paper); }
-	.lip { position: relative; height: 13px; border-top: 1px solid #abb1a7; border-bottom: 1px solid #070b0e; background: linear-gradient(#5b6665, #3d484a 20%, #354044 68%, #253036 70%); display: grid; place-items: center; }
-	.lip::before, .lip::after { content: ''; position: absolute; inset-block: 2px; width: 28px; background: repeating-linear-gradient(110deg, transparent 0 5px, #848d87 6px, #253034 7px); opacity: .6; }
-	.lip::before { left: 20px; }
-	.lip::after { right: 20px; }
-	.lip i { width: 68px; height: 3px; background: #1c2526; border-radius: 3px; box-shadow: 0 1px #737d7a; }
 	.sheet { max-width: 1280px; margin: auto; padding: 0 clamp(20px, 5vw, 80px); }
 	.rail, footer, .lobby { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 	.rail { min-height: 66px; border-bottom: 1px solid #475155; color: var(--muted); font: 13px var(--f-mono); }
@@ -151,14 +120,10 @@
 	.bare, .lobby a { padding: 10px 0; background: none; border: 0; color: #c7d0cd; text-underline-offset: 4px; font-size: 14px; }
 	.bare:hover { text-decoration: underline; }
 	.station :focus-visible { outline: 2px solid #edcf95; outline-offset: 3px; }
-	.still .window { transition: none; }
-	@media (prefers-reduced-motion: reduce) { .window { transition: none; } }
 	@media (max-width: 720px) {
-		.active .window { height: clamp(110px, 15svh, 145px); }
 		.work { grid-template-columns: 1fr; gap: 23px; padding: 25px 0; }
 		.rail { min-height: 48px; }
 		h1 { margin-bottom: 14px; }
 		dl { margin-top: 17px; }
-		.caption { bottom: 8px; }
 	}
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { page } from '$app/state';
 	import MemoClock from '#lib/MemoClock.svelte';
 	import CheatBody from '#lib/CheatBody.svelte';
@@ -102,6 +103,8 @@
 <svelte:head><title>{t('복습 · Matrix', 'Review · Matrix')}</title></svelte:head>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && askOpen && (askOpen = false)} />
+
+{#if data.cards.length > 0 && !done}<DeskHorizon />{/if}
 
 <div class="memo">
 	{#if data.cards.length === 0}

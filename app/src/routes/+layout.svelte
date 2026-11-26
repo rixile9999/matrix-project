@@ -20,6 +20,7 @@
 	const spar = $derived(['/spar', '/garden'].some((r) => path === r || path.startsWith(r + '/'))); // Sparring and Garden are always dark: their own wrapper, no card, no light bar
 	const demo = $derived(path.startsWith('/ambience-demo')); // the demo mounts its own layer
 
+	let menuOpen = $state(false);
 	onMount(syncLook);
 
 	// One ambience layer for the whole app (the video and the sound keep running across navigation). Light look: none, except under Sparring.
@@ -35,6 +36,7 @@
 	applyDefault(untrack(() => path)); // also during server rendering, so the first paint is already dimmed (no bright flash while the veil fades in)
 	$effect.pre(() => applyDefault(path));
 	afterNavigate(() => {
+		menuOpen = false;
 		stage.view = false; // view mode belongs to the page it was opened on
 		stage.viewBackdrop = null;
 	});
@@ -49,9 +51,10 @@
 </svelte:head>
 
 {#snippet bar()}
-	<header class="bar">
+	<header class="bar" class:expanded={menuOpen}>
 		<span class="brand">Matrix</span>
-		<nav aria-label={t('메뉴', 'Menu')}>
+		<button type="button" class="desk-menu" aria-expanded={menuOpen} aria-controls="platform-nav" onclick={() => (menuOpen = !menuOpen)}>{t('세션 메뉴', 'Session menu')}</button>
+		<nav id="platform-nav" aria-label={t('메뉴', 'Menu')}>
 			<a href="/" class:on={path === '/'} aria-current={path === '/' ? 'page' : undefined}>{t('훈련', 'Training')}</a>
 			<a href="/history" class:on={path.startsWith('/history')}>{t('기록', 'History')}</a>
 			<a href="/lang" class:on={path === '/lang' || path.startsWith('/lang/')}>{t('언어', 'Scala')}</a>
@@ -66,7 +69,7 @@
 			<a href="/settings/coach">{t('코치 설정', 'Coach settings')}</a>
 			<form method="POST" action="/logout" data-sveltekit-reload><button class="btn ghost small" title={data.accountName ?? undefined}>{data.accountName} · {t('로그아웃', 'Sign out')}</button></form>
 			<LookSwitch />
-			{#if layer}<button class="view-open" type="button" onclick={() => (stage.view = true)} title={t('배경만 보기', 'View background')}>{t('감상', 'View')}</button>{/if}
+			{#if layer}<button class="view-open" type="button" onclick={() => { if (stage.desk) stage.viewBackdrop = 'earthrise'; stage.view = true; }} title={t('배경만 보기', 'View background')}>{t('감상', 'View')}</button>{/if}
 			{#if look.value === 'arena' && !spar}<AmbienceControls />{/if}
 		</div>
 	</header>
@@ -93,5 +96,6 @@
 {/if}
 
 <style>
+	.desk-menu { display: none; }
 	.focus-language { display: flex; justify-content: flex-end; padding: .4rem 1rem; }
 </style>

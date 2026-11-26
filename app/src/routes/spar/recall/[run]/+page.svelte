@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeskHorizon from '#lib/ambience/DeskHorizon.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
@@ -113,6 +114,8 @@
 </script>
 
 <svelte:head><title>Recall · Matrix</title></svelte:head>
+
+<DeskHorizon />
 
 <main class="a-page narrow">
 	<div class="a-top">
