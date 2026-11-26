@@ -108,6 +108,20 @@ export function courseView(now = Date.now()) {
 	return { catalogue, recommendation };
 }
 
+export function recentStatsReviews(now = Date.now()) {
+	const database = storage();
+	expireRuns(now);
+	const rows = database.prepare(`
+		SELECT id, lesson_id, ended_ms, looked_up FROM stats_runs
+		WHERE outcome IS NOT NULL ORDER BY ended_ms DESC, id DESC LIMIT 5
+	`).all() as Pick<Run, 'id' | 'lesson_id' | 'ended_ms' | 'looked_up'>[];
+	return rows.flatMap((row) => {
+		const lesson = findLesson(row.lesson_id);
+		if (!lesson || row.ended_ms === null) return [];
+		return [{ id: row.id, lessonId: lesson.id, title: lesson.title, endedAt: row.ended_ms / 1000, usedReference: Boolean(row.looked_up) }];
+	});
+}
+
 export function startRun(lesson: Lesson, now = Date.now()) {
 	const database = storage();
 	return tx(() => {
@@ -144,8 +158,8 @@ export function runView(lesson: Lesson, id: number, now = Date.now()) {
 			feedback: checks[index] === false ? field.feedback : null
 		})),
 		hints: lesson.hints.slice(0, run.hints),
-		reference: run.looked_up ? lesson.reference : null,
-		review: run.outcome ? { solution: lesson.solution, intent: lesson.intent } : null
+		reference: run.looked_up || run.outcome ? lesson.reference : null,
+		review: run.outcome ? { solution: lesson.solution, intent: lesson.intent, usedReference: Boolean(run.looked_up) } : null
 	};
 }
 

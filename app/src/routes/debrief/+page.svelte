@@ -6,10 +6,11 @@
 	import NoteView from '#lib/debrief/NoteView.svelte';
 	import DayStrip from '#lib/debrief/DayStrip.svelte';
 	import Coaching from '#lib/debrief/Coaching.svelte';
-	import type { DebriefData } from '#lib/types.ts';
+	import type { PageProps } from './$types';
+	import { referenceUsage } from '#lib/stats/labels.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 
-	let { data }: { data: DebriefData } = $props();
+	let { data }: PageProps = $props();
 
 	const notes = $derived(data.notes.filter((n) => n.note));
 	const emerging = $derived(data.notes.filter((n) => !n.note));
@@ -72,8 +73,19 @@
 					{#if data.recent[recentOpen]}<SessionCard card={data.recent[recentOpen]} askSelf />{/if}
 				{/key}
 			</div>
-		{:else}
+		{:else if !data.statsReviews.length}
 			<p class="empty">{t('아직 없음.', 'Nothing yet.')}</p>
+		{/if}
+		{#if data.statsReviews.length}
+			<h3>{t('확률과 통계', 'Probability & Statistics')}</h3>
+			<ul class="stats-reviews">
+				{#each data.statsReviews as run (run.id)}
+					<li>
+						<a href="/stats/{run.lessonId}?run={run.id}">{t(...run.title)}</a>
+						<span>{date(run.endedAt)} · {t(...referenceUsage(run.usedReference))}</span>
+					</li>
+				{/each}
+			</ul>
 		{/if}
 	</section>
 
@@ -196,4 +208,7 @@
 	.big.none { color: var(--muted); }
 	.fact p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); text-wrap: pretty; }
 	.before { font-size: 12px !important; }
+	.stats-reviews { list-style: none; padding: 0; }
+	.stats-reviews li { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 8px 0; }
+	.stats-reviews span { color: var(--muted); font-size: 13px; }
 </style>

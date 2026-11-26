@@ -6,7 +6,12 @@ export const lessons: Lesson[] = [
 		title: ['표본공간 세기', 'Counting Outcomes'],
 		targets: ['표본공간 · 여사건', 'Sample space · complement'],
 		prompt: ['공정한 동전을 독립적으로 세 번 던진다. 앞면이 한 번 이상 나올 확률을 구하라.', 'Flip a fair coin three times independently. Find the probability of at least one head.'],
-		reference: ['같은 확률을 가진 결과라면 P(A) = |A| / |Ω|. 여사건의 확률은 P(Aᶜ) = 1 − P(A).', 'For equally likely outcomes, P(A) = |A| / |Ω|. The complement satisfies P(Aᶜ) = 1 − P(A).'],
+		reference: {
+			formula: ['P(A) = |A| / |Ω|. P(Aᶜ) = 1 − P(A).', 'P(A) = |A| / |Ω|. P(Aᶜ) = 1 − P(A).'],
+			symbols: ['Ω는 표본공간, A는 사건, Aᶜ는 여사건이다. |·|는 결과의 개수다.', 'Ω is the sample space, A is the event, and Aᶜ is its complement. |·| counts outcomes.'],
+			conditions: ['개수의 비는 가능한 결과가 유한하고 모두 같은 확률일 때 쓴다. 여사건 공식은 항상 성립한다.', 'Use the counting ratio for a finite set of equally likely outcomes. The complement rule always holds.'],
+			pitfall: ['앞면의 개수만 세면 각 개수에 해당하는 던짐 순서를 빠뜨리기 쉽다.', 'Counting only the number of heads can miss how many toss sequences give each count.']
+		},
 		fields: [{ label: ['앞면이 한 번 이상 나올 확률', 'Probability of at least one head'], answer: 7/8, feedback: ['앞면이 한 번도 안 나오는 경우부터 세어 보라.', 'Start by counting the outcomes with zero heads.'] }],
 		hints: [['“한 번 이상”의 여사건을 구하라.', 'Use the complement of “at least one.”'], ['동전을 두 번 던지면 TT 한 가지가 앞면이 없는 경우다. 독립이므로 그 확률은 (1/2)²이다.', 'For two flips, TT is the only outcome with zero heads. Its probability is (1/2)² by independence.']],
 		solution: ['전체 결과는 2³ = 8가지다. 앞면이 없는 TTT는 한 가지뿐이므로 1 − 1/8 = 7/8이다.', 'There are 2³ = 8 equally likely outcomes. TTT is the only one with no heads, so the probability is 1 − 1/8 = 7/8.'],
@@ -17,7 +22,12 @@ export const lessons: Lesson[] = [
 		title: ['베이즈와 기저율', 'Bayes and Base Rates'],
 		targets: ['조건부확률 · 전확률 · 베이즈 정리', 'Conditional probability · total probability · Bayes’ rule'],
 		prompt: ['부품의 2%가 불량이다. 검사는 불량품의 95%, 정상품의 5%를 양성으로 표시한다. 전체 양성 확률과 양성일 때 실제 불량일 확률을 구하라.', 'Two percent of parts are defective. A test flags 95% of defective parts and 5% of good parts. Find the overall flag rate and the probability that a flagged part is defective.'],
-		reference: ['P(A ∩ B) = P(B | A)P(A). P(A | B) = P(A ∩ B) / P(B). 서로 배반인 경로의 확률은 더한다.', 'P(A ∩ B) = P(B | A)P(A). P(A | B) = P(A ∩ B) / P(B). Add probabilities across disjoint paths.'],
+		reference: {
+			formula: ['P(B) = P(B | A)P(A) + P(B | Aᶜ)P(Aᶜ). P(A | B) = P(B | A)P(A) / P(B).', 'P(B) = P(B | A)P(A) + P(B | Aᶜ)P(Aᶜ). P(A | B) = P(B | A)P(A) / P(B).'],
+			symbols: ['A는 불량 사건, Aᶜ는 정상 사건, B는 양성 판정 사건이다. P(A)는 불량의 기저율이다.', 'A is the defect event, Aᶜ is its complement, and B is a positive test result. P(A) is the defect base rate.'],
+			conditions: ['A와 Aᶜ는 전체를 배반인 두 집단으로 나눈다. 식에 등장하는 조건부확률의 조건 사건은 확률이 양수여야 한다.', 'A and Aᶜ partition the population into two disjoint groups. Each conditioning event in the formulas must have positive probability.'],
+			pitfall: ['조건 기호 오른쪽의 사건이 분모를 정한다. 조건을 뒤집으면 기준이 되는 집단이 바뀐다.', 'The event to the right of the conditioning bar determines the denominator. Reversing the condition changes the reference group.']
+		},
 		fields: [
 			{ label: ['전체 양성 확률', 'Overall flag rate'], answer: .068, feedback: ['불량품과 정상품이 양성이 되는 두 경로를 합쳐라.', 'Combine the two paths to a flag, one for defective parts and one for good parts.'] },
 			{ label: ['양성일 때 불량일 확률', 'Probability of defect given a flag'], answer: 19/68, feedback: ['분모는 전체 부품 수가 아니라 양성 부품 수에 해당한다.', 'The denominator corresponds to all flagged parts.'] }
@@ -31,7 +41,12 @@ export const lessons: Lesson[] = [
 		title: ['기댓값과 분산', 'Mean and Variance'],
 		targets: ['이산 확률변수 · 2차 모멘트', 'Discrete random variables · second moments'],
 		prompt: ['확률변수 X는 0, 1, 3을 각각 확률 1/2, 1/4, 1/4로 취한다. E[X]와 Var(X)를 구하라.', 'A random variable X takes values 0, 1, and 3 with probabilities 1/2, 1/4, and 1/4. Find E[X] and Var(X).'],
-		reference: ['E[g(X)] = Σ g(x)P(X = x). Var(X) = E[X²] − (E[X])².', 'E[g(X)] = Σ g(x)P(X = x). Var(X) = E[X²] − (E[X])².'],
+		reference: {
+			formula: ['E[g(X)] = Σ g(x)P(X = x). Var(X) = E[X²] − (E[X])².', 'E[g(X)] = Σ g(x)P(X = x). Var(X) = E[X²] − (E[X])².'],
+			symbols: ['x는 X가 취하는 값이고, g(x)는 그 값을 변환한 결과다. E는 기댓값, Var는 분산을 뜻한다.', 'x is a possible value of X, and g(x) is its transformed value. E denotes expectation and Var denotes variance.'],
+			conditions: ['합은 모든 가능한 값에 대해 계산하고, 확률의 합은 1이어야 한다. 분산 공식에는 유한한 2차 모멘트가 필요하다.', 'Sum over the possible values, whose probabilities must add to 1. The variance formula requires a finite second moment.'],
+			pitfall: ['E[X²]를 구할 때는 가능한 값을 각각 제곱한 뒤 원래 확률로 가중한다.', 'For E[X²], square each possible value before weighting it by its original probability.']
+		},
 		fields: [
 			{ label: ['기댓값 E[X]', 'Mean E[X]'], answer: 1, feedback: ['각 값을 그 값의 확률로 가중하라.', 'Weight each value by its probability.'] },
 			{ label: ['분산 Var(X)', 'Variance Var(X)'], answer: 1.5, feedback: ['값을 먼저 제곱해서 평균을 내고, 기댓값의 제곱을 빼라.', 'Average the squared outcomes first, then subtract the squared mean.'] }
@@ -45,7 +60,12 @@ export const lessons: Lesson[] = [
 		title: ['조건부 독립', 'Conditional Independence'],
 		targets: ['잠재변수 · 결합확률 · 공분산', 'Latent variables · joint probability · covariance'],
 		prompt: ['앞면 확률이 각각 1/4, 3/4인 두 동전 중 하나를 같은 확률로 뽑아 두 번 던진다. 선택한 동전이 주어지면 두 던짐은 독립이다. X₁과 X₂를 앞면 지시변수로 두고, 첫 던짐의 앞면 확률, 두 번 모두 앞면일 확률, Cov(X₁, X₂)를 구하라.', 'Choose one of two coins with equal probability. Their head probabilities are 1/4 and 3/4. Toss that coin twice, independently given the choice. Let X₁ and X₂ indicate heads. Find the first-toss head probability, the probability of two heads, and Cov(X₁, X₂).'],
-		reference: ['Cov(X, Y) = E[XY] − E[X]E[Y]. 잠재변수 Z가 있으면 P(A) = Σ P(A | Z = z)P(Z = z).', 'Cov(X, Y) = E[XY] − E[X]E[Y]. For a latent variable Z, P(A) = Σ P(A | Z = z)P(Z = z).'],
+		reference: {
+			formula: ['P(A) = Σ P(A | Z = z)P(Z = z). 조건부 독립이면 P(A ∩ B | Z = z) = P(A | Z = z)P(B | Z = z). Cov(X₁, X₂) = E[X₁X₂] − E[X₁]E[X₂].', 'P(A) = Σ P(A | Z = z)P(Z = z). Under conditional independence, P(A ∩ B | Z = z) = P(A | Z = z)P(B | Z = z). Cov(X₁, X₂) = E[X₁X₂] − E[X₁]E[X₂].'],
+			symbols: ['Z는 공유하는 잠재변수다. X₁과 X₂는 사건 A와 B가 일어나면 각각 1, 아니면 0인 지시변수다.', 'Z is the shared latent variable. X₁ and X₂ are the indicators for A and B, each taking value 1 when its event occurs and 0 otherwise.'],
+			conditions: ['Z의 각 값에 대해 조건부 독립이 주어지면 결합확률을 곱으로 계산할 수 있다. 합은 확률이 양수인 z에 대해 계산한다.', 'The conditional joint probability factors when the events are independent given each value of Z. Sum over z with positive probability.'],
+			pitfall: ['조건부 곱을 평균한 값과 주변확률을 곱한 값은 달라질 수 있다.', 'Averaging the conditional products can give a different result from multiplying the marginal probabilities.']
+		},
 		fields: [
 			{ label: ['첫 던짐의 앞면 확률', 'Probability of heads on toss one'], answer: .5, feedback: ['두 동전의 첫 던짐 확률을 선택 확률로 가중하라.', 'Average the first-toss probabilities over the coin choice.'] },
 			{ label: ['두 번 모두 앞면일 확률', 'Probability of two heads'], answer: 5/16, feedback: ['동전을 하나로 고정한 뒤 두 확률을 곱하라.', 'Multiply the toss probabilities while holding the selected coin fixed.'] },
@@ -60,7 +80,12 @@ export const lessons: Lesson[] = [
 		title: ['표준오차', 'Standard Error'],
 		targets: ['표본평균 · 표준오차', 'Sample mean · standard error'],
 		prompt: ['모집단 표준편차가 12다. 독립 표본 36개의 평균에 대한 표준오차를 구하라.', 'A population has standard deviation 12. Find the standard error of the mean of 36 independent draws from this population.'],
-		reference: ['독립이고 같은 분포를 따르는 n개 값의 평균은 Var(X̄) = σ²/n을 만족한다.', 'The mean of n independent, identically distributed draws has variance Var(X̄) = σ²/n.'],
+		reference: {
+			formula: ['Var(X̄) = σ²/n. SE(X̄) = σ/√n.', 'Var(X̄) = σ²/n. SE(X̄) = σ/√n.'],
+			symbols: ['X̄는 표본평균, σ는 모표준편차, n은 표본 크기다.', 'X̄ is the sample mean, σ is the population standard deviation, and n is the sample size.'],
+			conditions: ['독립적으로 같은 모집단에서 뽑고 모분산이 유한할 때 성립한다.', 'These formulas hold for independent draws from the same population with finite variance.'],
+			pitfall: ['분산의 분모는 n이고, 표준오차의 분모는 √n이다.', 'The variance scales by 1/n, and the standard error scales by 1/√n.']
+		},
 		fields: [{ label: ['표준오차', 'Standard error'], answer: 2, feedback: ['분산을 n으로 나누고 그 결과의 제곱근을 취하라.', 'Divide the variance by n and take the square root.'] }],
 		hints: [['표준오차는 통계량의 표준편차다.', 'The standard error is the standard deviation of the statistic.'], ['σ = 15이고 n = 25라면 Var(X̄) = 225/25 = 9이고 표준오차는 3이다.', 'When σ = 15 and n = 25, Var(X̄) = 225/25 = 9, so the standard error is 3.']],
 		solution: ['SE(X̄) = σ/√n = 12/√36 = 2다.', 'SE(X̄) = σ/√n = 12/√36 = 2.'],
@@ -71,7 +96,12 @@ export const lessons: Lesson[] = [
 		title: ['신뢰구간', 'Confidence Intervals'],
 		targets: ['정규 평균 · 오차한계 · 반복 표집', 'Normal mean · margin of error · repeated sampling'],
 		prompt: ['정규 모집단에서 독립적으로 64개를 뽑았다. 모표준편차는 16이고 표본평균은 50이다. z = 1.96으로 모평균의 양측 95% 신뢰구간을 구하라.', 'A random sample of 64 independent draws from a normal population has mean 50. The population standard deviation is 16. Use z = 1.96 to find the two-sided 95% confidence interval for the population mean.'],
-		reference: ['정규 모집단의 σ를 알 때 평균의 구간은 X̄ ± zσ/√n이다.', 'For a normal population with known σ, the interval for its mean is X̄ ± zσ/√n.'],
+		reference: {
+			formula: ['양측 신뢰구간은 X̄ ± zσ/√n이다.', 'The two-sided confidence interval is X̄ ± zσ/√n.'],
+			symbols: ['X̄는 표본평균, σ는 모표준편차, n은 표본 크기, z는 표준정규분포의 양측 임계값이다.', 'X̄ is the sample mean, σ is the population standard deviation, n is the sample size, and z is the positive critical value for the two-sided interval.'],
+			conditions: ['독립적으로 뽑은 정규 표본에서 σ를 알 때 이 공식을 쓴다.', 'Use this formula for independent draws from a normal population with known σ.'],
+			pitfall: ['신뢰수준은 같은 절차를 반복했을 때 구간이 고정된 모평균을 포함하는 장기 비율이다.', 'The confidence level is the long-run proportion of intervals that contain the fixed population mean.']
+		},
 		fields: [
 			{ label: ['하한', 'Lower endpoint'], answer: 46.08, feedback: ['표본평균에서 오차한계를 빼라.', 'Subtract the margin of error from the sample mean.'] },
 			{ label: ['상한', 'Upper endpoint'], answer: 53.92, feedback: ['표본평균에 오차한계를 더하라.', 'Add the margin of error to the sample mean.'] }
@@ -85,7 +115,12 @@ export const lessons: Lesson[] = [
 		title: ['우도와 추정', 'Likelihood and Estimation'],
 		targets: ['베르누이 우도 · 최대우도추정 · 우도비', 'Bernoulli likelihood · maximum likelihood · likelihood ratio'],
 		prompt: ['성공 확률 p가 공통인 독립 베르누이 시행 10번 중 7번 성공했다. p의 최대우도추정값과 우도비 L(0.6)/L(0.5)를 구하라. 우도비는 소수 넷째 자리까지 입력하라.', 'Ten independent Bernoulli trials with common success probability p yield seven successes. Find the maximum-likelihood estimate of p and the likelihood ratio L(0.6)/L(0.5). Round the ratio to four decimal places.'],
-		reference: ['로그는 양수에서 증가한다. 곱으로 된 우도의 최대값은 로그우도를 최대화해 찾을 수 있다.', 'The logarithm is increasing on positive numbers. Maximizing the log likelihood also maximizes the likelihood.'],
+		reference: {
+			formula: ['L(p) ∝ pᵏ(1 − p)ⁿ⁻ᵏ. 로그우도의 p에 관한 항은 k log(p) + (n − k) log(1 − p)다.', 'L(p) ∝ pᵏ(1 − p)ⁿ⁻ᵏ. The p-dependent part of the log likelihood is k log(p) + (n − k) log(1 − p).'],
+			symbols: ['p는 성공 확률, n은 시행 횟수, k는 관측한 성공 횟수다. L(p)는 관측 자료에 대한 우도다.', 'p is the success probability, n is the number of trials, k is the observed success count, and L(p) is the likelihood of the observed data at p.'],
+			conditions: ['시행은 독립이고 성공 확률은 공통이다. 내부에서 로그우도를 미분하고 성공이나 실패만 관측했다면 경계에서 최대를 확인한다.', 'Trials must be independent with a common success probability. Differentiate the log likelihood in the interior and check the boundary if every trial has the same outcome.'],
+			pitfall: ['우도비를 구할 때 관측 자료와 우도의 정의를 고정한다. p에 의존하지 않는 공통 인자는 약분된다.', 'Keep the data and the likelihood definition fixed when taking a ratio. Common factors independent of p cancel.']
+		},
 		fields: [
 			{ label: ['최대우도추정값', 'Maximum-likelihood estimate'], answer: .7, feedback: ['로그우도에서 성공과 실패의 개수를 각각 계수로 써라.', 'Use the success and failure counts as separate coefficients in the log likelihood.'] },
 			{ label: ['우도비 L(0.6)/L(0.5)', 'Likelihood ratio L(0.6)/L(0.5)'], answer: (0.6/0.5)**7 * (0.4/0.5)**3, feedback: ['성공 확률의 비는 7제곱, 실패 확률의 비는 3제곱한다.', 'Raise the success-probability ratio to the seventh power and the failure-probability ratio to the third.'] }
@@ -99,7 +134,12 @@ export const lessons: Lesson[] = [
 		title: ['가설검정과 검정력', 'Testing and Power'],
 		targets: ['p값 · 제1종 오류 · 검정력', 'p-value · type I error · power'],
 		prompt: ['정규 모집단 평균 μ를 검정한다. 표본평균의 표준오차는 2이고 관측 평균은 14다. 귀무가설 μ = 10을 대립가설 μ > 10에 대해 검정한다. 검정 규칙은 표본평균이 13.29를 넘으면 기각하는 것이다. 표준정규 누적확률 Φ(2) = 0.9772와 Φ(1.355) = 0.9123을 써서 관측 p값과 실제 μ = 16에서의 검정력을 구하라.', 'Test a normal population mean μ. The standard error of the sample mean is 2 and the observed mean is 14. Test μ = 10 against μ > 10, rejecting if the sample mean exceeds 13.29. Use the standard normal CDF values Φ(2) = 0.9772 and Φ(1.355) = 0.9123 to find the observed p-value and the power when μ = 16.'],
-		reference: ['정규 확률변수 X의 표준화는 Z = (X − μ)/σ다. 위쪽 꼬리는 P(Z > z) = 1 − Φ(z)이다.', 'Standardize a normal variable X with Z = (X − μ)/σ. Its upper tail is P(Z > z) = 1 − Φ(z).'],
+		reference: {
+			formula: ['오른쪽 단측 검정에서 p값 = 1 − Φ((x̄ − μ₀)/s), 검정력 = 1 − Φ((c − μ₁)/s).', 'For an upper-tailed test, p-value = 1 − Φ((x̄ − μ₀)/s), and power = 1 − Φ((c − μ₁)/s).'],
+			symbols: ['x̄는 관측 평균, c는 기각 경계, μ₀는 귀무가설의 평균, μ₁은 검정력을 평가할 평균이다. s는 표본평균의 표준오차, Φ는 표준정규 누적분포함수다.', 'x̄ is the observed mean, c is the rejection cutoff, μ₀ is the null mean, and μ₁ is the mean at which power is evaluated. s is the standard error of the sample mean, and Φ is the standard normal CDF.'],
+			conditions: ['표본평균의 분포가 정규이고 표준오차를 알며, 표본평균이 c를 초과하면 기각하는 경우에 적용한다.', 'These formulas apply when the sample mean is normally distributed with a known standard error and the test rejects for sample means above c.'],
+			pitfall: ['p값은 관측 평균을 경계로 삼고, 검정력은 미리 정한 기각 경계를 사용한다.', 'The p-value takes its cutoff from the observed mean. Power uses the preset rejection cutoff.']
+		},
 		fields: [
 			{ label: ['관측 p값', 'Observed p-value'], answer: .0228, feedback: ['귀무가설의 평균 10을 기준으로, 관측값 14 이상의 꼬리를 구하라.', 'Center the distribution at the null mean 10 and take the upper tail beyond the observed mean 14.'] },
 			{ label: ['μ = 16에서 검정력', 'Power at μ = 16'], answer: .9123, feedback: ['실제 평균 16을 기준으로, 기각 경계 13.29보다 클 확률을 구하라.', 'Center the distribution at the true mean 16 and find the upper tail beyond the rejection cutoff 13.29.'] }
@@ -113,7 +153,12 @@ export const lessons: Lesson[] = [
 		title: ['분류기 임계값', 'Classifier Thresholds'],
 		targets: ['기저율 · 정밀도와 재현율 · 임계값', 'Base rate · precision and recall · thresholds'],
 		prompt: ['평가 표본은 양성 80개, 음성 920개다. 임계값 A에서 TP = 60, FP = 40이다. 더 높은 임계값 B에서 TP = 40, FP = 10이다. A의 정밀도와 재현율을 구하라. 재현율 60% 이상을 유지하며 정밀도를 최대화하려면 A와 B 중 무엇을 골라야 하는가? A는 1, B는 2를 입력하라.', 'An evaluation set contains 80 positives and 920 negatives. At threshold A, TP = 60 and FP = 40. At a higher threshold B, TP = 40 and FP = 10. Find A’s precision and recall. Which threshold maximizes precision subject to recall of at least 60%? Enter 1 for A or 2 for B.'],
-		reference: ['정밀도 = TP/(TP + FP), 재현율 = TP/(TP + FN). 제약을 만족하는 후보끼리 목적을 비교한다.', 'Precision = TP/(TP + FP), and recall = TP/(TP + FN). Compare the objective across feasible choices.'],
+		reference: {
+			formula: ['정밀도 = TP/(TP + FP). 재현율 = TP/(TP + FN).', 'Precision = TP/(TP + FP). Recall = TP/(TP + FN).'],
+			symbols: ['TP는 참양성, FP는 거짓 양성, FN은 거짓 음성의 개수다. TP + FP는 예측 양성 수, TP + FN은 실제 양성 수다.', 'TP, FP, and FN count true positives, false positives, and false negatives. TP + FP counts predicted positives, and TP + FN counts actual positives.'],
+			conditions: ['각 지표는 분모가 양수일 때 정의된다. 최소 재현율을 충족하는 임계값들 사이에서 정밀도를 비교한다.', 'Each metric is defined when its denominator is positive. Compare precision among thresholds that meet the minimum recall.'],
+			pitfall: ['정밀도와 재현율은 분자가 같아도 기준 집단이 다르다.', 'Precision and recall share a numerator but use different reference groups.']
+		},
 		fields: [
 			{ label: ['A의 정밀도', 'Precision at A'], answer: .6, feedback: ['분모는 양성으로 예측한 모든 표본이다.', 'The denominator is all predicted positives.'] },
 			{ label: ['A의 재현율', 'Recall at A'], answer: .75, feedback: ['분모는 실제 양성 표본 80개다.', 'The denominator is the 80 actual positives.'] },
@@ -128,7 +173,12 @@ export const lessons: Lesson[] = [
 		title: ['유전자 다중검정', 'Multiple Gene Tests'],
 		targets: ['다중검정 · 거짓 양성의 기댓값 · 가족단위 오류율', 'Multiple testing · expected false positives · family-wise error'],
 		prompt: ['조직 분류기에 넣을 변수를 학습 데이터에서 고른다. 두 조직 사이에 실제 발현 차이가 없는 유전자 1,000개에 보정 전 유의수준 0.05로 검정한다. 각 검정의 제1종 오류 확률은 정확히 0.05다. 거짓 양성 수의 기댓값과 가족단위 오류율을 최대 0.05로 제어하는 본페로니 검정별 기준을 구하라.', 'You are screening features for a tissue classifier using its training set. Test 1,000 genes with no true expression differences between the tissues at an unadjusted significance level of 0.05. Each test has a type I error probability of exactly 0.05. Find the expected number of false positives and the Bonferroni per-test cutoff for a family-wise error rate of at most 0.05.'],
-		reference: ['E[Σ Xᵢ] = Σ E[Xᵢ]. 합집합의 확률은 각 사건 확률의 합 이하이다.', 'E[Σ Xᵢ] = Σ E[Xᵢ]. The probability of a union is at most the sum of its event probabilities.'],
+		reference: {
+			formula: ['E[V] = Σ P(Fᵢ). P(V ≥ 1) ≤ Σ P(Fᵢ). 본페로니 검정별 기준은 α/m이다.', 'E[V] = Σ P(Fᵢ). P(V ≥ 1) ≤ Σ P(Fᵢ). The Bonferroni per-test cutoff is α/m.'],
+			symbols: ['V는 거짓 양성 수, Fᵢ는 i번째 검정의 거짓 양성 사건이다. α는 목표 가족단위 오류율, m은 전체 검정 수다.', 'V counts false positives, and Fᵢ is the event of a false positive in test i. α is the target family-wise error rate, and m is the total number of tests.'],
+			conditions: ['참인 귀무가설에서 검정별 거짓 양성 확률이 기준 이하라면 본페로니가 가족단위 오류율을 제어한다. 검정 간 의존성이 있어도 성립한다.', 'Bonferroni controls family-wise error when each true-null test has a false-positive probability at most its cutoff, even when tests are dependent.'],
+			pitfall: ['E[V]는 거짓 양성의 평균 개수이고 P(V ≥ 1)은 거짓 양성이 하나라도 나올 확률이다.', 'E[V] is the average false-positive count. P(V ≥ 1) is the chance of at least one false positive.']
+		},
 		fields: [
 			{ label: ['거짓 양성 수의 기댓값', 'Expected false positives'], answer: 50, feedback: ['거짓 양성의 지시변수 1,000개의 평균을 더하라.', 'Sum the expectations of the 1,000 false-positive indicators.'] },
 			{ label: ['본페로니 기준', 'Bonferroni cutoff'], answer: .00005, feedback: ['검정별 기준에 검정 수를 곱하면 전체 오류 예산이 되어야 한다.', 'Multiply the per-test cutoff by the number of tests to recover the family-wise error budget.'] }

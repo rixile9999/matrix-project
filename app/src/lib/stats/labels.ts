@@ -26,3 +26,7 @@ export const actionErrors = {
 	invalid: ['각 칸에 수를 입력하세요.', 'Enter a number in every field.'],
 	hints: ['힌트를 두 단계까지 확인하세요.', 'Open both hints to unlock the solution.']
 } satisfies Record<string, Copy>;
+
+export const referenceUsage = (used: boolean): Copy => used
+	? ['풀이 중 치트시트 사용', 'Cheat sheet used during practice']
+	: ['풀이 중 치트시트 미사용', 'Cheat sheet unused during practice'];

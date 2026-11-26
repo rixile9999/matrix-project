@@ -29,7 +29,7 @@ function apply(operation: Parameters<typeof act>[2]) {
 		const values = lesson.fields.map((_, index) => String(form.get(`answer${index}`) ?? '').trim().slice(0, 80));
 		const result = act(lesson, id, operation, operation === 'check' ? values : []);
 		if (result) return fail(result === 'unavailable' ? 404 : 400, { error: result, values });
-		return { error: null, values };
+		return { error: null, values, showReference: operation === 'reference' };
 	};
 }
 

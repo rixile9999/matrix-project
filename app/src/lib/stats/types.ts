@@ -17,7 +17,12 @@ export type Lesson = {
 	title: Copy;
 	targets: Copy;
 	prompt: Copy;
-	reference: Copy;
+	reference: {
+		formula: Copy;
+		symbols: Copy;
+		conditions: Copy;
+		pitfall: Copy;
+	};
 	fields: readonly AnswerField[];
 	hints: readonly [Copy, Copy];
 	solution: Copy;

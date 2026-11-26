@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, expect, it } from 'vitest';
 import { db, withAccount } from './db.ts';
-import { act, courseView, findLesson, parseNumber, runView, startRun } from './stats.ts';
+import { act, courseView, findLesson, parseNumber, recentStatsReviews, runView, startRun } from './stats.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'matrix-stats-'));
 const previous = process.env.MATRIX_DATA;
@@ -38,6 +38,9 @@ it('opens support step by step, retains partial feedback, and records timeouts',
 	const expires = 20_000 + lesson.seconds * 1000;
 	expect(act(lesson, next, 'check', ['6.8%', '19/68'], expires)).toBeNull();
 	expect(runView(lesson, next, expires)).toMatchObject({ outcome: 'timeout', elapsed: lesson.seconds });
+	expect(recentStatsReviews(expires)).toMatchObject([
+		{ id: next, usedReference: false }, { id, usedReference: true }
+	]);
 	expect(courseView(expires).catalogue.find(({ id }) => id === lesson.id)).toMatchObject({ best: 5, status: 'timeout' });
 }));
 
@@ -80,4 +83,31 @@ it('checks all published solutions against numerical responses and rejects a bla
 	}
 	expect(parseNumber('1 / 0')).toBe(Infinity);
 	expect(parseNumber('0x2')).toBeNaN();
+}));
+
+it('supplies a bilingual sheet for every lesson and preserves the lookup history when reviewing', () => withAccount(randomUUID(), () => {
+	const start = 1000;
+	for (const { id: lessonId } of courseView(start).catalogue) {
+		const lesson = findLesson(lessonId)!;
+		const run = startRun(lesson, start);
+		const deadline = start + lesson.seconds * 1000;
+		expect(runView(lesson, run, start)?.reference).toBeNull();
+		for (const key of ['formula', 'symbols', 'conditions', 'pitfall'] as const) {
+			const [korean, english] = lesson.reference[key];
+			expect(korean.trim()).not.toBe('');
+			expect(english.trim()).not.toBe('');
+		}
+		act(lesson, run, 'reference', [], start + 1);
+		act(lesson, run, 'reference', [], start + 2);
+		expect(runView(lesson, run, start + 2)).toMatchObject({
+			deadline, hints: [], reference: lesson.reference, review: null
+		});
+		expect(runView(lesson, run, deadline)?.review?.usedReference).toBe(true);
+		const next = startRun(lesson, deadline);
+		const end = deadline + lesson.seconds * 1000;
+		act(lesson, next, 'reference', [], end);
+		expect(runView(lesson, next, end)).toMatchObject({
+			outcome: 'timeout', reference: lesson.reference, review: { usedReference: false }
+		});
+	}
 }));
