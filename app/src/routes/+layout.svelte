@@ -62,6 +62,7 @@
 			<a href="/stats" class:on={path.startsWith('/stats')}>{t('확률·통계', 'Statistics')}</a>
 			<a href="/spar" class:on={path.startsWith('/spar')} aria-current={path.startsWith('/spar') ? 'page' : undefined}>{t('스파링', 'Sparring')}</a>
 			<a href="/debrief" class:on={path.startsWith('/debrief')} aria-current={path.startsWith('/debrief') ? 'page' : undefined}>{t('복기', 'Debrief')}</a>
+			<a href="/descent" class:on={path.startsWith('/descent')} aria-current={path.startsWith('/descent') ? 'page' : undefined}>{t('Descent', 'Descent')}</a>
 			<a href="/garden" class:on={path.startsWith('/garden')} aria-current={path.startsWith('/garden') ? 'page' : undefined}>{t('정원', 'Garden')}</a>
 			<a href="/library" class:on={path === '/library' || path.startsWith('/library/')} aria-current={path === '/library' ? 'page' : undefined}>{t('PDF 문제집', 'PDF sets')}</a>
 			<a href="/learning-map" class:on={path === '/learning-map'} aria-current={path === '/learning-map' ? 'page' : undefined}>{t('학습 구조', 'Learning model')}</a>
@@ -91,7 +92,7 @@
 		{@render children()}
 	</div>
 {:else}
-	<div class="screen" class:wide={path.startsWith('/lang/')} class:viewing={stage.view} inert={stage.view}>
+	<div class="screen" class:wide={path.startsWith('/lang/') || path.startsWith('/descent')} class:viewing={stage.view} inert={stage.view}>
 		{#if !focus && path !== '/login' && path !== '/signup'}{@render bar()}{:else}<div class="focus-language"><LanguageSwitch /></div>{/if}
 		{@render children()}
 	</div>

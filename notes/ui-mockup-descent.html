@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descent — 목업</title>
+<style>
+	:root { --bg:#0b0c10; --ink:#ecebe6; --muted:#8b8d94; --line:#23252c; --accent:#f0cfa6; --card:#111318; }
+	* { box-sizing: border-box; }
+	body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 "Inter", system-ui, sans-serif; padding:40px max(16px, env(safe-area-inset-left)) 80px; }
+	h1 { font:400 28px/1.2 Georgia, serif; margin:0 0 4px; letter-spacing:-.01em; }
+	.sub { color:var(--muted); font:500 12px ui-monospace, monospace; letter-spacing:.08em; margin-bottom:36px; }
+	.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:24px; max-width:1180px; }
+	.frame { border:1px solid var(--line); border-radius:18px; background:var(--card); padding:22px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+	.tag { font:500 11px ui-monospace, monospace; letter-spacing:.1em; color:var(--muted); }
+	.trail { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font:500 12px ui-monospace, monospace; color:var(--muted); }
+	.trail b { color:var(--ink); font-weight:500; }
+	.dots { margin-left:auto; display:flex; gap:5px; }
+	.dots i { width:6px; height:6px; border-radius:50%; border:1px solid var(--muted); }
+	.dots i.on { background:var(--accent); border-color:var(--accent); }
+	.clock { font:400 34px/1 Georgia, serif; }
+	.clock.held { color:var(--muted); }
+	pre { margin:0; padding:12px 14px; border:1px solid var(--line); border-radius:10px; font:13px/1.55 ui-monospace, monospace; overflow-x:auto; color:#cfd0d4; }
+	.err { color:#e0a39a; }
+	.offer { border-top:1px solid var(--line); padding-top:16px; display:grid; gap:12px; }
+	.offer p { margin:0; font:400 18px/1.5 Georgia, serif; }
+	.offer code, p code { font:13px ui-monospace, monospace; color:var(--accent); }
+	.row { display:flex; gap:8px; flex-wrap:wrap; }
+	button { font:500 13px inherit; color:var(--ink); background:transparent; border:1px solid var(--line); border-radius:999px; padding:7px 15px; cursor:pointer; }
+	button.go { border-color:var(--accent); color:var(--accent); }
+	.quiet { color:var(--muted); font:500 12px ui-monospace, monospace; }
+	.tree { display:grid; gap:6px; font:14px/1.5 inherit; }
+	.tree div { display:flex; gap:10px; align-items:baseline; }
+	.tree span { color:var(--muted); font:500 12px ui-monospace, monospace; margin-left:auto; white-space:nowrap; }
+	.tree .l1 { padding-left:18px; } .tree .l2 { padding-left:36px; }
+	.done { color:var(--accent); }
+</style>
+
+<h1>Descent</h1>
+<div class="sub">막히면 내려가고, 풀고 올라온다 · 목업</div>
+
+<div class="grid">
+	<section class="frame">
+		<div class="tag">1 · 제안</div>
+		<div class="trail"><b>b-06 정렬됐는가</b><div class="dots"><i></i><i></i><i></i></div></div>
+		<div class="clock">0:00</div>
+		<pre>def isSorted(xs: List[Int]) =
+  xs.forall((a, b) =&gt; a &lt;= b)
+<span class="err">Wrong number of parameters, expected: 1</span></pre>
+		<div class="offer">
+			<p>이웃끼리 짝짓는 <code>zip</code>이 아직 없다. 그것부터 풀어 볼래요?</p>
+			<div class="row"><button class="go">내려가기</button><button>계속</button></div>
+		</div>
+	</section>
+
+	<section class="frame">
+		<div class="tag">2 · 하위 문제</div>
+		<div class="trail">b-06 정렬됐는가 › <b>이웃 쌍 만들기</b><div class="dots"><i class="on"></i><i></i><i></i></div></div>
+		<div class="clock">1:30</div>
+		<pre>// List(1, 2, 3) → List((1,2), (2,3))
+def pairs(xs: List[Int]): List[(Int, Int)] =
+  ???</pre>
+		<div class="quiet">b-06 · 멈춤</div>
+	</section>
+
+	<section class="frame">
+		<div class="tag">3 · 복귀</div>
+		<div class="trail">b-06 정렬됐는가 › <b>이웃 쌍 만들기</b><div class="dots"><i class="on"></i><i></i><i></i></div></div>
+		<div class="clock done">통과</div>
+		<div class="offer">
+			<p>올라갈 차례.</p>
+			<div class="row"><button class="go">b-06으로</button><button>나중에</button></div>
+		</div>
+	</section>
+
+	<section class="frame">
+		<div class="tag">4 · 바닥 (3단계)</div>
+		<div class="trail">… › <b>튜플 꺼내기</b><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+		<pre>val p = (3, 5)
+p._1          // 3
+val (a, b) = p  // a = 3, b = 5</pre>
+		<div class="offer">
+			<p>여기가 바닥. 읽고, 가리고, 다시 써 본다.</p>
+			<div class="row"><button class="go">가리기</button></div>
+		</div>
+	</section>
+
+	<section class="frame">
+		<div class="tag">5 · Debrief에 남는 것</div>
+		<div class="tree">
+			<div>b-06 정렬됐는가 <span>3일 뒤 다시</span></div>
+			<div class="l1">이웃 쌍 만들기 <span class="done">통과</span></div>
+			<div class="l2">튜플 꺼내기 <span class="done">통과</span></div>
+		</div>
+		<div class="quiet">해결은 다시 풀었을 때만.</div>
+	</section>
+</div>
+</html>

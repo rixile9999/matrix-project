@@ -1,5 +1,6 @@
 import { readPack } from './content-language.ts';
-import { tr, label } from './locale.ts';
+import { tr, label, english } from './locale.ts';
+import { deckDrillChecks } from './drill.ts';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db } from './db.ts';
@@ -165,7 +166,7 @@ function world(): World {
 			pattern: null, book: null, topic: e.topic, unlock: [], entry: e
 		});
 	}
-	return { cards: mixBy(cards, (c) => (c.kind === 'syntax' ? 'syntax' : 'file')), checks: readValid<Check>('checks', validCheck).filter((c) => !c.debrief || inDeck(c.debrief)), memories: buildMemories(reviewLog()), finished, at: now() };
+	return { cards: mixBy(cards, (c) => (c.kind === 'syntax' ? 'syntax' : 'file')), checks: readValid<Check>('checks', validCheck).filter((c) => !c.debrief || inDeck(c.debrief)).concat(deckDrillChecks(english() ? 'en' : 'ko')), memories: buildMemories(reviewLog()), finished, at: now() };
 }
 
 const open = (w: World, unlock: string[] | undefined) => !unlock || unlock.length === 0 || unlock.some((p) => w.finished.has(p));

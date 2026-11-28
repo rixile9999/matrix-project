@@ -636,7 +636,11 @@ export type DebriefNote = {
 	inDeck: boolean;
 	practice: { id: string; title: string; passed: boolean }[];
 	questions: { problemId: string; at: number; text: string }[]; // Operator questions in the sessions where it showed up
+	drills: DebriefDrill[]; // generated variations for this note (machine-verified), newest first; dropped ones are not listed
+	drillJob: 'running' | 'failed' | null; // the latest generation job for this note, if it is running or failed
 };
+/** A generated trace exercise tied to a note. The answer stays on the server; once added it is reviewed in the memo deck as check `drill-<id>`. */
+export type DebriefDrill = { id: number; prompt: string; code: string; state: 'ready' | 'added' };
 export type DebriefReading = { id: number; createdAt: number; backend: string; backendName: string; sentences: { text: string; facts: { id: string; text: string }[] }[] };
 export type DebriefExperiment = { id: ExperimentId; title: string; detail: string };
 export type DebriefData = {
@@ -653,7 +657,11 @@ export type DebriefData = {
 	experiments: DebriefExperiment[];
 	choice: (DebriefExperiment & { at: number; result: { label: string; before: string; after: string; afterSessions: number } }) | null;
 	warmup: { patternId: string; short: string; problemId: string; title: string } | null;
+	drillAuto: boolean; // generate variations in the background when a session ends on a note's pattern
 };
+// POST /debrief/drills       { pattern, backend? } -> { ok: true } | { error }  (starts a background generation job; 409 while one runs)
+// POST /debrief/drills/add   { id, drop?: true } -> { ok: true } | { error }  (ready -> added, or ready/added -> dropped)
+// POST /debrief/drills/auto  { on: boolean } -> { ok: true } | { error }
 // POST /debrief/deck    { pattern } -> { ok: true } | { error }  (adds the note's check to the memo deck; append-only)
 // POST /debrief/mine    { pattern, text } -> { ok: true } | { error }  (text <= 200 chars; '' clears)
 // POST /debrief/choice  { choice: ExperimentId | '' } -> { ok: true } | { error }
@@ -662,3 +670,22 @@ export type DebriefData = {
 // POST /lang/[id]/self  { sessionId, state: SelfState | 'none' } -> { recorded: boolean }  (only for a finished session)
 export type DebriefOk = { ok: true } | { error: string };
 export type DebriefReadingResponse = { reading: DebriefReading } | { error: string };
+
+// ---------- Descent (coach chat + editor; contract: notes/descent.md) ----------
+export type DescentFrameView = { problemId: string; title: string; depth: number; status: 'solving' | 'held' | 'passed' | 'failed' };
+export type DescentMessage = {
+	id: number; at: number; role: 'me' | 'coach' | 'event'; text: string; // coach text is inline markdown
+	tone: 'good' | 'bad' | null; // events only
+	offer: { kind: 'descend' | 'ascend'; open: boolean } | null; // open: still waiting for the learner's choice
+};
+export type DescentData = {
+	messages: DescentMessage[];
+	stack: DescentFrameView[]; // root first; the last one is the problem in the editor
+	session: Omit<LangSessionData, 'debrief'> | null; // the top problem's session, as the lang page gets it
+	busy: boolean; // a coach turn is in flight
+	connected: boolean; // the account has a model backend connected
+};
+export type DescentOk = { ok: true } | { error: string };
+// POST /descent/turn   { text } | { choice: 'accept' | 'decline' } -> DescentOk (409 while a turn runs)
+// POST /descent/sync   {} -> DescentOk   (observe the top problem's records after a run, hint, reveal or the clock passing the limit)
+// POST /descent/close  {} -> DescentOk

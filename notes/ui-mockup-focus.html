@@ -1,0 +1,767 @@
+<style>
+/* Matrix 몰입 흐름 시안 v2 — Arena 언어(Sparring·Garden룸)로 빚은 코칭 흐름.
+   한 번에 하나의 순간. 세션 중 빈 화면. 판정이 아니라 관찰. 외부 리소스 없음. */
+.fx {
+	--bg: #06070b; --ink: #ecebe6; --dim: rgba(236, 235, 230, .56); --faint: rgba(236, 235, 230, .12); --warm: #f0cfa6;
+	--display: 'Space Grotesk', 'Pretendard', 'Apple SD Gothic Neo', -apple-system, system-ui, sans-serif;
+	--body: 'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', -apple-system, system-ui, sans-serif;
+	--mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+	--r: 14px;
+	background: var(--bg); color: var(--ink); font: 15px/1.62 var(--body);
+	min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow-x: clip;
+}
+.fx *, .fx *::before, .fx *::after { box-sizing: border-box; }
+.fx button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
+.fx :is(button, a, summary):focus-visible { outline: 2px solid var(--warm); outline-offset: 3px; border-radius: 4px; }
+.fx code { font: .9em var(--mono); font-variant-ligatures: none; background: rgba(236, 235, 230, .08); border-radius: 4px; padding: 0 5px; }
+.fx pre, .fx code { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; }
+.fx .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-variant-ligatures: none; }
+
+/* ---------- 배경: 달빛 비네트 + 아주 느린 먼지 ---------- */
+.fx::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+	background: radial-gradient(60vmax 40vmax at 72% -12%, rgba(240, 207, 166, .07), transparent 60%),
+		radial-gradient(50vmax 40vmax at 12% 110%, rgba(169, 211, 220, .045), transparent 60%); }
+.fx .dust { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.fx .dust i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--ink); opacity: .1; animation: fx-float 26s ease-in-out infinite; }
+.fx .dust i:nth-child(1) { left: 12%; top: 22%; animation-delay: 0s; }
+.fx .dust i:nth-child(2) { left: 34%; top: 68%; animation-delay: -6s; }
+.fx .dust i:nth-child(3) { left: 58%; top: 14%; animation-delay: -12s; }
+.fx .dust i:nth-child(4) { left: 78%; top: 52%; animation-delay: -18s; }
+.fx .dust i:nth-child(5) { left: 88%; top: 80%; animation-delay: -22s; }
+@keyframes fx-float { 50% { transform: translateY(-26px); opacity: .04; } }
+
+/* ---------- 상단 바: 역할은 '어느 순간인지'만 ---------- */
+.fx .mbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px;
+	padding: 10px 18px; border-bottom: 1px solid var(--faint);
+	background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); }
+.fx .brand { font: 600 16px var(--display); letter-spacing: -.01em; white-space: nowrap; }
+.fx .brand small { font: 500 10.5px var(--mono); color: var(--dim); margin-left: 8px; letter-spacing: .1em; }
+.fx .stations { display: flex; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.fx .stations::-webkit-scrollbar { display: none; }
+.fx .st { padding: 7px 10px; font: 500 12px var(--mono); color: var(--dim); white-space: nowrap; border-radius: 8px; letter-spacing: .02em; }
+.fx .st:hover { color: var(--ink); }
+.fx .st[aria-current="true"] { color: var(--warm); }
+.fx .st .no { margin-right: 4px; color: var(--faint); }
+.fx .st[aria-current="true"] .no { color: var(--warm); }
+.fx .mtools { display: flex; gap: 6px; white-space: nowrap; }
+.fx .mt { font: 500 12px var(--mono); color: var(--dim); border: 1px solid var(--faint); border-radius: 999px; padding: 6px 12px; }
+.fx .mt:hover { color: var(--ink); border-color: rgba(236, 235, 230, .3); }
+.fx .mt[aria-pressed="true"] { color: var(--warm); border-color: var(--warm); }
+
+/* ---------- 무대 ---------- */
+.fx .stages { flex: 1; display: grid; }
+.fx .stage { grid-area: 1 / 1; display: none; flex-direction: column; gap: 26px;
+	width: min(780px, 100%); margin: 0 auto; padding: 30px 22px 84px; }
+.fx .stage.on { display: flex; }
+.fx .narrow .stage { width: min(430px, 100%); }
+.fx .in > * { animation: fx-in 1.1s cubic-bezier(.2, .7, .2, 1) both; }
+.fx .in > *:nth-child(2) { animation-delay: .1s; } .fx .in > *:nth-child(3) { animation-delay: .2s; }
+.fx .in > *:nth-child(4) { animation-delay: .3s; } .fx .in > *:nth-child(5) { animation-delay: .4s; }
+.fx .in > *:nth-child(6) { animation-delay: .5s; } .fx .in > *:nth-child(7) { animation-delay: .6s; }
+@keyframes fx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.fx .k-top { display: flex; justify-content: space-between; gap: 12px; font: 500 12px var(--mono); letter-spacing: .08em; color: var(--dim); }
+.fx .k-title { font: 600 clamp(30px, 6vw, 46px) / 1.12 var(--display); letter-spacing: -.025em; margin: 0; text-wrap: balance; }
+.fx .k-sub { color: var(--dim); margin: 0; font-size: 14px; max-width: 52ch; }
+.fx .k-sub b { color: var(--ink); font-weight: 500; }
+.fx .kline { border: 0; border-top: 1px solid var(--faint); margin: 0; }
+
+/* 버튼: 알약 하나 + 조용한 글 */
+.fx .pill { font: 600 15px var(--body); color: var(--bg); background: var(--ink); border: 1px solid var(--ink);
+	border-radius: 999px; padding: 13px 26px; min-height: 46px; display: inline-flex; align-items: center; gap: 8px;
+	transition: opacity .3s; }
+.fx .pill:hover { opacity: .85; }
+.fx .pill.big { font-size: 17px; padding: 15px 34px; }
+.fx .pill.small { font-size: 13px; padding: 9px 18px; min-height: 38px; }
+.fx .pill.ghost { background: transparent; color: var(--ink); border-color: rgba(236, 235, 230, .26); }
+.fx .pill.warm { background: var(--warm); border-color: var(--warm); }
+.fx .pill:disabled { opacity: .35; cursor: default; }
+.fx .quiet { font: 500 13px var(--body); color: var(--dim); text-decoration: underline; text-decoration-color: var(--faint);
+	text-underline-offset: 4px; padding: 8px 2px; min-height: 36px; }
+.fx .quiet:hover { color: var(--ink); }
+.fx .quiet.mono { font: 500 12px var(--mono); }
+.fx .arow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* 유리 패널 */
+.fx .glass { background: rgba(236, 235, 230, .04); border: 1px solid rgba(236, 235, 230, .09);
+	border-radius: var(--r); padding: 16px 18px; backdrop-filter: blur(8px); display: flex; flex-direction: column; gap: 10px; }
+.fx .glass.dim { background: rgba(6, 7, 11, .6); }
+.fx .glass .cap { font: 500 12px var(--mono); letter-spacing: .06em; color: var(--dim); }
+
+/* 코드 */
+.fx pre.code { margin: 0; padding: 12px 14px; font: 13px/1.7 var(--mono); color: var(--ink);
+	background: rgba(8, 9, 13, .92); border: 1px solid var(--faint); border-radius: 12px;
+	white-space: pre; overflow-x: auto; tab-size: 2; }
+.fx .hl { display: block; border-radius: 4px; }
+.fx .hl-bad { background: color-mix(in srgb, var(--warm) 9%, transparent); box-shadow: inset 2px 0 0 var(--warm); }
+.fx .hl-good { background: rgba(236, 235, 230, .06); box-shadow: inset 2px 0 0 var(--ink); }
+
+/* 달 타이머 */
+.fx .moonrow { display: flex; align-items: center; gap: 10px; }
+.fx .moon { width: 40px; height: 40px; }
+.fx .moon .ring { stroke: var(--faint); }
+.fx .moon .prog { stroke: var(--ink); transition: stroke-dashoffset .25s linear, stroke .8s; }
+.fx .moon.over .prog { stroke: var(--warm); }
+.fx .clock { font: 500 22px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.fx .clock.over { color: var(--warm); }
+.fx .clock.over::before { content: '+'; }
+.fx .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warm); animation: fx-pulse 1.8s ease-in-out infinite; }
+@keyframes fx-pulse { 50% { opacity: .2; } }
+
+/* 풀이 화면 */
+.fx .solve-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.fx .solve-top .who { font: 500 13px var(--mono); color: var(--dim); }
+.fx .solve-top .who b { color: var(--ink); font-weight: 500; }
+.fx .hbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fx .hintdashes { font: 500 12px var(--mono); color: var(--dim); letter-spacing: .3em; }
+.fx .cases { display: flex; flex-direction: column; }
+.fx .case { display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--faint); font-size: 13px; }
+.fx .case:first-child { border-top: 0; }
+.fx .case .m { font: 500 13px var(--mono); color: var(--dim); }
+.fx .case.bad .m, .fx .case.bad .t { color: var(--warm); }
+.fx .case .d { color: var(--dim); font: 12px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* 착지(블룸) */
+.fx .land { position: relative; padding: clamp(48px, 14vh, 120px) 0 24px; text-align: center; display: flex; flex-direction: column; gap: 18px; align-items: center; }
+.fx .bloom { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
+.fx .bloom i { width: 46vmin; height: 46vmin; border-radius: 50%;
+	background: radial-gradient(circle, rgba(240, 207, 166, .3), rgba(240, 207, 166, .05) 55%, transparent 70%);
+	animation: fx-bloom 2.8s cubic-bezier(.2, .7, .2, 1) forwards; }
+@keyframes fx-bloom { from { transform: scale(.35); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+.fx .bigclock { font: 500 clamp(64px, 14vw, 108px) / 1 var(--display); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.fx .landline { color: var(--dim); font-size: 15px; max-width: 40ch; }
+
+/* 회고 */
+.fx .clarity { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fx .fx.narrow .clarity { grid-template-columns: 1fr; }
+.fx .cl { border: 1px solid rgba(236, 235, 230, .16); border-radius: 14px; background: rgba(8, 9, 13, .6);
+	padding: 18px 14px; min-height: 86px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+	transition: border-color .4s, color .4s; text-align: left; }
+.fx .cl:hover { border-color: rgba(236, 235, 230, .4); }
+.fx .cl[aria-pressed="true"] { border-color: var(--warm); color: var(--warm); }
+.fx .cl b { font: 500 17px var(--body); }
+.fx .cl span { font-size: 12.5px; color: var(--dim); }
+.fx .ctxpills { display: flex; gap: 8px; flex-wrap: wrap; }
+.fx .ctx { font: 500 13px var(--body); color: var(--dim); border: 1px solid var(--faint); border-radius: 999px; padding: 9px 15px; min-height: 38px; }
+.fx .ctx[aria-pressed="true"] { color: var(--ink); border-color: rgba(236, 235, 230, .4); background: rgba(236, 235, 230, .07); }
+
+/* 정산 카드 */
+.fx .note { border: 1px solid rgba(236, 235, 230, .14); border-radius: 16px; background: rgba(8, 9, 13, .72);
+	backdrop-filter: blur(6px); padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.fx .note h2 { font: 600 20px / 1.3 var(--display); letter-spacing: -.015em; margin: 0; }
+.fx .kv { display: grid; grid-template-columns: 64px 1fr; gap: 10px; font-size: 14px; }
+.fx .kv > b { font: 500 12px var(--mono); color: var(--dim); letter-spacing: .08em; padding-top: 2px; }
+.fx .verify { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--mono); color: var(--dim); }
+.fx .verify::before { content: ''; width: 14px; height: 14px; border: 1.5px solid var(--dim); border-radius: 50%;
+	background: radial-gradient(circle at center, var(--dim) 0 2.5px, transparent 3px); }
+.fx details.ev > summary { list-style: none; cursor: pointer; font: 500 12px var(--mono); color: var(--dim); padding: 10px 0; min-height: 40px; }
+.fx details.ev > summary::-webkit-details-marker { display: none; }
+.fx details.ev > summary:hover { color: var(--ink); }
+.fx details.ev > summary::after { content: ' ·'; }
+.fx .evlist { margin: 0; padding: 2px 0 0 14px; border-left: 1px solid var(--faint); list-style: none;
+	display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; color: var(--dim); }
+.fx .evlist .mono { color: var(--ink); font-size: 12px; }
+.fx .done-line { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--dim); }
+.fx .done-line b { color: var(--warm); font-weight: 500; }
+
+/* 다음 제안 */
+.fx .nextone { display: flex; flex-direction: column; gap: 8px; padding: 20px 22px;
+	border: 1px solid var(--warm); border-radius: 16px; background: color-mix(in srgb, var(--warm) 5%, transparent); }
+.fx .nextone .t { font: 600 19px var(--display); letter-spacing: -.01em; }
+.fx .alts { display: flex; flex-direction: column; gap: 2px; }
+.fx .alt { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 12px 2px; min-height: 44px;
+	border-top: 1px solid var(--faint); font-size: 14px; color: var(--dim); text-align: left; }
+.fx .alt:hover { color: var(--ink); }
+.fx .alt .mono { font-size: 12px; }
+
+/* 정원: 리듬 */
+.fx .hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; height: 88px; }
+.fx .hr { display: flex; align-items: flex-end; min-width: 0; border-bottom: 1px solid var(--faint); padding: 0; }
+.fx .hr i { display: block; width: 100%; background: var(--ink); opacity: .85; border-radius: 2px 2px 0 0; transition: opacity .4s, background .4s; }
+.fx .hr.faint i { opacity: .18; }
+.fx .hr:hover i, .fx .hr.on i { opacity: 1; background: var(--warm); }
+.fx .axis { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--dim); margin-top: 6px; }
+.fx .read { margin: 10px 0 0; min-height: 22px; font-size: 13px; color: var(--dim); }
+.fx .read b { font: 500 13px var(--mono); color: var(--ink); }
+.fx .facts { margin-top: 14px; }
+.fx .fact { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 10px 0;
+	border-top: 1px solid var(--faint); font-size: 14px; color: var(--dim); }
+.fx .fact b { font: 500 14px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.fx .fact b.none { font: 400 13px var(--body); color: var(--dim); }
+.fx .fact small { flex-basis: 100%; font-size: 12px; color: var(--dim); opacity: .8; }
+
+/* 정원: 연속의 그림 */
+.fx .dayrow { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; padding: 9px 0;
+	border-top: 1px solid var(--faint); }
+.fx .dayrow .d { font: 500 12px var(--mono); color: var(--dim); }
+.fx .dayrow .seq { display: flex; gap: 7px; flex-wrap: wrap; }
+.fx .mk { width: 11px; height: 11px; border-radius: 50%; background: var(--ink); }
+.fx .mk.half { background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); border: 1px solid var(--ink); }
+.fx .mk.hollow { background: transparent; border: 1.5px solid var(--dim); }
+.fx .mk.now { box-shadow: 0 0 0 3px color-mix(in srgb, var(--warm) 35%, transparent); }
+.fx .dayrow .n { font: 500 12px var(--mono); color: var(--dim); }
+.fx .legend { font: 500 12px var(--mono); color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.fx .legend .mk { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; }
+
+/* 정원: 관찰 */
+.fx .obs { display: flex; flex-direction: column; }
+.fx .ob { padding: 16px 0; border-top: 1px solid var(--faint); display: flex; flex-direction: column; gap: 6px; }
+.fx .ob p { margin: 0; font-size: 16px; line-height: 1.65; text-wrap: pretty; max-width: 44ch; }
+.fx .ob .ref { font: 500 12px var(--mono); color: var(--dim); }
+.fx .ob .ref::before { content: '→ '; color: var(--faint); }
+.fx .ob .warm { color: var(--warm); }
+
+/* 설계 노트(마지막 순간) */
+.fx .moves { display: flex; flex-direction: column; }
+.fx .mv { display: grid; grid-template-columns: 1fr 24px 1fr; gap: 12px; padding: 13px 0; border-top: 1px solid var(--faint);
+	font-size: 13.5px; align-items: baseline; }
+.fx .mv .was { color: var(--dim); }
+.fx .mv .arrow { color: var(--faint); text-align: center; }
+.fx .mv .now { color: var(--ink); }
+.fx .mv .now b { color: var(--warm); font-weight: 500; }
+.fx .plist { display: flex; flex-wrap: wrap; gap: 8px; }
+.fx .p { font: 500 12px var(--mono); border: 1px solid var(--faint); border-radius: 999px; padding: 5px 12px; color: var(--dim); }
+
+/* 설명 각주(dnote) */
+.fx .dnote { display: none; }
+.fx.notes-on .dnote { display: block; margin: 4px 0 0; padding: 8px 0 8px 14px; border-left: 2px solid color-mix(in srgb, var(--warm) 45%, transparent);
+	font-size: 12.5px; color: var(--dim); max-width: 60ch; }
+.fx .dnote::before { content: '◇ '; color: var(--warm); }
+
+/* 하단 레일 */
+.fx .rail { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; gap: 14px;
+	padding: 10px 18px; border-top: 1px solid var(--faint);
+	background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); }
+.fx .rail .grow { flex: 1; }
+.fx .dots { display: flex; gap: 8px; }
+.fx .dots button { width: 12px; height: 12px; border-radius: 50%; background: var(--faint); padding: 0; }
+.fx .dots button.seen { background: rgba(236, 235, 230, .45); }
+.fx .dots button.cur { background: var(--warm); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warm) 22%, transparent); }
+.fx .rail .hint { font: 500 11.5px var(--mono); color: var(--dim); letter-spacing: .04em; }
+
+/* 토스트 */
+.fx .toast { position: fixed; left: 50%; bottom: 74px; transform: translate(-50%, 12px); z-index: 40;
+	background: rgba(10, 11, 16, .96); border: 1px solid rgba(236, 235, 230, .2); color: var(--ink);
+	border-radius: 999px; padding: 11px 20px; font-size: 13.5px; opacity: 0; pointer-events: none;
+	transition: opacity .35s, transform .35s; max-width: min(88vw, 480px); text-align: center; }
+.fx .toast.show { opacity: 1; transform: translate(-50%, 0); }
+.fx .toast .mono { color: var(--dim); font-size: 12px; }
+
+/* 반응형 */
+@media (max-width: 700px) {
+	.fx .clarity { grid-template-columns: 1fr; }
+	.fx .kv { grid-template-columns: 56px 1fr; }
+	.fx .brand small { display: none; }
+	.fx .mtools .mt span { display: none; }
+	.fx .mv { grid-template-columns: 1fr; gap: 2px; }
+	.fx .mv .arrow { display: none; }
+	.fx .dayrow { grid-template-columns: 52px 1fr; }
+	.fx .dayrow .n { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.fx .in > * { animation: none; }
+	.fx .dust i, .fx .dot, .fx .bloom i { animation: none; opacity: .5; }
+	.fx .moon .prog, .fx .pill { transition: none; }
+}
+</style>
+
+<div class="fx" id="fx">
+	<div class="dust" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+	<header class="mbar">
+		<span class="brand">Matrix <small>FOCUS FLOW · 시안 v2</small></span>
+		<nav class="stations" id="stations" aria-label="순간 사이를 오갑니다"></nav>
+		<div class="mtools">
+			<button type="button" class="mt" id="btn-notes" aria-pressed="false">◇ <span>설명 각주</span></button>
+			<button type="button" class="mt" id="btn-narrow" aria-pressed="false">▯ <span>모바일 폭</span></button>
+		</div>
+	</header>
+
+	<main class="stages" id="stages">
+
+		<!-- 1 진입 -->
+		<section class="stage" data-i="0" aria-label="진입">
+			<div class="in">
+				<div class="k-top"><span>다음 문제 · Scala 언어</span><span class="mono">11.26 목 · 23:41</span></div>
+				<h1 class="k-title">foldLeft로 reverse 구현</h1>
+				<p class="k-sub">책 3장 · 연습 3.12 · <b>제한 3:00</b> · 주제 fold·누적 · 이어지는 문제입니다. 최근 이 주제 <b>5개 중 4개</b>를 통과했습니다.</p>
+				<div class="arow">
+					<button type="button" class="pill big" id="btn-start"><span class="dot" aria-hidden="true"></span>시작</button>
+					<span class="k-sub" style="align-self:center">문을 열면 타이머가 먼저 움직입니다.</span>
+				</div>
+				<div class="alts">
+					<button type="button" class="alt"><span>또는 · 워밍업 — take와 drop으로 자르기</span><span class="mono">2:00 · 기본</span></button>
+					<button type="button" class="alt"><span>또는 · 오늘은 Sparring 스프린트 한 판</span><span class="mono">5분</span></button>
+				</div>
+				<aside class="dnote">선택권을 지킵니다(원칙 25). 문제는 제안 하나와 조용한 대안 둘뿐이고, 카드 그리드가 아닌 글줄로만 나열합니다.</aside>
+				<aside class="dnote">난이도 근거(85% 구간)는 수치로 한 줄만 — 배지가 아니라 문장으로 말합니다.</aside>
+			</div>
+		</section>
+
+		<!-- 2 풀이 -->
+		<section class="stage" data-i="1" aria-label="풀이">
+			<div class="in">
+				<div class="solve-top">
+					<span class="who"><b>fp-0312</b> · foldLeft로 reverse 구현</span>
+					<div class="moonrow">
+						<svg class="moon" id="moon" viewBox="0 0 40 40" aria-hidden="true">
+							<circle class="ring" cx="20" cy="20" r="17.5" fill="none" stroke-width="1.5" />
+							<circle class="prog" id="moon-prog" cx="20" cy="20" r="17.5" fill="none" stroke-width="1.5"
+								stroke-dasharray="110" stroke-dashoffset="110" transform="rotate(-90 20 20)" />
+							<circle cx="20" cy="20" r="9" fill="rgba(236,235,230,.85)" />
+							<circle cx="17" cy="18" r="1.6" fill="rgba(6,7,11,.25)" />
+							<circle cx="23" cy="22" r="2.2" fill="rgba(6,7,11,.18)" />
+						</svg>
+						<span class="clock" id="clock">3:00</span>
+					</div>
+				</div>
+				<p class="k-sub">foldLeft 하나만 써서 <code>xs</code>를 뒤집은 List를 돌려주는 <code>reverse</code>를 완성하세요.</p>
+				<pre class="code" id="editor">def reverse[A](xs: List[A]): List[A] =
+  <span class="hl" id="ed-line">xs.foldLeft(Nil)((acc, a) => a :: acc)</span></pre>
+				<div class="hbar">
+					<button type="button" class="pill" id="btn-run">실행 <span class="mono" style="font-size:12px;opacity:.6">⌘↵</span></button>
+					<span class="hintdashes" title="힌트 2단계" aria-label="힌트 2단계 남음">··</span>
+					<button type="button" class="quiet mono" id="btn-cheat">치트시트</button>
+					<span class="grow" style="flex:1"></span>
+					<button type="button" class="quiet mono" id="btn-force">» 데모: 통과로 건너뛰기</button>
+				</div>
+				<div class="glass dim" id="judge" hidden>
+					<span class="cap" id="judge-cap">채점</span>
+					<div class="cases" id="judge-cases"></div>
+					<button type="button" class="quiet mono" id="btn-fixrun" hidden>» 고친 코드로 다시 실행</button>
+				</div>
+				<p class="k-sub" id="away-note" style="font-size:12.5px" hidden></p>
+				<aside class="dnote">이 화면엔 아무것도 더 없습니다. 시간은 달이 채우고, 실행·히트·치트시트만 남습니다. 힌트는 내용이 아니라 점 두 개로만 존재합니다.</aside>
+				<aside class="dnote">치트시트는 막지 않고 측정합니다(원칙 12). Operator는 타이머가 도는 동안 잠겨 있습니다(원칙 11).</aside>
+				<aside class="dnote">탭을 떠나 보세요. 아무 일도 일어나지 않습니다 — 떠난 시각만 조용히 기록되고, 나중에 정산의 근거가 됩니다.</aside>
+			</div>
+		</section>
+
+		<!-- 3 착지 -->
+		<section class="stage" data-i="2" aria-label="착지">
+			<div class="in">
+				<div class="land">
+					<div class="bloom" aria-hidden="true"><i></i></div>
+					<div class="k-top" style="justify-content:center">세션 종료 · fp-0312</div>
+					<div class="bigclock mono" id="land-clock">4:48</div>
+					<p class="k-sub"><b>통과</b> · 제한 3:00을 1:48 넘겼습니다. 실행 4번, 힌트 없음, 치트시트 1회.</p>
+					<p class="landline">숨을 한 번 쉬고 넘어갑니다. 몇 초 뒤 회고가 열립니다.</p>
+					<button type="button" class="quiet mono" id="btn-land-skip">» 바로 넘어가기</button>
+				</div>
+				<aside class="dnote">세션의 끝은 통계가 아니라 의식입니다(peak-end). 가장 좋은 기록에선 앰비언스 블룸이 이미 그렇게 하고 있습니다 — 같은 언어로, 보상 아닌 착지를 씁니다.</aside>
+			</div>
+		</section>
+
+		<!-- 4 회고 -->
+		<section class="stage" data-i="3" aria-label="회고">
+			<div class="in">
+				<div class="k-top"><span>세션 직후 · 1탭</span><span class="mono">23:47</span></div>
+				<h1 class="k-title">지금, 머리는 어땠나요?</h1>
+				<p class="k-sub">한 번이면 충분합니다. 나중에 “어떤 컨디션에서 잘 풀리는지”를 찾는 데만 씁니다.</p>
+				<div class="clarity" role="group" aria-label="집중감">
+					<button type="button" class="cl" data-cl="맑음" aria-pressed="false"><b>맑음</b><span>평소 풀던 속도, 흐릿함 없음</span></button>
+					<button type="button" class="cl" data-cl="보통" aria-pressed="false"><b>보통</b><span>가끔 흐려지지만 이어짐</span></button>
+					<button type="button" class="cl" data-cl="흐림" aria-pressed="false"><b>흐림</b><span>집중이 자꾸 끊김</span></button>
+				</div>
+				<div id="phase2" hidden>
+					<div class="ctxpills" role="group" aria-label="상황 (여러 개 골라도 됩니다)">
+						<button type="button" class="ctx" aria-pressed="false">방해가 있었음</button>
+						<button type="button" class="ctx" aria-pressed="false">늦은 시간</button>
+						<button type="button" class="ctx" aria-pressed="false">졸림</button>
+					</div>
+					<div class="arow" style="margin-top:16px">
+						<button type="button" class="pill" id="btn-checkin-done">기록하고 넘어가기</button>
+						<button type="button" class="quiet" id="btn-checkin-skip">건너뛰기</button>
+					</div>
+				</div>
+				<aside class="dnote">한 번에 하나의 질문, 탭 한 번. 타이머가 도는 동안은 절대 나오지 않습니다. 컨디션은 점수가 아니라 상황 기록입니다(판정 금지, 원칙 14·26).</aside>
+				<aside class="dnote">이 답은 정원의 “관찰”과만 만납니다 — 예: “맑음이라고 적은 세션의 첫 통과율은 91% (n=11)”.</aside>
+			</div>
+		</section>
+
+		<!-- 5 정산 -->
+		<section class="stage" data-i="4" aria-label="정산">
+			<div class="in">
+				<div class="k-top"><span>이번 세션에서 건진 것</span><span class="mono">1장</span></div>
+				<div class="note">
+					<h2>foldLeft의 초기값 <code>Nil</code> — 타입이 <code>List[Nothing]</code>으로 먼저 고정됨</h2>
+					<div class="kv"><b>함정</b><span>빈 컬렉션 리터럴을 초기값으로 넘기면, 첫 인자 목록에서 누적기 타입 <code>B</code>가 <code>List[Nothing]</code>으로 고정되어 <code>a :: acc</code>가 컴파일되지 않습니다.</span></div>
+					<div class="kv"><b>해결</b><span>초기값에서 원소 타입을 명시합니다. <code>List.empty[A]</code> 또는 <code>Nil: List[A]</code>.</span></div>
+					<div class="kv"><b>코드</b><span>
+						<pre class="code" style="margin:0"><span class="hl hl-bad">xs.foldLeft(Nil)((acc, a) =&gt; a :: acc)</span>
+<span class="hl hl-good">xs.foldLeft(List.empty[A])((acc, a) =&gt; a :: acc)</span></pre></span></div>
+					<span class="verify">scala-cli 검증됨 · 컴파일·실행 대조</span>
+					<details class="ev"><summary>근거 보기 — 이 세션과 지난 기록 3건</summary>
+						<ul class="evlist">
+							<li><span class="mono">lang_run #412</span> · fp-0312 · 컴파일 오류 “Found: List[A] · Required: Nil.type”</li>
+							<li><span class="mono">coach_msg #89</span> · 세션 후 질문 “Nil도 List[A]의 하위 타입인데 왜…?”</li>
+							<li><span class="mono">lang_run #387</span> · fp-0318 · 5일 전 같은 오류 1회</li>
+							<li><span class="mono">lang_lookup</span> · foldLeft 항목 조회 2회 (두 문제 합침)</li>
+						</ul>
+					</details>
+					<div class="arow" id="note-actions">
+						<button type="button" class="pill" id="btn-promote">복습 카드로 승격</button>
+						<button type="button" class="quiet" id="btn-keep">서랍에 두기</button>
+					</div>
+					<p class="done-line" id="note-done" hidden>복습 카드가 되었습니다 · 다음 인출 <b>3일 뒤</b> (FSRS) · 흔들리면 다시 풀기 목록에 올랐다가 내려옵니다</p>
+				</div>
+				<details class="ev"><summary>서랍 · 아직 승격하지 않은 노트 3장</summary>
+					<ul class="evlist">
+						<li>Option.map2와 for 내포 — 치트시트 중복 조회 2회 + 질문 1건 (미검증)</li>
+						<li>sequence에서 traverse 순서 — 오답 2회 (검증됨)</li>
+						<li>var 대신 불변 누적 — 리팩터 문제 반복 지적 (검증됨)</li>
+					</ul>
+				</details>
+				<aside class="dnote">세션당 최대 한 장. 묶을 실수가 없으면 이 자리엔 “이번엔 새로 묶을 실수가 없었습니다” 한 줄만 옵니다. 검증 전 노트는 “미검증”으로 표시되고 승격할 수 없습니다(원칙 18).</aside>
+				<aside class="dnote">실행·질문·조회·탭 이탈은 여기서 처음 얼굴을 드러냅니다. 풀 때는 측정만 하고, 정산 때 정보가 됩니다(원칙 24).</aside>
+			</div>
+		</section>
+
+		<!-- 6 다음 -->
+		<section class="stage" data-i="5" aria-label="다음">
+			<div class="in">
+				<div class="k-top"><span>다음</span><span class="mono">23:48</span></div>
+				<div class="nextone">
+					<span class="cap" style="font:500 12px var(--mono);color:var(--dim);letter-spacing:.06em">이어서 권합니다</span>
+					<span class="t">map2로 combine 구현 · fp-0313</span>
+					<p class="k-sub" style="font-size:13.5px">같은 주제(fold·누적), 지금보다 반 칸 위 · <b>3:00</b> · 이 주제 최근 통과유 4/5</p>
+					<div class="arow"><button type="button" class="pill" id="btn-next-start">시작</button></div>
+				</div>
+				<div class="alts">
+					<button type="button" class="alt"><span>또는 · 여기서 그만 — 오늘 충분합니다</span><span class="mono">정원은 그대로 자랍니다</span></button>
+				</div>
+				<p class="k-sub" style="font-size:13.5px">지금 23시입니다. 이 시간대의 첫 통과율은 <b>87%</b>(31건) — 당신이 가장 잘 푸는 시간 중 하나입니다.</p>
+				<aside class="dnote">“오늘은 여기까지”를 대안의 하나로 내놓습니다. 그만두는 날에 잃을 것은 없습니다(원칙 26·27).</aside>
+				<aside class="dnote">제안 근거는 시간대·주제 통과유처럼 기록에서 온 수치이며, 표본 수를 함께 밝힙니다.</aside>
+			</div>
+		</section>
+
+		<!-- 7 정원 -->
+		<section class="stage" data-i="6" aria-label="정원">
+			<div class="in">
+				<div class="k-top"><span>Garden · 리듬과 연속</span><span class="mono">42일째</span></div>
+				<h1 class="k-title" style="font-size:clamp(24px,4vw,34px)">관찰</h1>
+				<p class="k-sub">점수도 성격도 없습니다. 기록에서 온 문장이고, 표본이 부족하면 “수집 중”이라고만 말합니다.</p>
+
+				<div class="glass">
+					<span class="cap">나의 시간 · 시간대별 첫 시도 정답률 (기록 189건)</span>
+					<div class="hours" id="hours" role="group" aria-label="시간대별 첫 시도 정답률"></div>
+					<div class="axis" aria-hidden="true"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div>
+					<p class="read" id="hours-read" aria-live="polite">막대를 누르면 건수가 보입니다. 기록이 6건 미만인 시간대는 흐리게 그리고 이름 붙이지 않습니다.</p>
+					<div class="facts">
+						<div class="fact"><span>가장 잘 푸는 시간</span><b>23시 · 87% (31건)</b></div>
+						<div class="fact"><span>가장 흔들리는 시간</span><b>14시 · 58% (19건)</b></div>
+						<div class="fact"><span>3일 이상 비운 뒤 속도</span><b>평소보다 22% 느림 (5회)</b></div>
+						<div class="fact"><span>돌아오는 데 걸리는 날</span><b class="none">아직 기록이 부족합니다</b><small>돌아온 날이 5회 이상이면 보입니다.</small></div>
+					</div>
+				</div>
+
+				<div class="glass">
+					<span class="cap">연속의 그림 · 하루에 이어 푼 순서 (최근 6일)</span>
+					<div id="marks"></div>
+					<div class="legend" style="margin-top:10px">
+						<span><i class="mk" aria-hidden="true"></i>제한 안에 통과</span>
+						<span><i class="mk half" aria-hidden="true"></i>넘겨서 통과</span>
+						<span><i class="mk hollow" aria-hidden="true"></i>모범답안 열람</span>
+					</div>
+					<div class="obs" style="margin-top:12px">
+						<div class="ob">
+							<p>연속 <span class="warm">넷째 문제</span>부터 첫 통과가 71%에서 44%로 낮아집니다.</p>
+							<span class="ref">12일치 · 아래 표시는 최근 6일 — 셋째·넷째에 ○가 몰려 있습니다</span>
+						</div>
+					</div>
+					<div class="arow"><button type="button" class="pill ghost small" id="btn-rest">네 문제마다 쉬는 묶음으로 바꿔 보기</button></div>
+				</div>
+
+				<div class="obs">
+					<div class="ob">
+						<p>탭을 10초 이상 떠나 있던 세션은, 그렇지 않은 세션보다 시간을 <span class="warm">1.4배</span> 썼습니다.</p>
+						<span class="ref">n=9 · lang_sessions + focus_events — 방해는 막지 않고 측정만 합니다</span>
+					</div>
+					<div class="ob">
+						<p>“맑음”이라고 적어 둔 날의 첫 통과유은 91%, “흐림”의 날은 62%였습니다.</p>
+						<span class="ref">회고 14건 · memo_condition_checkins × lang_sessions</span>
+					</div>
+				</div>
+
+				<p class="k-sub" style="font-size:13.5px">쉬는 날에도 정원은 시들지 않습니다. 스트릭도, 잃을 것도 없습니다.</p>
+				<aside class="dnote">리듬 막대·게이팅 문구는 앱의 Garden 리듬 구성요소를 그대로 가져왔습니다 — 새 화면이 아니라 이미 익은 표현을 이어 씁니다.</aside>
+				<aside class="dnote">연속의 그림은 형태(●◐○)로 구분하고 색은 하나(웜)만 씁니다. 시간대·회고 상관도 표본 수를 문장 안에 밝힙니다.</aside>
+			</div>
+		</section>
+
+		<!-- 8 설계 -->
+		<section class="stage" data-i="7" aria-label="설계">
+			<div class="in">
+				<div class="k-top"><span>설계 노트</span><span class="mono">v1 → v2</span></div>
+				<h1 class="k-title" style="font-size:clamp(24px,4vw,34px)">무엇을 바꿨나</h1>
+				<p class="k-sub">v1은 탭 4개짜리 분석 문서였습니다. v2는 같은 기능을 훈련 한 바퀴의 순간들로 옮겼습니다.</p>
+				<div class="moves">
+					<div class="mv"><span class="was">탭 4개 · 각 패널에 카드·배지·필터</span><span class="arrow">→</span><span class="now"><b>순간 8개</b> · 한 번에 하나, 나머지는 사라짐</span></div>
+					<div class="mv"><span class="was">세션 종료 화면에 블록 7개 동시 등장</span><span class="arrow">→</span><span class="now">종료는 <b>착지</b> 3초 → 회고 1탭 → 정산 카드 1장</span></div>
+					<div class="mv"><span class="was">풀이 중에도 신호·감지 상자 노출</span><span class="arrow">→</span><span class="now">풀이 중 <b>완전한 빈 화면</b> · 측정은 뒤에서만</span></div>
+					<div class="mv"><span class="was">노트 4장 그리드 + 배치 배너</span><span class="arrow">→</span><span class="now">세션당 <b>정산 카드 1장</b> + 조용한 서랍</span></div>
+					<div class="mv"><span class="was">다음 문제 카드 그리드 3×N</span><span class="arrow">→</span><span class="now">제안 <b>하나</b> + 글줄 대안 둘 (선택권 유지)</span></div>
+					<div class="mv"><span class="was">피로 곡선·집중 신호 패널 2개</span><span class="arrow">→</span><span class="now">정원의 <b>관찰 문장</b> · 근거 ID 동봉</span></div>
+					<div class="mv"><span class="was">밝은 문서 톤 + 뱃지 남발</span><span class="arrow">→</span><span class="now">Arena 룸(Sparring·Garden과 같은 어둠) · 웜 단색 하나</span></div>
+				</div>
+				<div class="kline"></div>
+				<h1 class="k-title" style="font-size:clamp(20px,3vw,26px)">지킨 원칙</h1>
+				<div class="plist">
+					<span class="p">C.11 타이머 중 잠금</span><span class="p">C.14 판정 아닌 정보</span><span class="p">D.18 검증된 것만</span>
+					<span class="p">D.21 짧은 한국어</span><span class="p">E.24 결과 외 측정</span><span class="p">F.25 선택권</span>
+					<span class="p">F.26 보상 대신 성장</span><span class="p">F.27 과거의 나</span>
+				</div>
+				<div class="kline"></div>
+				<h1 class="k-title" style="font-size:clamp(20px,3vw,26px)">정직한 한계</h1>
+				<p class="k-sub">· 탭 이탈은 “가시성”의 대리 신호입니다. 집중 그 자체가 아닙니다 — 그래서 관찰로만 말합니다.<br>
+				· 상관 문장은 표본이 쌓일 때까지 “수집 중”을 유지합니다 (시간대 6건·시간 3개 기준은 앱 규칙 그대로).<br>
+				· CF 훈련 화면은 코드가 남지 않아 이 흐름에 들어오지 못합니다 — Scala 언어 문제가 무대입니다.<br>
+				· 모든 수치는 시연용 예시입니다. 실제 구현은 기록에서 재계산됩니다(원칙 23).</p>
+			</div>
+		</section>
+	</main>
+
+	<footer class="rail">
+		<button type="button" class="pill small ghost" id="btn-prev">‹ 이전</button>
+		<span class="grow" style="flex:1"></span>
+		<div class="dots" id="dots" role="tablist" aria-label="순간"></div>
+		<span class="grow" style="flex:1"></span>
+		<button type="button" class="pill small" id="btn-next">다음 ›</button>
+	</footer>
+
+	<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+	'use strict';
+	var fx = document.getElementById('fx');
+	var stages = [].slice.call(document.querySelectorAll('.fx .stage'));
+	var NAMES = ['진입', '풀이', '착지', '회고', '정산', '다음', '정원', '설계'];
+	var cur = -1, seen = {}, timers = [], toastT = null;
+
+	// ---------- 이동 ----------
+	var stationsNav = document.getElementById('stations');
+	var dots = document.getElementById('dots');
+	stages.forEach(function (s, i) {
+		var b = document.createElement('button');
+		b.type = 'button'; b.className = 'st';
+		b.innerHTML = '<span class="no">' + (i + 1) + '</span>' + NAMES[i];
+		b.addEventListener('click', function () { go(i); });
+		stationsNav.appendChild(b);
+		var d = document.createElement('button');
+		d.type = 'button'; d.setAttribute('aria-label', NAMES[i]);
+		d.addEventListener('click', function () { go(i); });
+		dots.appendChild(d);
+	});
+	function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+	function replay(s) {
+		var box = s.querySelector('.in');
+		if (!box) return;
+		box.style.animation = 'none';
+		[].forEach.call(box.children, function (c) { c.style.animation = 'none'; });
+		void box.offsetWidth;
+		box.style.animation = ''; box.style.animation = '';
+		[].forEach.call(box.children, function (c) { c.style.animation = ''; });
+	}
+	function go(i) {
+		i = Math.max(0, Math.min(stages.length - 1, i));
+		if (i === cur) return;
+		clearTimers(); stopTimer();
+		if (cur >= 0) stages[cur].classList.remove('on');
+		cur = i; seen[i] = true;
+		stages[i].classList.add('on'); replay(stages[i]);
+		[].forEach.call(stationsNav.children, function (b, k) { b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+		[].forEach.call(dots.children, function (d, k) { d.className = (k === i ? 'cur' : seen[k] ? 'seen' : ''); });
+		window.scrollTo({ top: 0 });
+		if (i === 1) startTimer();
+		if (i === 2) landBloom();
+	}
+	document.getElementById('btn-prev').addEventListener('click', function () { go(cur - 1); });
+	document.getElementById('btn-next').addEventListener('click', function () { go(cur + 1); });
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'ArrowRight') go(cur + 1);
+		if (e.key === 'ArrowLeft') go(cur - 1);
+	});
+
+	// ---------- 토스트 ----------
+	var toast = document.getElementById('toast');
+	function say(msg, sub) {
+		toast.innerHTML = msg + (sub ? '<br><span class="mono">' + sub + '</span>' : '');
+		toast.classList.add('show');
+		clearTimeout(toastT);
+		toastT = setTimeout(function () { toast.classList.remove('show'); }, 2800);
+	}
+
+	// ---------- 풀이: 타이머(달) ----------
+	var LIMIT = 180, elapsed = 0, tick = null;
+	var clock = document.getElementById('clock'), moon = document.getElementById('moon'), prog = document.getElementById('moon-prog');
+	function paint() {
+		var over = elapsed > LIMIT;
+		var m = Math.floor(elapsed / 60), s = elapsed % 60;
+		clock.textContent = (over ? '' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+		clock.classList.toggle('over', over);
+		moon.classList.toggle('over', over);
+		prog.setAttribute('stroke-dashoffset', 110 - Math.min(elapsed / LIMIT, 1.35) * 110);
+	}
+	function startTimer() {
+		if (tick) return;
+		tick = setInterval(function () { elapsed++; paint(); }, 1000);
+	}
+	function stopTimer() { clearInterval(tick); tick = null; }
+	function freezeAt(sec) { stopTimer(); elapsed = sec; paint(); }
+
+	// ---------- 풀이: 채점 데모 ----------
+	var runs = 0;
+	var judge = document.getElementById('judge'), cap = document.getElementById('judge-cap'), casesEl = document.getElementById('judge-cases');
+	var fixrun = document.getElementById('btn-fixrun'), edLine = document.getElementById('ed-line');
+	function caseRow(mark, text, detail, bad) {
+		return '<div class="case' + (bad ? ' bad' : '') + '"><span class="m">' + mark + '</span><span><span class="t">' + text + '</span>' +
+			(detail ? '<div class="d">' + detail + '</div>' : '') + '</span></div>';
+	}
+	document.getElementById('btn-run').addEventListener('click', function () {
+		if (runs === 0) {
+			runs = 1;
+			judge.hidden = false;
+			cap.textContent = '채점 · 컴파일 오류';
+			casesEl.innerHTML = caseRow('×', 'User.scala 2:2 — 이 줄이 원인입니다',
+				'value :: is not a member of object Nil\nFound: List[A] — Required: Nil.type', true);
+			edLine.classList.add('hl-bad');
+			fixrun.hidden = false;
+		}
+	});
+	fixrun.addEventListener('click', function () {
+		runs = 2;
+		edLine.textContent = 'xs.foldLeft(List.empty[A])((acc, a) => a :: acc)';
+		edLine.classList.remove('hl-bad'); edLine.classList.add('hl-good');
+		cap.textContent = '채점 · 통과';
+		casesEl.innerHTML = caseRow('✓', '모든 케이스 통과 (4/4) · 금지 키워드 없음 · clean', '기본 · 빈 리스트 · 긴 리스트 · 중복 원소');
+		fixrun.hidden = true;
+		timers.push(setTimeout(function () { pass(288); }, 900));
+	});
+	function pass(sec) {
+		if (cur !== 1) return;
+		freezeAt(sec);
+		timers.push(setTimeout(function () { go(2); }, 650));
+	}
+	document.getElementById('btn-force').addEventListener('click', function () { pass(288); });
+	document.getElementById('btn-start').addEventListener('click', function () { go(1); });
+	document.getElementById('btn-cheat').addEventListener('click', function () {
+		say('조회가 기록되었습니다', 'lang_lookups · foldLeft — 화면은 그대로입니다');
+	});
+	// 탭을 떠나 보기: 아무 일도 일어나지 않고, 돌아오면 한 줄만.
+	var hiddenAt = 0, awayCount = 0;
+	document.addEventListener('visibilitychange', function () {
+		if (document.hidden) { hiddenAt = Date.now(); return; }
+		if (cur !== 1 || !hiddenAt) return;
+		var sec = Math.max(1, Math.round((Date.now() - hiddenAt) / 1000));
+		awayCount++;
+		var note = document.getElementById('away-note');
+		note.hidden = false;
+		note.textContent = '탭 이탈 ' + awayCount + '회 · ' + sec + '초 — 조용히 기록되었습니다. 화면엔 아무 변화가 없습니다.';
+	});
+
+	// ---------- 착지 ----------
+	function landBloom() {
+		var i = stages[2].querySelector('.bloom i');
+		if (!i) return;
+		i.style.animation = 'none'; void i.offsetWidth; i.style.animation = '';
+		timers.push(setTimeout(function () { if (cur === 2) go(3); }, 3400));
+	}
+	document.getElementById('btn-land-skip').addEventListener('click', function () { go(3); });
+
+	// ---------- 회고 ----------
+	var cl = null, phase2 = document.getElementById('phase2');
+	[].forEach.call(document.querySelectorAll('.fx .cl'), function (b) {
+		b.addEventListener('click', function () {
+			[].forEach.call(document.querySelectorAll('.fx .cl'), function (x) { x.setAttribute('aria-pressed', 'false'); });
+			b.setAttribute('aria-pressed', 'true'); cl = b.dataset.cl;
+			phase2.hidden = false;
+		});
+	});
+	[].forEach.call(document.querySelectorAll('.fx .ctx'), function (b) {
+		b.addEventListener('click', function () {
+			b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+		});
+	});
+	function checkinDone(skipped) {
+		if (!cl && !skipped) return;
+		var ctx = [].slice.call(document.querySelectorAll('.fx .ctx[aria-pressed="true"]')).map(function (b) { return b.textContent; });
+		say(skipped ? '건너뛰었습니다 — 언제든 다음 회고부터' : '기록되었습니다 · ' + cl + (ctx.length ? ' · ' + ctx.join(', ') : ''),
+			skipped ? '조건은 나중에 붙여도 됩니다' : '세션 회고 1건 · 세부는 정원에서만 쓰입니다');
+		go(4);
+	}
+	document.getElementById('btn-checkin-done').addEventListener('click', function () { checkinDone(false); });
+	document.getElementById('btn-checkin-skip').addEventListener('click', function () { checkinDone(true); });
+
+	// ---------- 정산 ----------
+	document.getElementById('btn-promote').addEventListener('click', function () {
+		document.getElementById('note-actions').hidden = true;
+		document.getElementById('note-done').hidden = false;
+		say('복습 카드로 승격했습니다', '다음 인출 3일 뒤 · FSRS — 흔들리면 다시 풀기로 이어집니다');
+	});
+	document.getElementById('btn-keep').addEventListener('click', function () {
+		say('서랍에 두었습니다', '3장이 모이면 다음 정산에 함께 제안됩니다');
+	});
+
+	// ---------- 다음 ----------
+	document.getElementById('btn-next-start').addEventListener('click', function () {
+		say('데모는 여기서 멈춥니다', '실제로는 fp-0313 문제 화면이 열립니다');
+	});
+	[].forEach.call(document.querySelectorAll('.fx .alt'), function (b) {
+		b.addEventListener('click', function () { say('데모에서는 동작하지 않습니다', '실제 화면에서는 각각 문제·스파링·종료로 이어집니다'); });
+	});
+	document.getElementById('btn-rest').addEventListener('click', function () {
+		say('묶음 크기를 넷으로 두었습니다', '강제가 아닙니다 — 다음 제안이 넷째 문제 앞에서 쉼을 먼저 내놓습니다');
+	});
+
+	// ---------- 정원: 리듬 ----------
+	var HOURS = [[7,4],[2,1],[0,0],[0,0],[0,0],[0,0],[1,0],[3,2],[0,0],[0,0],[9,6],[5,3],[0,0],[8,5],[19,11],[12,8],[10,6],[4,2],[0,0],[0,0],[2,1],[8,5],[14,9],[31,27]];
+	var hoursEl = document.getElementById('hours'), hoursRead = document.getElementById('hours-read');
+	HOURS.forEach(function (h, i) {
+		var n = h[0], ok = h[1], enough = n >= 6;
+		var b = document.createElement('button');
+		b.type = 'button'; b.className = 'hr' + (enough ? '' : ' faint');
+		b.setAttribute('aria-label', (i) + '시, ' + (n ? n + '건 중 ' + ok + '건, ' + Math.round(ok / n * 100) + '%' + (enough ? '' : ', 기록이 적음') : '기록 없음'));
+		b.innerHTML = '<i style="height:' + (n ? Math.max(3, ok / n * 100) : 2) + '%"></i>';
+		b.addEventListener('click', function () {
+			[].forEach.call(hoursEl.children, function (x) { x.classList.remove('on'); });
+			b.classList.add('on');
+			hoursRead.innerHTML = n
+				? '<b>' + i + '시</b> · ' + n + '건 중 ' + ok + '건 · ' + Math.round(ok / n * 100) + '%' + (enough ? '' : ' · 6건 미만이라 이름 붙이지 않음')
+				: '<b>' + i + '시</b> · 기록 없음';
+		});
+		hoursEl.appendChild(b);
+	});
+	// 연속의 그림
+	var DAYS = [['11.20', 'pff'], ['11.22', 'ppph'], ['11.23', 'ppoph'], ['11.24', 'pp'], ['11.25', 'ppophh'], ['11.26', 'pph!']];
+	var marksEl = document.getElementById('marks');
+	var MK = { p: '', h: ' half', o: ' hollow' };
+	DAYS.forEach(function (d) {
+		var row = document.createElement('div');
+		row.className = 'dayrow';
+		var seq = d[1].split('').map(function (c) {
+			var now = c === '!' ? ' now' : '';
+			var base = c === '!' ? 'h' : c;
+			return '<span class="mk' + MK[base] + now + '" title="' + ({ p: '제한 안에 통과', h: '넘겨서 통과', o: '모범답안 열람' })[base] + (now ? ' · 방금 세션' : '') + '"></span>';
+		}).join('');
+		row.innerHTML = '<span class="d">' + d[0] + '</span><span class="seq">' + seq + '</span><span class="n">' + d[1].replace('!', '').length + '문제</span>';
+		marksEl.appendChild(row);
+	});
+
+	// ---------- 토글 ----------
+	document.getElementById('btn-notes').addEventListener('click', function () {
+		var on = fx.classList.toggle('notes-on');
+		this.setAttribute('aria-pressed', on ? 'true' : 'false');
+		say(on ? '설명 각주를 켰습니다' : '설명 각주를 껐습니다', '각주는 실제 제품에 없는 안내입니다');
+	});
+	document.getElementById('btn-narrow').addEventListener('click', function () {
+		var on = fx.classList.toggle('narrow');
+		this.setAttribute('aria-pressed', on ? 'true' : 'false');
+		say(on ? '모바일 폭으로 보는 중' : '폭을 되돌렸습니다', '같은 흐름이 그대로 전화 폭에서 작동합니다');
+	});
+
+	go(0);
+})();
+</script>

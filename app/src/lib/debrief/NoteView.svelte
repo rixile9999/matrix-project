@@ -2,6 +2,7 @@
 	import { t } from '#lib/i18n.svelte.ts';
 	// One pattern note: my own code where it happened, the rule (with my own line), verified examples, one retrieval question, and the way into the deck.
 	import { untrack } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { renderInline } from '#lib/inline.ts';
 	import type { DebriefNote } from '#lib/types.ts';
 
@@ -63,6 +64,47 @@
 		const j = (await r.json()) as { ok?: true; error?: string };
 		if (j.ok) inDeck = true;
 		deckMsg = j.ok ? '' : (j.error ?? t('넣지 못했습니다.', 'Could not add.'));
+	}
+
+	// variations: generated trace drills for this note; the answer stays on the server
+	const MAX_DRILLS = 6;
+	let making = $state(false);
+	let drillMsg = $state('');
+	let pending = $state<number | null>(null);
+	const running = $derived(making || note.drillJob === 'running');
+	$effect(() => {
+		if (note.drillJob !== 'running') return;
+		const timer = setInterval(() => void invalidateAll(), 4000);
+		return () => clearInterval(timer);
+	});
+	async function post(url: string, body: unknown): Promise<boolean> {
+		try {
+			const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+			const j = (await r.json()) as { ok?: true; error?: string };
+			drillMsg = j.ok ? '' : (j.error ?? t('실패했습니다.', 'Did not work.'));
+			return !!j.ok;
+		} catch (e) {
+			drillMsg = e instanceof Error ? e.message : String(e);
+			return false;
+		}
+	}
+	async function make() {
+		if (running) return;
+		making = true;
+		try {
+			if (await post('/debrief/drills', { pattern: note.id })) await invalidateAll();
+		} finally {
+			making = false;
+		}
+	}
+	async function setDrill(id: number, drop: boolean) {
+		if (pending !== null) return;
+		pending = id;
+		try {
+			if (await post('/debrief/drills/add', drop ? { id, drop: true } : { id })) await invalidateAll();
+		} finally {
+			pending = null;
+		}
 	}
 </script>
 
@@ -138,6 +180,29 @@
 		</div>
 	{/if}
 
+	{#if note.note}
+		<div class="block">
+			<div class="lab">{t('변형', 'Variations')}</div>
+			{#each note.drills as d (d.id)}
+				<div class="drill">
+					<p>{@html renderInline(d.prompt)}</p>
+					<pre>{d.code}</pre>
+					<div class="act">
+						<button class="btn small ghost add" type="button" aria-pressed={d.state === 'added'} disabled={pending === d.id} onclick={() => d.state !== 'added' && setDrill(d.id, false)}>{d.state === 'added' ? t('덱에 있음', 'In deck') : t('덱에 넣기', 'Add')}</button>
+						<button class="x" type="button" aria-label={t('지우기', 'Remove')} disabled={pending === d.id} onclick={() => setDrill(d.id, true)}>×</button>
+					</div>
+				</div>
+			{/each}
+			{#if note.drills.length < MAX_DRILLS}
+				<div class="act make">
+					<button class="btn small" type="button" disabled={running} onclick={make}>{note.drillJob === 'failed' && !running ? t('실패 · 다시', 'Failed · retry') : t('만들기', 'Make')}</button>
+					{#if running}<span class="pulse" role="status" aria-label={t('만드는 중', 'Making')}></span>{/if}
+				</div>
+			{/if}
+			{#if drillMsg}<p class="err" role="alert">{drillMsg}</p>{/if}
+		</div>
+	{/if}
+
 	{#if note.practice.length}
 		<div class="block">
 			<div class="lab">{t('연습', 'Practice')}</div>
@@ -187,6 +252,18 @@
 	.opt.wrong { border-color: var(--bad); color: var(--bad); }
 	.why { margin-top: 12px !important; color: var(--muted); font-size: 14px !important; }
 	.act { margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+	.drill { border-top: 1px solid var(--line); padding: 14px 0 12px; min-width: 0; }
+	.drill p { margin: 0 0 8px; font-size: 15px; }
+	.drill pre { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; font: 13.5px/1.6 var(--f-mono); font-variant-ligatures: none; overflow-x: auto; white-space: pre; }
+	.drill .act { margin-top: 0; }
+	.btn.add[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); cursor: default; }
+	.btn.add[aria-pressed='true']:disabled { opacity: 1; }
+	.x { border: 0; background: none; color: var(--muted); font: 400 18px/1 var(--f-mono); padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+	.x:hover:not(:disabled) { color: var(--ink); }
+	.x:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+	.x:disabled { opacity: .5; cursor: default; }
+	.make { margin-top: 12px; }
+	.err { margin: 8px 0 0; font-size: 13px; color: var(--bad); }
 	.prac { display: flex; flex-wrap: wrap; gap: 8px; }
 	.prac form { margin: 0; }
 </style>

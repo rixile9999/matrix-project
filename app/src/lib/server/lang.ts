@@ -3,6 +3,7 @@ import { tr, label } from './locale.ts';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db } from './db.ts';
+import { autoDrills } from './drill.ts';
 import { sprintStruggleSessions } from './spar-log.ts';
 import { judge, loadBooks, loadGiven, loadProblem, loadSolution } from './judge.ts';
 import { listCheatEntries, cheatIndex } from './cheatsheet.ts';
@@ -347,6 +348,15 @@ const endSession = (id: number, outcome: 'passed' | 'revealed', avoided: string[
 		)
 		.run(now(), outcome, JSON.stringify(avoided), now(), id);
 
+/** Debrief drills for the notes this session showed; in the background and never a reason for a run to fail. */
+function afterSession(problemId: string) {
+	try {
+		autoDrills(problemId);
+	} catch {
+		// a failed background start must never break a run
+	}
+}
+
 export async function runCode(problemId: string, code: unknown): Promise<{ result: JudgeResult; finished: boolean }> {
 	const p = requireProblem(problemId);
 	if (typeof code !== 'string' || code.trim() === '') throw new Error(tr('코드를 입력하세요.', 'Enter your code.'));
@@ -359,6 +369,7 @@ export async function runCode(problemId: string, code: unknown): Promise<{ resul
 	db().prepare('INSERT INTO lang_runs(session_id, at, status, code, result) VALUES(?,?,?,?,?)').run(s.id, now(), result.status, code, JSON.stringify(result));
 	let finished = false;
 	if (open && result.status === 'passed') finished = endSession(s.id, 'passed', result.avoided).changes > 0;
+	if (finished) afterSession(problemId);
 	return { result: displayJudge(result), finished };
 }
 
@@ -376,7 +387,7 @@ export function revealSolution(problemId: string): void {
 	requireProblem(problemId);
 	const s = latestSession(problemId);
 	if (!s) throw new Error(tr('진행 중인 세션이 없습니다. 먼저 문제를 시작하세요.', 'Start this problem to open a session.'));
-	if (s.ended_at === null) endSession(s.id, 'revealed', []);
+	if (s.ended_at === null && endSession(s.id, 'revealed', []).changes > 0) afterSession(problemId);
 }
 
 /** What the Operator needs about a problem: its latest session, that session's last run, and (lazily) the solution. Null for an unknown problem. */

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { renderInline } from '#lib/inline.ts';
 	import SessionCard from '#lib/debrief/SessionCard.svelte';
@@ -45,6 +45,17 @@
 		const w = (page.data.locale === 'ko' ? '일월화수목금토' : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])[new Date(s + 'T12:00:00').getDay()];
 		return `${m}${t('월', '/')} ${d}${t('일', '')} (${w})`;
 	};
+	let autoBusy = $state(false);
+	async function toggleAuto() {
+		if (autoBusy) return;
+		autoBusy = true;
+		try {
+			await fetch('/debrief/drills/auto', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ on: !data.drillAuto }) });
+			await invalidateAll();
+		} finally {
+			autoBusy = false;
+		}
+	}
 	let recentOpen = $state(0);
 	const LABEL = $derived<Record<string, string>>({ sessions: t('Scala 세션', 'Scala sessions'), quick: t('즉시 재실행', 'Quick reruns'), reveal: t('맨손 공개', 'Answer reveal'), silent: t('긴 정적', 'Long silence'), away: t('이탈 / 정지', 'Away / paused'), fatigue: t('1시간 전후', 'Around one hour'), self: t('상태', 'State') });
 </script>
@@ -91,7 +102,7 @@
 
 	<!-- 02 -->
 	<section aria-labelledby="s2" id="notes">
-		<div class="sh"><span class="n">02</span><h2 id="s2">{t('패턴', 'Patterns')}</h2></div>
+		<div class="sh"><span class="n">02</span><h2 id="s2">{t('패턴', 'Patterns')}</h2><span class="autobox"><button class="auto" type="button" aria-pressed={data.drillAuto} disabled={autoBusy} onclick={toggleAuto}>{t('자동', 'Auto')}</button>{#if data.drillAuto}<small>{t('노트가 생기면 기록이 모델 제공자에게 전송됩니다.', 'New notes send their records to your model provider.')}</small>{/if}</span></div>
 		{#if current}
 			<div class="notes">
 				<div class="index" role="tablist" aria-label={t('패턴', 'Patterns')} aria-orientation="vertical" tabindex="-1" onkeydown={keys}>
@@ -184,6 +195,14 @@
 	.lead { color: var(--muted); max-width: 62ch; margin: 0; text-wrap: pretty; }
 	.sh { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 4px 18px; margin-bottom: 22px; }
 	.sh .n { font: 400 14px var(--f-mono); color: var(--accent); padding-top: 9px; }
+	.sh:has(.autobox) { grid-template-columns: 56px auto minmax(0, 1fr); align-items: baseline; }
+	@media (max-width: 600px) { .sh:has(.autobox) { grid-template-columns: 56px minmax(0, 1fr); } .autobox { grid-column: 2; } }
+	.autobox { display: flex; gap: 6px 12px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
+	.autobox small { font-size: 12px; color: var(--muted); }
+	.auto { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 2px 10px; font: 500 11.5px var(--f-mono); letter-spacing: .04em; cursor: pointer; }
+	.auto[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); }
+	.auto:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+	.auto:disabled { opacity: .6; cursor: default; }
 	.sh h2 { font: 400 clamp(24px, 3.2vw, 32px)/1.15 var(--f-display); letter-spacing: -.02em; margin: 0; }
 	.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: clamp(16px, 3vw, 30px); min-width: 0; }
 	.empty { color: var(--muted); }

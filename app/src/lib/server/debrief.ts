@@ -9,6 +9,7 @@ import { findLesson, statsHistory } from './stats.ts';
 import type { Copy } from '#lib/stats/types.ts';
 import { findProblem } from './lang.ts';
 import { askCoach } from './worker.ts';
+import { drillAuto, drillJobState, drillsFor } from './drill.ts';
 import { listChecks } from './memo-content.ts';
 import { BACKENDS, type BackendId } from '#lib/core/coach.ts';
 import type { JudgeResult } from '#lib/core/lang.ts';
@@ -37,7 +38,7 @@ export function catalog(): DebriefPattern[] {
 		return [];
 	}
 }
-function debriefChecks(): Map<string, TraceCheck> {
+export function debriefChecks(): Map<string, TraceCheck> {
 	try {
 		return new Map(listChecks(LANG).flatMap((c) => (c.kind === 'trace' && c.debrief ? [[c.id, c] as const] : [])));
 	} catch {
@@ -120,6 +121,7 @@ function notes(stats: PatternStat[], cat: DebriefPattern[]): DebriefNote[] {
 	const mine = mineLines();
 	const passed = passedIds();
 	const title = (id: string) => findProblem(id)?.title ?? id;
+	const locale = english() ? 'en' : 'ko';
 	return stats.map((st) => {
 		const p = cat.find((c) => c.id === st.id)!;
 		const c = checks.get(p.check);
@@ -131,7 +133,9 @@ function notes(stats: PatternStat[], cat: DebriefPattern[]): DebriefNote[] {
 			check: c && c.debrief === p.id ? { id: c.id, prompt: c.prompt, code: c.code, options: c.options, answer: c.answer } : null,
 			inDeck: added.has(p.id),
 			practice: p.practice.flatMap((id) => (findProblem(id) ? [{ id, title: title(id), passed: passed.has(id) }] : [])),
-			questions: st.questions.slice(-4).map((q) => ({ problemId: q.problemId, at: q.at, text: q.text }))
+			questions: st.questions.slice(-4).map((q) => ({ problemId: q.problemId, at: q.at, text: q.text })),
+			drills: st.note ? drillsFor(p.id, locale) : [],
+			drillJob: st.note ? drillJobState(p.id) : null
 		};
 	});
 }
@@ -237,7 +241,8 @@ export function debriefData(date: string | null) {
 		defaultBackend: DEFAULT_BACKEND,
 		experiments,
 		choice: ch && choice ? { ...choice, at: ch.at, result: experimentResult(log, ch.id, ch.at, now, locale) } : null,
-		warmup: warmupOf(ns)
+		warmup: warmupOf(ns),
+		drillAuto: drillAuto()
 	};
 }
 
