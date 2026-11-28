@@ -2,3 +2,12 @@
 .DS_Store
 tools/
 .claude/worktrees/
+.env
+.env.local
+study/.env.local
+.metals/
+.bsp/
+.scala-build/
+.vscode/
+
+

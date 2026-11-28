@@ -1,0 +1,6 @@
+def longestPositiveRun(nums: Array[Int]): Int = 
+  def parse(lgt: Int, acc: Int, i: Int): Int = 
+    if i == nums.size then lgt else if nums(i) <=0 then parse(if lgt > acc then lgt else acc, 0, i + 1)
+    else parse(if lgt > (acc + 1) then lgt else acc + 1, acc + 1, i + 1)
+  parse(0, 0, 0)
+
